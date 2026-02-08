@@ -97,13 +97,20 @@ def main() -> None:
             "by ensuring no provider SDKs or ML libraries are bundled."
         ),
     )
+    parser.add_argument(
+        "--name",
+        type=str,
+        default="BITS Whisperer",
+        help="Custom name for the output executable (default: 'BITS Whisperer')",
+    )
     args = parser.parse_args()
 
     root = Path(__file__).parent
     spec_file = root / "bits_whisperer.spec"
 
-    if not spec_file.exists():
+    if not args.onefile and not spec_file.exists():
         print("ERROR: bits_whisperer.spec not found in project root.")
+        print("       Use --onefile to build without a spec file.")
         sys.exit(1)
 
     # Determine which Python to use
@@ -136,7 +143,7 @@ def main() -> None:
             "--onefile",
             "--windowed",
             "--name",
-            "BITS Whisperer",
+            args.name,
             str(root / "src" / "bits_whisperer" / "__main__.py"),
         ])
     else:
@@ -158,9 +165,9 @@ def main() -> None:
         print("=" * 60)
         print("  BUILD SUCCESSFUL!")
         if args.onefile:
-            print(f"  Output: dist/BITS Whisperer.exe")
+            print(f"  Output: dist/{args.name}.exe")
         else:
-            print(f"  Output: dist/BITS Whisperer/")
+            print(f"  Output: dist/{args.name}/")
         if args.lean:
             print()
             print("  Lean build — provider SDKs NOT bundled.")
