@@ -33,9 +33,9 @@ import importlib
 import importlib.util
 import logging
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from bits_whisperer.utils.constants import DATA_DIR
 
@@ -87,7 +87,9 @@ class PluginManager:
         self._settings = settings
         self._provider_manager = provider_manager
         self._plugins: dict[str, PluginInfo] = {}
-        self._plugin_dir = Path(settings.plugin_directory) if settings.plugin_directory else PLUGINS_DIR
+        self._plugin_dir = (
+            Path(settings.plugin_directory) if settings.plugin_directory else PLUGINS_DIR
+        )
 
         # Ensure plugin directory exists
         self._plugin_dir.mkdir(parents=True, exist_ok=True)
@@ -150,9 +152,8 @@ class PluginManager:
 
         loaded = 0
         for info in self._plugins.values():
-            if info.is_enabled and not info.is_loaded:
-                if self._load_plugin(info):
-                    loaded += 1
+            if info.is_enabled and not info.is_loaded and self._load_plugin(info):
+                loaded += 1
 
         logger.info("Loaded %d/%d plugins", loaded, len(self._plugins))
         return loaded
@@ -312,13 +313,15 @@ class PluginManager:
                 # Package plugin
                 module_name = f"bw_plugin_{path.parent.name}"
                 spec = importlib.util.spec_from_file_location(
-                    module_name, str(path),
+                    module_name,
+                    str(path),
                     submodule_search_locations=[str(path.parent)],
                 )
             else:
                 module_name = f"bw_plugin_{info.module_name}"
                 spec = importlib.util.spec_from_file_location(
-                    module_name, str(path),
+                    module_name,
+                    str(path),
                 )
 
             if spec is None or spec.loader is None:

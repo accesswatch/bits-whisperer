@@ -36,7 +36,7 @@ class TranscriptionProvider(ABC):
     for each transcription job.
     """
 
-    def configure(self, settings: dict[str, Any]) -> None:
+    def configure(self, settings: dict[str, Any]) -> None:  # noqa: B027
         """Apply provider-specific settings before transcription.
 
         Called by the TranscriptionService before ``transcribe()`` to

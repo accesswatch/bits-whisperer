@@ -444,8 +444,10 @@ class WheelInstaller:
             if status == 404:
                 raise RuntimeError(f"Package '{package_name}' " "not found on PyPI.") from exc
             raise RuntimeError(f"PyPI request failed for '{package_name}': HTTP {status}") from exc
-        except (httpx.ConnectError, httpx.ConnectTimeout):
-            raise RuntimeError("Cannot reach PyPI (pypi.org). Check your internet connection.")
+        except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+            raise RuntimeError(
+                "Cannot reach PyPI (pypi.org). Check your internet connection."
+            ) from exc
         except Exception as exc:
             raise RuntimeError(f"Failed to query PyPI for " f"'{package_name}': {exc}") from exc
 
@@ -556,16 +558,18 @@ class WheelInstaller:
             dest.unlink()
 
         try:
-            with httpx.Client(
-                follow_redirects=True,
-                timeout=httpx.Timeout(connect=30, read=300, write=30, pool=30),
-                headers={"User-Agent": _USER_AGENT},
-            ) as client:
-                with client.stream("GET", url) as r:
-                    r.raise_for_status()
-                    with dest.open("wb") as f:
-                        for chunk in r.iter_bytes(chunk_size=1024 * 1024):
-                            f.write(chunk)
+            with (
+                httpx.Client(
+                    follow_redirects=True,
+                    timeout=httpx.Timeout(connect=30, read=300, write=30, pool=30),
+                    headers={"User-Agent": _USER_AGENT},
+                ) as client,
+                client.stream("GET", url) as r,
+            ):
+                r.raise_for_status()
+                with dest.open("wb") as f:
+                    for chunk in r.iter_bytes(chunk_size=1024 * 1024):
+                        f.write(chunk)
         except Exception as exc:
             dest.unlink(missing_ok=True)
             raise RuntimeError(f"Download failed: {filename}: " f"{exc}") from exc

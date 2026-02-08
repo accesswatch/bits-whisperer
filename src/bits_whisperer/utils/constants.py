@@ -942,11 +942,7 @@ def get_copilot_models_for_tier(tier: str) -> list[AIModelInfo]:
     """
     tier_order = {"free": 0, "pro": 1, "business": 2, "enterprise": 3}
     tier_level = tier_order.get(tier, 0)
-    return [
-        m
-        for m in COPILOT_AI_MODELS
-        if tier_order.get(m.copilot_tier, 0) <= tier_level
-    ]
+    return [m for m in COPILOT_AI_MODELS if tier_order.get(m.copilot_tier, 0) <= tier_level]
 
 
 def format_price_per_1k(price_per_1m: float) -> str:

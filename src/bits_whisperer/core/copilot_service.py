@@ -15,14 +15,16 @@ App → CopilotService → github-copilot-sdk → JSON-RPC → Copilot CLI
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import shutil
 import subprocess
 import threading
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from bits_whisperer.core.settings import CopilotSettings
@@ -300,17 +302,13 @@ class CopilotService:
     def stop(self) -> None:
         """Stop the Copilot client and clean up resources."""
         if self._session:
-            try:
+            with contextlib.suppress(Exception):
                 self._run_async(self._session.destroy())
-            except Exception:
-                pass
             self._session = None
 
         if self._client and self._is_running:
-            try:
+            with contextlib.suppress(Exception):
                 self._run_async(self._client.stop())
-            except Exception:
-                pass
             self._client = None
             self._is_running = False
 
@@ -395,9 +393,7 @@ class CopilotService:
                         matches.append(f"Line {i + 1}: {line.strip()}")
                 if not matches:
                     return f"No matches found for '{args.query}'."
-                return (
-                    f"Found {len(matches)} match(es):\n" + "\n".join(matches[:20])
-                )
+                return f"Found {len(matches)} match(es):\n" + "\n".join(matches[:20])
 
             class EmptyArgs(BaseModel):
                 pass
@@ -444,10 +440,8 @@ class CopilotService:
         self._transcript_context = text
         # Reset session so context is refreshed
         if self._session:
-            try:
+            with contextlib.suppress(Exception):
                 self._run_async(self._session.destroy())
-            except Exception:
-                pass
             self._session = None
 
     def send_message(
@@ -470,15 +464,11 @@ class CopilotService:
             on_complete: Called with the full response when done.
             on_error: Called with an error message if something fails.
         """
-        self._conversation_history.append(
-            CopilotMessage(role="user", content=message)
-        )
+        self._conversation_history.append(CopilotMessage(role="user", content=message))
 
         def _do_send() -> None:
             try:
-                result = self._run_async(
-                    self._async_send(message, on_delta=on_delta)
-                )
+                result = self._run_async(self._async_send(message, on_delta=on_delta))
                 self._conversation_history.append(result)
                 if on_complete:
                     on_complete(result)
@@ -510,16 +500,12 @@ class CopilotService:
                 async for event in response:
                     if hasattr(event, "type"):
                         if event.type == "assistant.message_delta":
-                            delta = getattr(event, "delta", "") or getattr(
-                                event, "text", ""
-                            )
+                            delta = getattr(event, "delta", "") or getattr(event, "text", "")
                             if delta:
                                 full_text += delta
                                 on_delta(delta)
                         elif event.type == "assistant.message":
-                            text = getattr(event, "text", "") or getattr(
-                                event, "content", ""
-                            )
+                            text = getattr(event, "text", "") or getattr(event, "content", "")
                             if text and not full_text:
                                 full_text = text
                     elif isinstance(event, str):
@@ -573,10 +559,8 @@ class CopilotService:
         """Clear the conversation history and reset the session."""
         self._conversation_history.clear()
         if self._session:
-            try:
+            with contextlib.suppress(Exception):
                 self._run_async(self._session.destroy())
-            except Exception:
-                pass
             self._session = None
 
     # ------------------------------------------------------------------ #
@@ -594,10 +578,8 @@ class CopilotService:
         self._agent_config = config
         # Reset session to pick up new instructions
         if self._session:
-            try:
+            with contextlib.suppress(Exception):
                 self._run_async(self._session.destroy())
-            except Exception:
-                pass
             self._session = None
 
     def load_agent_config(self, path: Path) -> AgentConfig:

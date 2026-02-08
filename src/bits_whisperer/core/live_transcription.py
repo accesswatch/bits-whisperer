@@ -19,7 +19,6 @@ from __future__ import annotations
 import logging
 import queue
 import threading
-import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -203,10 +202,7 @@ class LiveTranscriptionService:
                 # Try to find the device by name
                 devices = sd.query_devices()
                 for i, dev in enumerate(devices):
-                    if (
-                        dev["max_input_channels"] > 0
-                        and self._settings.input_device in dev["name"]
-                    ):
+                    if dev["max_input_channels"] > 0 and self._settings.input_device in dev["name"]:
                         device = i
                         break
 
@@ -214,9 +210,7 @@ class LiveTranscriptionService:
                 samplerate=self._settings.sample_rate,
                 channels=1,
                 dtype="float32",
-                blocksize=int(
-                    self._settings.sample_rate * self._settings.chunk_duration_seconds
-                ),
+                blocksize=int(self._settings.sample_rate * self._settings.chunk_duration_seconds),
                 device=device,
                 callback=self._audio_callback,
             )
@@ -227,9 +221,7 @@ class LiveTranscriptionService:
                 self._settings.sample_rate,
             )
         except ImportError:
-            logger.error(
-                "sounddevice not installed. Install with: pip install sounddevice"
-            )
+            logger.error("sounddevice not installed. Install with: pip install sounddevice")
             self._stop_event.set()
             self._state.is_running = False
         except Exception as exc:
@@ -313,12 +305,9 @@ class LiveTranscriptionService:
 
             # Transcribe when we have enough audio + silence pause,
             # or when buffer exceeds a reasonable max
-            should_transcribe = (
-                audio_buffer
-                and (
-                    (silence_duration >= silence_threshold and buffer_duration >= 1.0)
-                    or buffer_duration >= 30.0  # Max buffer 30 seconds
-                )
+            should_transcribe = audio_buffer and (
+                (silence_duration >= silence_threshold and buffer_duration >= 1.0)
+                or buffer_duration >= 30.0  # Max buffer 30 seconds
             )
 
             if should_transcribe:

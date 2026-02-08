@@ -19,7 +19,6 @@ from bits_whisperer.utils.accessibility import (
     announce_status,
     label_control,
     make_panel_accessible,
-    safe_call_after,
     set_accessible_help,
     set_accessible_name,
 )
@@ -138,9 +137,7 @@ class AgentBuilderDialog(wx.Dialog):
         root = wx.BoxSizer(wx.VERTICAL)
 
         # Header
-        header = wx.StaticText(
-            self, label="Customize Your AI Assistant"
-        )
+        header = wx.StaticText(self, label="Customize Your AI Assistant")
         font = header.GetFont()
         font.SetPointSize(font.GetPointSize() + 3)
         font.SetWeight(wx.FONTWEIGHT_BOLD)
@@ -278,9 +275,7 @@ class AgentBuilderDialog(wx.Dialog):
 
         temp_row = wx.BoxSizer(wx.HORIZONTAL)
         temp_lbl = wx.StaticText(parent, label="&Temperature:")
-        self._temp_spin = wx.SpinCtrlDouble(
-            parent, min=0.0, max=2.0, inc=0.1, initial=0.3
-        )
+        self._temp_spin = wx.SpinCtrlDouble(parent, min=0.0, max=2.0, inc=0.1, initial=0.3)
         set_accessible_name(self._temp_spin, "AI temperature value")
         set_accessible_help(
             self._temp_spin,
@@ -463,9 +458,7 @@ class AgentBuilderDialog(wx.Dialog):
 
     def _collect_values(self) -> AgentConfig:
         """Collect values from the UI into an AgentConfig."""
-        tools = [
-            tid for tid, cb in self._tool_checks.items() if cb.GetValue()
-        ]
+        tools = [tid for tid, cb in self._tool_checks.items() if cb.GetValue()]
 
         model_idx = self._model_choice.GetSelection()
         model = self._model_choice.GetString(model_idx) if model_idx >= 0 else "gpt-4o"

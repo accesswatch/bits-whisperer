@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -26,7 +26,6 @@ from bits_whisperer.utils.constants import (
     get_prompt_template_by_id,
     get_templates_by_category,
 )
-
 
 # -----------------------------------------------------------------------
 # AI Model Catalog tests
@@ -185,7 +184,7 @@ class TestCopilotTiers:
             assert tier_info["description"], f"Tier {tier_key} has empty description"
 
     def test_all_tiers_have_name(self) -> None:
-        for tier_key, tier_info in COPILOT_TIERS.items():
+        for _tier_key, tier_info in COPILOT_TIERS.items():
             assert "name" in tier_info
 
     def test_get_copilot_models_for_free_tier(self) -> None:
@@ -403,9 +402,9 @@ class TestAIServiceTemplates:
     """Prompt template support in AI Service."""
 
     def test_translate_accepts_template_id(self) -> None:
-        from bits_whisperer.core.ai_service import AIService
-
         import inspect
+
+        from bits_whisperer.core.ai_service import AIService
 
         mock_keys = MagicMock()
         settings = AISettings()
@@ -415,9 +414,9 @@ class TestAIServiceTemplates:
         assert "template_id" in sig.parameters
 
     def test_summarize_accepts_template_id(self) -> None:
-        from bits_whisperer.core.ai_service import AIService
-
         import inspect
+
+        from bits_whisperer.core.ai_service import AIService
 
         mock_keys = MagicMock()
         settings = AISettings()

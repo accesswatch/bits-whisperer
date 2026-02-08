@@ -390,9 +390,8 @@ class GeminiAIProvider(AIProvider):
             text = response.text or ""
             tokens = 0
             if response.usage_metadata:
-                tokens = (
-                    (response.usage_metadata.prompt_token_count or 0)
-                    + (response.usage_metadata.candidates_token_count or 0)
+                tokens = (response.usage_metadata.prompt_token_count or 0) + (
+                    response.usage_metadata.candidates_token_count or 0
                 )
             return AIResponse(
                 text=text,
@@ -481,9 +480,7 @@ class CopilotAIProvider(AIProvider):
                 try:
                     session = await client.create_session(
                         model=self._model,
-                        system_message=(
-                            "You are a helpful assistant that processes transcripts."
-                        ),
+                        system_message=("You are a helpful assistant that processes transcripts."),
                     )
                     result_text = ""
                     response = await session.send(prompt)
@@ -733,9 +730,7 @@ class AIService:
                 if tpl:
                     prompt_text = tpl.template.format(language=lang, text=text)
             if not prompt_text:
-                prompt_text = _TRANSLATE_PROMPT.format(
-                    target_language=lang, text=text
-                )
+                prompt_text = _TRANSLATE_PROMPT.format(target_language=lang, text=text)
 
         # Prepend custom vocabulary hints
         vocab = custom_vocabulary or self._settings.custom_vocabulary
@@ -841,8 +836,7 @@ class AIService:
         if vocab:
             vocab_str = ", ".join(vocab)
             prompt_text = (
-                f"Important vocabulary/terms to use correctly: "
-                f"{vocab_str}\n\n{prompt_text}"
+                f"Important vocabulary/terms to use correctly: " f"{vocab_str}\n\n{prompt_text}"
             )
 
         return provider.generate(

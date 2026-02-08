@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from bits_whisperer.core.settings import (
     AISettings,
@@ -14,7 +11,6 @@ from bits_whisperer.core.settings import (
     LiveTranscriptionSettings,
     PluginSettings,
 )
-
 
 # -----------------------------------------------------------------------
 # AISettings tests
@@ -298,9 +294,7 @@ class TestPluginManager:
         from bits_whisperer.core.plugin_manager import PluginManager
 
         # File without register function
-        (tmp_path / "not_a_plugin.py").write_text(
-            "# Just a helper\nx = 1\n", encoding="utf-8"
-        )
+        (tmp_path / "not_a_plugin.py").write_text("# Just a helper\nx = 1\n", encoding="utf-8")
 
         settings = PluginSettings(plugin_directory=str(tmp_path))
         mock_pm = MagicMock()
@@ -342,9 +336,7 @@ class TestPluginManager:
         from bits_whisperer.core.plugin_manager import PluginManager
 
         plugin_file = tmp_path / "toggle_plugin.py"
-        plugin_file.write_text(
-            "def register(manager):\n    pass\n", encoding="utf-8"
-        )
+        plugin_file.write_text("def register(manager):\n    pass\n", encoding="utf-8")
 
         settings = PluginSettings(plugin_directory=str(tmp_path))
         mock_pm = MagicMock()

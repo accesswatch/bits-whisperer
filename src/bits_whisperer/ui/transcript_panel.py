@@ -131,9 +131,7 @@ class TranscriptPanel(wx.Panel):
         speaker_bar.Add(self._speaker_label, 1, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
 
         self._manage_speakers_btn = wx.Button(self, label="&Manage Speakers...")
-        set_accessible_name(
-            self._manage_speakers_btn, "Manage and rename speakers"
-        )
+        set_accessible_name(self._manage_speakers_btn, "Manage and rename speakers")
         set_accessible_help(
             self._manage_speakers_btn,
             "Rename speakers or assign display names. Right-click a line "
@@ -238,11 +236,7 @@ class TranscriptPanel(wx.Panel):
             for i, seg in enumerate(result.segments):
                 ts = self._fmt_ts(seg.start)
                 speaker_id = seg.speaker
-                display_name = (
-                    speaker_map.get(speaker_id, speaker_id)
-                    if speaker_id
-                    else ""
-                )
+                display_name = speaker_map.get(speaker_id, speaker_id) if speaker_id else ""
                 if display_name:
                     unique_speakers.add(display_name)
                     lines.append(f"[{ts}]  {display_name}: {seg.text}")
@@ -258,9 +252,7 @@ class TranscriptPanel(wx.Panel):
         # Show/hide speaker bar
         if unique_speakers:
             names_str = ", ".join(sorted(unique_speakers))
-            self._speaker_label.SetLabel(
-                f"Speakers ({len(unique_speakers)}): {names_str}"
-            )
+            self._speaker_label.SetLabel(f"Speakers ({len(unique_speakers)}): {names_str}")
             self._speaker_label.Show()
             self._manage_speakers_btn.Show()
         else:
@@ -512,9 +504,7 @@ class TranscriptPanel(wx.Panel):
         self.PopupMenu(menu)
         menu.Destroy()
 
-    def _assign_speaker_to_segment(
-        self, seg_idx: int, speaker_id: str
-    ) -> None:
+    def _assign_speaker_to_segment(self, seg_idx: int, speaker_id: str) -> None:
         """Reassign a segment to a different speaker.
 
         Args:

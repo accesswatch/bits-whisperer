@@ -18,7 +18,6 @@ from bits_whisperer.core.live_transcription import (
 from bits_whisperer.core.settings import AppSettings
 from bits_whisperer.utils.accessibility import (
     announce_status,
-    make_panel_accessible,
     safe_call_after,
     set_accessible_help,
     set_accessible_name,
@@ -151,12 +150,7 @@ class LiveTranscriptionDialog(wx.Dialog):
 
         self._text_ctrl = wx.TextCtrl(
             self,
-            style=(
-                wx.TE_MULTILINE
-                | wx.TE_READONLY
-                | wx.TE_RICH2
-                | wx.TE_WORDWRAP
-            ),
+            style=(wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2 | wx.TE_WORDWRAP),
         )
         set_accessible_name(self._text_ctrl, "Live transcript text")
         set_accessible_help(

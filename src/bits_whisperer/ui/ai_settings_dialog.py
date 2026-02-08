@@ -133,9 +133,21 @@ _AI_PROVIDERS = [
 
 # Available languages for translation
 _LANGUAGES = [
-    "English", "Spanish", "French", "German", "Italian", "Portuguese",
-    "Chinese", "Japanese", "Korean", "Russian", "Arabic", "Hindi",
-    "Dutch", "Swedish", "Polish",
+    "English",
+    "Spanish",
+    "French",
+    "German",
+    "Italian",
+    "Portuguese",
+    "Chinese",
+    "Japanese",
+    "Korean",
+    "Russian",
+    "Arabic",
+    "Hindi",
+    "Dutch",
+    "Swedish",
+    "Polish",
 ]
 
 
@@ -284,9 +296,7 @@ class AISettingsDialog(wx.Dialog):
                 style = wx.TE_PASSWORD if field_def.get("password") else 0
                 txt = wx.TextCtrl(parent, style=style, size=(250, -1))
                 field_id = f"{provider['id']}_{field_def['id']}"
-                set_accessible_name(
-                    txt, f"{field_def['label']} for {provider['name']}"
-                )
+                set_accessible_name(txt, f"{field_def['label']} for {provider['name']}")
                 grid.Add(txt, 1, wx.EXPAND)
                 self._fields[field_id] = txt
 
@@ -340,13 +350,8 @@ class AISettingsDialog(wx.Dialog):
                     set_accessible_name(tier_lbl, "Copilot subscription tier")
                     tier_row.Add(tier_lbl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
 
-                    tier_choices = [
-                        f"{v['name']} — {v['price']}"
-                        for v in COPILOT_TIERS.values()
-                    ]
-                    self._copilot_tier_choice = wx.Choice(
-                        parent, choices=tier_choices
-                    )
+                    tier_choices = [f"{v['name']} — {v['price']}" for v in COPILOT_TIERS.values()]
+                    self._copilot_tier_choice = wx.Choice(parent, choices=tier_choices)
                     set_accessible_name(
                         self._copilot_tier_choice,
                         "Select your Copilot subscription tier",
@@ -363,9 +368,7 @@ class AISettingsDialog(wx.Dialog):
                     self._copilot_tier_desc = tier_desc
                     box_sizer.Add(tier_desc, 0, wx.LEFT | wx.BOTTOM, 10)
 
-                    self._copilot_tier_choice.Bind(
-                        wx.EVT_CHOICE, self._on_copilot_tier_changed
-                    )
+                    self._copilot_tier_choice.Bind(wx.EVT_CHOICE, self._on_copilot_tier_changed)
 
             sizer.Add(box_sizer, 0, wx.ALL | wx.EXPAND, 5)
 
@@ -445,9 +448,7 @@ class AISettingsDialog(wx.Dialog):
         set_accessible_name(temp_label, "AI temperature")
         temp_row.Add(temp_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
 
-        self._temp_spin = wx.SpinCtrlDouble(
-            parent, min=0.0, max=2.0, inc=0.1, initial=0.3
-        )
+        self._temp_spin = wx.SpinCtrlDouble(parent, min=0.0, max=2.0, inc=0.1, initial=0.3)
         set_accessible_name(self._temp_spin, "AI temperature value")
         set_accessible_help(
             self._temp_spin,
@@ -613,9 +614,7 @@ class AISettingsDialog(wx.Dialog):
         set_accessible_name(lang_box, "Multi-language target selection")
         lang_sizer = wx.StaticBoxSizer(lang_box, wx.VERTICAL)
 
-        self._multi_lang_list = wx.CheckListBox(
-            parent, choices=_LANGUAGES
-        )
+        self._multi_lang_list = wx.CheckListBox(parent, choices=_LANGUAGES)
         set_accessible_name(
             self._multi_lang_list,
             "Select target languages for simultaneous translation",
@@ -687,8 +686,7 @@ class AISettingsDialog(wx.Dialog):
                 if model_info.is_premium:
                     tier_note += " (Premium)"
             pricing_label.SetLabel(
-                f"Input: {in_price}  |  Output: {out_price}  |  "
-                f"Context: {ctx}{tier_note}"
+                f"Input: {in_price}  |  Output: {out_price}  |  " f"Context: {ctx}{tier_note}"
             )
         else:
             pricing_label.SetLabel("")
@@ -884,9 +882,7 @@ class AISettingsDialog(wx.Dialog):
         # Custom vocabulary
         vocab_raw = self._vocab_text.GetValue().strip()
         if vocab_raw:
-            ai.custom_vocabulary = [
-                w.strip() for w in vocab_raw.split("\n") if w.strip()
-            ]
+            ai.custom_vocabulary = [w.strip() for w in vocab_raw.split("\n") if w.strip()]
         else:
             ai.custom_vocabulary = []
 

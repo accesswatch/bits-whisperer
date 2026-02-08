@@ -119,17 +119,13 @@ def _register_dll_dirs(base: Path) -> None:
     Args:
         base: The isolated site-packages directory.
     """
-    try:
+    with contextlib.suppress(OSError):
         os.add_dll_directory(str(base))
-    except OSError:
-        pass
     try:
         for child in base.iterdir():
             if child.is_dir() and any(child.glob("*.dll")):
-                try:
+                with contextlib.suppress(OSError):
                     os.add_dll_directory(str(child))
-                except OSError:
-                    pass
     except OSError:
         pass
 
@@ -316,10 +312,13 @@ def get_missing_sdks() -> list[SDKInfo]:
     """
     missing: list[SDKInfo] = []
     for key, info in _SDK_REGISTRY.items():
-        if info.pip_packages and not is_sdk_available(key):
+        if (
+            info.pip_packages
+            and not is_sdk_available(key)
             # Deduplicate (e.g. azure_speech + azure_embedded share a package)
-            if not any(m.test_import == info.test_import for m in missing):
-                missing.append(info)
+            and not any(m.test_import == info.test_import for m in missing)
+        ):
+            missing.append(info)
     return missing
 
 

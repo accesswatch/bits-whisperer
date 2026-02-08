@@ -184,14 +184,23 @@ _PROVIDER_SETTINGS_DEFS: dict[str, list[tuple[str, str, str, Any, Any]]] = {
         ("silence_cutting", "Remove Silence", "check", False, None),
         ("filler_cutting", "Remove Filler Words", "check", False, None),
         ("cough_cutting", "Remove Coughs", "check", False, None),
-        ("speech_service", "Speech Engine", "choice", "whisper",
-         ["whisper", "google", "amazon", "speechmatics"]),
-        ("output_format", "Output Format", "choice", "mp3",
-         ["mp3", "aac", "flac", "wav", "opus", "ogg"]),
+        (
+            "speech_service",
+            "Speech Engine",
+            "choice",
+            "whisper",
+            ["whisper", "google", "amazon", "speechmatics"],
+        ),
+        (
+            "output_format",
+            "Output Format",
+            "choice",
+            "mp3",
+            ["mp3", "aac", "flac", "wav", "opus", "ogg"],
+        ),
     ],
     "deepgram": [
-        ("model", "Model", "choice", "nova-2",
-         ["nova-2", "nova", "enhanced", "base"]),
+        ("model", "Model", "choice", "nova-2", ["nova-2", "nova", "enhanced", "base"]),
         ("smart_format", "Smart Format", "check", True, None),
         ("punctuate", "Auto Punctuation", "check", True, None),
         ("paragraphs", "Auto Paragraphs", "check", True, None),
@@ -206,9 +215,21 @@ _PROVIDER_SETTINGS_DEFS: dict[str, list[tuple[str, str, str, Any, Any]]] = {
         ("entity_detection", "Entity Detection", "check", False, None),
     ],
     "google": [
-        ("model", "Recognition Model", "choice", "default",
-         ["default", "latest_long", "latest_short", "phone_call", "video",
-          "command_and_search", "medical_conversation"]),
+        (
+            "model",
+            "Recognition Model",
+            "choice",
+            "default",
+            [
+                "default",
+                "latest_long",
+                "latest_short",
+                "phone_call",
+                "video",
+                "command_and_search",
+                "medical_conversation",
+            ],
+        ),
         ("max_speaker_count", "Max Speakers (diarization)", "spin", 6, (2, 20)),
     ],
     "azure": [
@@ -221,25 +242,38 @@ _PROVIDER_SETTINGS_DEFS: dict[str, list[tuple[str, str, str, Any, Any]]] = {
         ("custom_vocabulary", "Custom Vocabulary (comma-separated)", "text", "", None),
     ],
     "speechmatics": [
-        ("operating_point", "Operating Point", "choice", "enhanced",
-         ["enhanced", "standard"]),
+        ("operating_point", "Operating Point", "choice", "enhanced", ["enhanced", "standard"]),
     ],
     "elevenlabs": [
-        ("timestamps_granularity", "Timestamp Granularity", "choice", "segment",
-         ["segment", "word"]),
+        (
+            "timestamps_granularity",
+            "Timestamp Granularity",
+            "choice",
+            "segment",
+            ["segment", "word"],
+        ),
     ],
     "openai": [
         ("model", "Model", "choice", "whisper-1", ["whisper-1"]),
         ("temperature", "Temperature", "spin", 0, (0, 100)),
     ],
     "groq": [
-        ("model", "Model", "choice", "whisper-large-v3-turbo",
-         ["whisper-large-v3-turbo", "whisper-large-v3",
-          "distil-whisper-large-v3-en"]),
+        (
+            "model",
+            "Model",
+            "choice",
+            "whisper-large-v3-turbo",
+            ["whisper-large-v3-turbo", "whisper-large-v3", "distil-whisper-large-v3-en"],
+        ),
     ],
     "gemini": [
-        ("model", "Model", "choice", "gemini-2.0-flash",
-         ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]),
+        (
+            "model",
+            "Model",
+            "choice",
+            "gemini-2.0-flash",
+            ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
+        ),
     ],
 }
 
@@ -428,9 +462,7 @@ class AddProviderDialog(wx.Dialog):
         self._prov_settings_inner = wx.FlexGridSizer(cols=2, vgap=6, hgap=8)
         self._prov_settings_inner.AddGrowableCol(1, 1)
         self._prov_settings_panel.SetSizer(self._prov_settings_inner)
-        self._prov_settings_sizer.Add(
-            self._prov_settings_panel, 1, wx.EXPAND | wx.ALL, 4
-        )
+        self._prov_settings_sizer.Add(self._prov_settings_panel, 1, wx.EXPAND | wx.ALL, 4)
         self._settings_controls: dict[str, wx.Control] = {}
 
         sizer.Add(self._prov_settings_sizer, 0, wx.EXPAND | wx.ALL, 4)
@@ -740,9 +772,7 @@ class AddProviderDialog(wx.Dialog):
                 set_accessible_name(ctrl, label_text)
             elif ctype == "spin":
                 lo, hi = extra if extra else (-100, 100)
-                ctrl = wx.SpinCtrl(
-                    panel, min=lo, max=hi, initial=int(saved_val)
-                )
+                ctrl = wx.SpinCtrl(panel, min=lo, max=hi, initial=int(saved_val))
                 set_accessible_name(ctrl, label_text)
             elif ctype == "text":
                 ctrl = wx.TextCtrl(panel, value=str(saved_val), size=(200, -1))

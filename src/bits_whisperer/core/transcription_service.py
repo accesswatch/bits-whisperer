@@ -280,7 +280,7 @@ class TranscriptionService:
             raise RuntimeError(f"Audio file is empty (0 bytes): {job.file_path}")
 
         # Check SDK availability before attempting to load the provider
-        from bits_whisperer.core.sdk_installer import is_sdk_available, get_provider_sdk_info
+        from bits_whisperer.core.sdk_installer import get_provider_sdk_info, is_sdk_available
 
         if not is_sdk_available(job.provider):
             sdk_info = get_provider_sdk_info(job.provider)
@@ -407,8 +407,7 @@ class TranscriptionService:
                     )
                 else:
                     logger.debug(
-                        "Local diarization requested but pyannote.audio "
-                        "is not installed."
+                        "Local diarization requested but pyannote.audio " "is not installed."
                     )
             except Exception as exc:
                 logger.warning("Local diarization failed: %s", exc)

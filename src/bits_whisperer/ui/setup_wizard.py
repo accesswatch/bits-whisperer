@@ -1024,9 +1024,7 @@ class SetupWizard(wx.Dialog):
 
         g_row = wx.BoxSizer(wx.HORIZONTAL)
         g_lbl = wx.StaticText(scroll, label="Gemini API Key:")
-        self._wizard_gemini_key = wx.TextCtrl(
-            scroll, style=wx.TE_PASSWORD, size=(300, -1)
-        )
+        self._wizard_gemini_key = wx.TextCtrl(scroll, style=wx.TE_PASSWORD, size=(300, -1))
         set_accessible_name(self._wizard_gemini_key, "Google Gemini API key")
         label_control(g_lbl, self._wizard_gemini_key)
 
@@ -1079,16 +1077,12 @@ class SetupWizard(wx.Dialog):
         copilot_sizer.Add(cli_label, 0, wx.ALL, 4)
 
         # Enable Copilot checkbox
-        self._wizard_copilot_enable = wx.CheckBox(
-            scroll, label="&Enable GitHub Copilot features"
-        )
+        self._wizard_copilot_enable = wx.CheckBox(scroll, label="&Enable GitHub Copilot features")
         set_accessible_name(
             self._wizard_copilot_enable,
             "Enable GitHub Copilot for transcript AI features",
         )
-        self._wizard_copilot_enable.SetValue(
-            self._settings.copilot.enabled if cli_path else False
-        )
+        self._wizard_copilot_enable.SetValue(self._settings.copilot.enabled if cli_path else False)
         copilot_sizer.Add(self._wizard_copilot_enable, 0, wx.ALL, 4)
 
         scroll_sizer.Add(copilot_sizer, 0, wx.EXPAND | wx.BOTTOM, 8)
@@ -1106,9 +1100,7 @@ class SetupWizard(wx.Dialog):
 
         o_row = wx.BoxSizer(wx.HORIZONTAL)
         o_lbl = wx.StaticText(scroll, label="OpenAI API Key:")
-        self._wizard_openai_key = wx.TextCtrl(
-            scroll, style=wx.TE_PASSWORD, size=(300, -1)
-        )
+        self._wizard_openai_key = wx.TextCtrl(scroll, style=wx.TE_PASSWORD, size=(300, -1))
         set_accessible_name(self._wizard_openai_key, "OpenAI API key for AI features")
         label_control(o_lbl, self._wizard_openai_key)
 

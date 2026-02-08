@@ -117,9 +117,7 @@ class MainFrame(wx.Frame):
         # ---- Persistent settings ----
         self.app_settings: AppSettings = AppSettings.load()
 
-        self.plugin_manager = PluginManager(
-            self.app_settings.plugins, self.provider_manager
-        )
+        self.plugin_manager = PluginManager(self.app_settings.plugins, self.provider_manager)
         self.plugin_manager.load_all()
 
         # ---- Copilot service (lazy start) ----
@@ -404,9 +402,7 @@ class MainFrame(wx.Frame):
         from bits_whisperer.ui.transcript_panel import TranscriptPanel
 
         # Outer vertical splitter — top workspace / bottom chat panel
-        self._outer_splitter = wx.SplitterWindow(
-            self, style=wx.SP_LIVE_UPDATE | wx.SP_3DSASH
-        )
+        self._outer_splitter = wx.SplitterWindow(self, style=wx.SP_LIVE_UPDATE | wx.SP_3DSASH)
         set_accessible_name(self._outer_splitter, "Main layout")
 
         # Inner horizontal splitter — queue (left) / transcript (right)
@@ -996,8 +992,7 @@ class MainFrame(wx.Frame):
 
         dlg = wx.SingleChoiceDialog(
             self,
-            f"Found {len(plugins)} plugin(s).\n"
-            "Select a plugin to toggle enabled/disabled:",
+            f"Found {len(plugins)} plugin(s).\n" "Select a plugin to toggle enabled/disabled:",
             "Plugins",
             items,
         )

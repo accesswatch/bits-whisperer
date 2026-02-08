@@ -16,7 +16,7 @@ import wave
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from urllib.request import urlopen, Request
+from urllib.request import Request, urlopen
 
 from bits_whisperer.core.job import TranscriptionResult, TranscriptSegment
 from bits_whisperer.providers.base import (
@@ -25,9 +25,9 @@ from bits_whisperer.providers.base import (
     TranscriptionProvider,
 )
 from bits_whisperer.utils.constants import (
+    VOSK_MODEL_URL_BASE,
     VOSK_MODELS,
     VOSK_MODELS_DIR,
-    VOSK_MODEL_URL_BASE,
     get_vosk_model_by_id,
 )
 
@@ -205,7 +205,7 @@ class VoskProvider(TranscriptionProvider):
 
         # Open the WAV file (must be 16kHz mono PCM from transcoder)
         try:
-            wf = wave.open(audio_path, "rb")
+            wf = wave.open(audio_path, "rb")  # noqa: SIM115
         except Exception as exc:
             raise RuntimeError(
                 f"Failed to open audio file for Vosk: {Path(audio_path).name}\n\n"

@@ -115,9 +115,7 @@ class CopilotSetupDialog(wx.Dialog):
 
         cli_btn_row = wx.BoxSizer(wx.HORIZONTAL)
 
-        self._install_winget_btn = wx.Button(
-            scroll, label="Install via &WinGet"
-        )
+        self._install_winget_btn = wx.Button(scroll, label="Install via &WinGet")
         set_accessible_name(
             self._install_winget_btn, "Install Copilot CLI via Windows Package Manager"
         )
@@ -128,12 +126,8 @@ class CopilotSetupDialog(wx.Dialog):
         self._install_winget_btn.Bind(wx.EVT_BUTTON, self._on_install_winget)
         cli_btn_row.Add(self._install_winget_btn, 0, wx.RIGHT, 8)
 
-        self._install_npm_btn = wx.Button(
-            scroll, label="Install via &npm"
-        )
-        set_accessible_name(
-            self._install_npm_btn, "Install Copilot CLI via npm"
-        )
+        self._install_npm_btn = wx.Button(scroll, label="Install via &npm")
+        set_accessible_name(self._install_npm_btn, "Install Copilot CLI via npm")
         set_accessible_help(
             self._install_npm_btn,
             "Runs: npm install -g @github/copilot",
@@ -163,9 +157,7 @@ class CopilotSetupDialog(wx.Dialog):
         set_accessible_name(self._sdk_status, "SDK installation status")
         sdk_sizer.Add(self._sdk_status, 0, wx.EXPAND | wx.ALL, 4)
 
-        self._install_sdk_btn = wx.Button(
-            scroll, label="Install &SDK"
-        )
+        self._install_sdk_btn = wx.Button(scroll, label="Install &SDK")
         set_accessible_name(self._install_sdk_btn, "Install GitHub Copilot Python SDK")
         set_accessible_help(
             self._install_sdk_btn,
@@ -273,9 +265,7 @@ class CopilotSetupDialog(wx.Dialog):
         # Tier selector
         tier_row = wx.BoxSizer(wx.HORIZONTAL)
         tier_label = wx.StaticText(scroll, label="&Tier:")
-        tier_choices = [
-            f"{v['name']} — {v['price']}" for v in COPILOT_TIERS.values()
-        ]
+        tier_choices = [f"{v['name']} — {v['price']}" for v in COPILOT_TIERS.values()]
         self._tier_choice = wx.Choice(scroll, choices=tier_choices)
         set_accessible_name(self._tier_choice, "Select your Copilot subscription tier")
         set_accessible_help(
@@ -358,9 +348,7 @@ class CopilotSetupDialog(wx.Dialog):
 
             def _update() -> None:
                 if cli_path and cli_version:
-                    self._cli_status.SetValue(
-                        f"Installed: {cli_path}\nVersion: {cli_version}"
-                    )
+                    self._cli_status.SetValue(f"Installed: {cli_path}\nVersion: {cli_version}")
                     self._install_winget_btn.Disable()
                     self._install_npm_btn.Disable()
                 elif cli_path:
@@ -376,9 +364,7 @@ class CopilotSetupDialog(wx.Dialog):
                     self._sdk_status.SetValue("Installed and ready.")
                     self._install_sdk_btn.Disable()
                 else:
-                    self._sdk_status.SetValue(
-                        "Not installed. Click Install SDK to set it up."
-                    )
+                    self._sdk_status.SetValue("Not installed. Click Install SDK to set it up.")
 
             safe_call_after(_update)
 
@@ -414,13 +400,9 @@ class CopilotSetupDialog(wx.Dialog):
                 def _done() -> None:
                     if success:
                         self._cli_status.SetValue("Installation complete. Click Recheck.")
-                        announce_status(
-                            self._main_frame, "Copilot CLI installed successfully"
-                        )
+                        announce_status(self._main_frame, "Copilot CLI installed successfully")
                     else:
-                        self._cli_status.SetValue(
-                            f"Installation failed: {result.stderr[:200]}"
-                        )
+                        self._cli_status.SetValue(f"Installation failed: {result.stderr[:200]}")
                         self._install_winget_btn.Enable()
 
                 safe_call_after(_done)
@@ -432,9 +414,7 @@ class CopilotSetupDialog(wx.Dialog):
                 )
                 safe_call_after(self._install_winget_btn.Enable)
             except Exception as exc:
-                safe_call_after(
-                    lambda: self._cli_status.SetValue(f"Error: {exc}")
-                )
+                safe_call_after(lambda e=exc: self._cli_status.SetValue(f"Error: {e}"))
                 safe_call_after(self._install_winget_btn.Enable)
 
         threading.Thread(target=_install, daemon=True).start()
@@ -457,13 +437,9 @@ class CopilotSetupDialog(wx.Dialog):
                 def _done() -> None:
                     if success:
                         self._cli_status.SetValue("Installation complete. Click Recheck.")
-                        announce_status(
-                            self._main_frame, "Copilot CLI installed via npm"
-                        )
+                        announce_status(self._main_frame, "Copilot CLI installed via npm")
                     else:
-                        self._cli_status.SetValue(
-                            f"Installation failed: {result.stderr[:200]}"
-                        )
+                        self._cli_status.SetValue(f"Installation failed: {result.stderr[:200]}")
                         self._install_npm_btn.Enable()
 
                 safe_call_after(_done)
@@ -475,9 +451,7 @@ class CopilotSetupDialog(wx.Dialog):
                 )
                 safe_call_after(self._install_npm_btn.Enable)
             except Exception as exc:
-                safe_call_after(
-                    lambda: self._cli_status.SetValue(f"Error: {exc}")
-                )
+                safe_call_after(lambda e=exc: self._cli_status.SetValue(f"Error: {e}"))
                 safe_call_after(self._install_npm_btn.Enable)
 
         threading.Thread(target=_install, daemon=True).start()
@@ -501,20 +475,14 @@ class CopilotSetupDialog(wx.Dialog):
                     if success:
                         self._sdk_status.SetValue("SDK installed successfully.")
                         self._install_sdk_btn.Disable()
-                        announce_status(
-                            self._main_frame, "Copilot SDK installed"
-                        )
+                        announce_status(self._main_frame, "Copilot SDK installed")
                     else:
-                        self._sdk_status.SetValue(
-                            f"Failed: {result.stderr[:200]}"
-                        )
+                        self._sdk_status.SetValue(f"Failed: {result.stderr[:200]}")
                         self._install_sdk_btn.Enable()
 
                 safe_call_after(_done)
             except Exception as exc:
-                safe_call_after(
-                    lambda: self._sdk_status.SetValue(f"Error: {exc}")
-                )
+                safe_call_after(lambda e=exc: self._sdk_status.SetValue(f"Error: {e}"))
                 safe_call_after(self._install_sdk_btn.Enable)
 
         threading.Thread(target=_install, daemon=True).start()
@@ -548,9 +516,7 @@ class CopilotSetupDialog(wx.Dialog):
                         self._test_status.SetValue(
                             "Connection successful! Copilot is ready to use."
                         )
-                        announce_status(
-                            self._main_frame, "Copilot connection verified"
-                        )
+                        announce_status(self._main_frame, "Copilot connection verified")
                     else:
                         self._test_status.SetValue(
                             "Connection failed. Check that the CLI is installed "
@@ -568,9 +534,7 @@ class CopilotSetupDialog(wx.Dialog):
                 )
                 safe_call_after(self._test_btn.Enable)
             except Exception as exc:
-                safe_call_after(
-                    lambda: self._test_status.SetValue(f"Error: {exc}")
-                )
+                safe_call_after(lambda e=exc: self._test_status.SetValue(f"Error: {e}"))
                 safe_call_after(self._test_btn.Enable)
 
         threading.Thread(target=_test, daemon=True).start()

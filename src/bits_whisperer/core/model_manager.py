@@ -228,10 +228,7 @@ class ModelManager:
             Path to model subdirectory.
         """
         info = self._get_model_info(model_id)
-        if info.repo_id:
-            dirname = f"models--{info.repo_id.replace('/', '--')}"
-        else:
-            dirname = model_id
+        dirname = f"models--{info.repo_id.replace('/', '--')}" if info.repo_id else model_id
         return self._models_dir / dirname
 
     def _get_snapshot_dir(self, model_dir: Path) -> Path | None:

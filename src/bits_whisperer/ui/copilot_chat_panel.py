@@ -83,13 +83,9 @@ class CopilotChatPanel(wx.Panel):
 
         # Status indicator
         self._status_label = wx.StaticText(self, label="Not connected")
-        self._status_label.SetForegroundColour(
-            wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT)
-        )
+        self._status_label.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT))
         set_accessible_name(self._status_label, "Connection status")
-        header_sizer.Add(
-            self._status_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8
-        )
+        header_sizer.Add(self._status_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
 
         # Clear button
         clear_btn = wx.Button(self, label="Clea&r")
@@ -115,8 +111,7 @@ class CopilotChatPanel(wx.Panel):
         set_accessible_name(self._chat_display, "Conversation history")
         set_accessible_help(
             self._chat_display,
-            "Shows the conversation with the AI assistant. "
-            "New messages appear at the bottom.",
+            "Shows the conversation with the AI assistant. " "New messages appear at the bottom.",
         )
         main_sizer.Add(self._chat_display, 1, wx.EXPAND | wx.ALL, 4)
 
@@ -320,9 +315,7 @@ class CopilotChatPanel(wx.Panel):
             def _done() -> None:
                 self._finalize_response()
                 self._status_label.SetLabel("Connected")
-                announce_status(
-                    self._main_frame, "Assistant response complete"
-                )
+                announce_status(self._main_frame, "Assistant response complete")
 
             safe_call_after(_done)
 
@@ -359,9 +352,7 @@ class CopilotChatPanel(wx.Panel):
         def _do_send() -> None:
             try:
                 settings = AppSettings.load()
-                ai_service = AIService(
-                    self._main_frame.key_store, settings.ai
-                )
+                ai_service = AIService(self._main_frame.key_store, settings.ai)
 
                 if not ai_service.is_configured():
                     safe_call_after(
@@ -379,8 +370,7 @@ class CopilotChatPanel(wx.Panel):
                 if self._copilot_service and self._copilot_service._transcript_context:
                     transcript = self._copilot_service._transcript_context[:50000]
                     prompt = (
-                        f"Given this transcript:\n\n{transcript}\n\n"
-                        f"User question: {message}"
+                        f"Given this transcript:\n\n{transcript}\n\n" f"User question: {message}"
                     )
 
                 # Use the AI service for generation
@@ -393,16 +383,12 @@ class CopilotChatPanel(wx.Panel):
                         self._append_streaming_text(response.text)
                         self._append_text("\n\n")
                     self._finalize_response()
-                    self._status_label.SetLabel(
-                        f"Ready ({response.provider}/{response.model})"
-                    )
+                    self._status_label.SetLabel(f"Ready ({response.provider}/{response.model})")
 
                 safe_call_after(_show)
 
             except Exception as exc:
-                safe_call_after(
-                    self._append_text, f"\n[Error: {exc}]\n\n"
-                )
+                safe_call_after(self._append_text, f"\n[Error: {exc}]\n\n")
                 safe_call_after(self._finalize_response)
 
         threading.Thread(target=_do_send, daemon=True).start()
