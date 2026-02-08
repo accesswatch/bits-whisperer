@@ -506,6 +506,9 @@ src/bits_whisperer/
     transcoder.py             # ffmpeg WAV normalisation
     updater.py                # GitHub Releases self-update
     job.py                    # Job / TranscriptionResult data models
+    ai_service.py             # AI translation & summarization (OpenAI/Anthropic/Azure)
+    live_transcription.py     # Real-time microphone transcription
+    plugin_manager.py         # Plugin discovery, loading & lifecycle
   providers/                    # 17 provider adapters (strategy pattern)
     base.py                   # TranscriptionProvider ABC + ProviderCapabilities
     local_whisper.py          # faster-whisper (local, free)
@@ -542,6 +545,8 @@ src/bits_whisperer/
     add_provider_dialog.py    # Cloud provider onboarding wizard
     setup_wizard.py           # First-run setup wizard (7 pages)
     tray_icon.py              # System tray (TaskBarIcon)
+    live_transcription_dialog.py  # Live microphone transcription dialog
+    ai_settings_dialog.py     # AI provider configuration dialog
   utils/
     accessibility.py          # a11y helpers (announce, set_name, safe_call_after)
     constants.py              # App constants, model registry, path definitions

@@ -15,7 +15,7 @@
 ; ================================================================
 
 #define MyAppName "BITS Whisperer"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.1.0"
 #define MyAppPublisher "Blind Information Technology Solutions (BITS)"
 #define MyAppURL "https://github.com/accesswatch/bits-whisperer"
 #define MyAppExeName "BITS Whisperer.exe"

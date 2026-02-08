@@ -25,6 +25,11 @@ _KEY_NAMES: dict[str, str] = {
     "speechmatics": "Speechmatics API Key",
     "elevenlabs": "ElevenLabs API Key",
     "auphonic": "Auphonic API Token",
+    # AI service providers (translation / summarization)
+    "anthropic": "Anthropic (Claude) API Key",
+    "azure_openai": "Azure OpenAI API Key",
+    "azure_openai_endpoint": "Azure OpenAI Endpoint URL",
+    "azure_openai_deployment": "Azure OpenAI Deployment Name",
 }
 
 

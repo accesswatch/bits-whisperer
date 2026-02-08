@@ -102,7 +102,24 @@ class TranscriptPanel(wx.Panel):
 
         self._export_btn = wx.Button(self, label="E&xport…")
         set_accessible_name(self._export_btn, "Export transcript to file")
-        toolbar.Add(self._export_btn, 0, wx.ALIGN_CENTER_VERTICAL)
+        toolbar.Add(self._export_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+
+        # AI action buttons
+        self._translate_btn = wx.Button(self, label="&Translate")
+        set_accessible_name(self._translate_btn, "Translate transcript using AI")
+        set_accessible_help(
+            self._translate_btn,
+            "Translate the current transcript to another language using AI",
+        )
+        toolbar.Add(self._translate_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+
+        self._summarize_btn = wx.Button(self, label="S&ummarize")
+        set_accessible_name(self._summarize_btn, "Summarize transcript using AI")
+        set_accessible_help(
+            self._summarize_btn,
+            "Create an AI-powered summary of the current transcript",
+        )
+        toolbar.Add(self._summarize_btn, 0, wx.ALIGN_CENTER_VERTICAL)
 
         sizer.Add(toolbar, 0, wx.ALL | wx.EXPAND, 5)
 
@@ -161,6 +178,8 @@ class TranscriptPanel(wx.Panel):
         # Events
         self._copy_btn.Bind(wx.EVT_BUTTON, self._on_copy)
         self._export_btn.Bind(wx.EVT_BUTTON, self._on_export)
+        self._translate_btn.Bind(wx.EVT_BUTTON, self._on_translate)
+        self._summarize_btn.Bind(wx.EVT_BUTTON, self._on_summarize)
         self._search_ctrl.Bind(wx.EVT_SEARCHCTRL_SEARCH_BTN, self._on_search)
         self._search_ctrl.Bind(wx.EVT_TEXT_ENTER, self._on_search)
         self._search_ctrl.Bind(wx.EVT_TEXT, self._on_search_text_changed)
@@ -367,6 +386,14 @@ class TranscriptPanel(wx.Panel):
             from bits_whisperer.utils.accessibility import announce_status
 
             announce_status(self._main_frame, f"'{query}' not found in transcript")
+
+    def _on_translate(self, _event: wx.CommandEvent | None) -> None:
+        """Delegate translate to main frame handler."""
+        self._main_frame._on_translate(None)
+
+    def _on_summarize(self, _event: wx.CommandEvent | None) -> None:
+        """Delegate summarize to main frame handler."""
+        self._main_frame._on_summarize(None)
 
     # ------------------------------------------------------------------ #
     # Helpers                                                              #

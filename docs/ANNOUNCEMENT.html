@@ -146,6 +146,12 @@
 </ul>
 </li>
 <li><a href="#who-is-this-for">Who Is This For?</a></li>
+<li><a href="#new-in-v11-ai-powered-features">New in v1.1: AI-Powered Features</a><ul>
+<li><a href="#live-microphone-transcription">Live Microphone Transcription</a></li>
+<li><a href="#ai-translation-summarization">AI Translation &amp; Summarization</a></li>
+<li><a href="#plugin-system">Plugin System</a></li>
+</ul>
+</li>
 <li><a href="#whats-next">What's Next</a></li>
 </ul>
 </li>
@@ -156,7 +162,7 @@
 <p><strong>The free, privacy-first desktop app that turns audio into text — fast, accurate, and fully accessible.</strong></p>
 <hr>
 <h2 id="what-is-bits-whisperer">What Is BITS Whisperer?</h2>
-<p>BITS Whisperer is a powerful yet easy-to-use desktop application for Windows and macOS that converts speech to text. Whether you're a journalist, podcaster, student, researcher, content creator, or anyone who works with audio — BITS Whisperer gives you professional-quality transcription right from your desktop.</p>
+<p>*BITS Whisperer is a powerful yet easy-to-use desktop application for Windows and macOS that converts speech to text. Whether you're a journalist, podcaster, student, researcher, content creator, or anyone who works with audio — BITS Whisperer gives you professional-quality transcription, translation, and summarization right from your desktop.</p>
 <p>No subscriptions. No cloud lock-in. No data harvesting. Just drag, drop, and transcribe.</p>
 <hr>
 <h2 id="key-features">Key Features</h2>
@@ -341,11 +347,40 @@ iscc<span class="w"> </span>installer.iss
 <li><strong>Power users</strong> — Maximum control over every aspect of transcription</li>
 </ul>
 <hr>
+<h2 id="new-in-v11-ai-powered-features">New in v1.1: AI-Powered Features</h2>
+<h3 id="live-microphone-transcription">Live Microphone Transcription</h3>
+<p>Transcribe speech from your microphone in real time:</p>
+<ul>
+<li><strong>Press Ctrl+L</strong> or go to <strong>Tools, then Live Transcription</strong> to open the live transcription dialog</li>
+<li>Choose your microphone and Whisper model, then press Start</li>
+<li>Speech is transcribed in real-time using faster-whisper with energy-based voice activity detection</li>
+<li>Pause, resume, copy, or clear the transcript at any time</li>
+<li>Settings: model size, language, sample rate, silence threshold, and VAD filter</li>
+</ul>
+<h3 id="ai-translation-summarization">AI Translation &amp; Summarization</h3>
+<p>Leverage AI to work with your transcripts:</p>
+<ul>
+<li><strong>Translate</strong> — Press Ctrl+T or go to AI, then Translate to convert your transcript into 15+ languages using OpenAI GPT-4o, Anthropic Claude, or Azure OpenAI</li>
+<li><strong>Summarize</strong> — Press Ctrl+Shift+S or go to AI, then Summarize to generate concise, detailed, or bullet-point summaries</li>
+<li>Configure AI providers in <strong>Tools, then AI Provider Settings</strong> — add API keys for OpenAI, Anthropic, or Azure OpenAI, choose models, and adjust temperature and token limits</li>
+<li>Translate and Summarize buttons are also available directly in the transcript panel toolbar</li>
+</ul>
+<h3 id="plugin-system">Plugin System</h3>
+<p>Extend BITS Whisperer with custom transcription providers:</p>
+<ul>
+<li>Drop <code>.py</code> plugin files into the plugins directory (configurable in Settings)</li>
+<li>Plugins are discovered automatically and loaded on startup</li>
+<li>Each plugin implements a <code>register(manager)</code> function to add new providers</li>
+<li>Enable or disable individual plugins from <strong>Tools, then Plugins</strong></li>
+<li>Plugin metadata (name, version, author, description) is displayed in the management dialog</li>
+</ul>
+<hr>
 <h2 id="whats-next">What's Next</h2>
 <ul>
-<li>Real-time microphone transcription</li>
-<li>Translation and summarization</li>
-<li>Plugin system for custom providers</li>
+<li>Real-time streaming from cloud providers</li>
+<li>Custom vocabulary and prompt templates</li>
+<li>Multi-language simultaneous translation</li>
+<li>Plugin marketplace</li>
 </ul>
 <hr>
 <p><strong>BITS Whisperer</strong> — because your words matter.</p>

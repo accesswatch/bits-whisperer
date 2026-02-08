@@ -6,7 +6,7 @@
 
 ## What Is BITS Whisperer?
 
-BITS Whisperer is a powerful yet easy-to-use desktop application for Windows and macOS that converts speech to text. Whether you're a journalist, podcaster, student, researcher, content creator, or anyone who works with audio — BITS Whisperer gives you professional-quality transcription right from your desktop.
+*BITS Whisperer is a powerful yet easy-to-use desktop application for Windows and macOS that converts speech to text. Whether you're a journalist, podcaster, student, researcher, content creator, or anyone who works with audio — BITS Whisperer gives you professional-quality transcription, translation, and summarization right from your desktop.
 
 No subscriptions. No cloud lock-in. No data harvesting. Just drag, drop, and transcribe.
 
@@ -186,11 +186,45 @@ Output: `dist/BITS_Whisperer_Setup.exe`
 
 ---
 
+## New in v1.1: AI-Powered Features
+
+### Live Microphone Transcription
+
+Transcribe speech from your microphone in real time:
+
+- **Press Ctrl+L** or go to **Tools, then Live Transcription** to open the live transcription dialog
+- Choose your microphone and Whisper model, then press Start
+- Speech is transcribed in real-time using faster-whisper with energy-based voice activity detection
+- Pause, resume, copy, or clear the transcript at any time
+- Settings: model size, language, sample rate, silence threshold, and VAD filter
+
+### AI Translation & Summarization
+
+Leverage AI to work with your transcripts:
+
+- **Translate** — Press Ctrl+T or go to AI, then Translate to convert your transcript into 15+ languages using OpenAI GPT-4o, Anthropic Claude, or Azure OpenAI
+- **Summarize** — Press Ctrl+Shift+S or go to AI, then Summarize to generate concise, detailed, or bullet-point summaries
+- Configure AI providers in **Tools, then AI Provider Settings** — add API keys for OpenAI, Anthropic, or Azure OpenAI, choose models, and adjust temperature and token limits
+- Translate and Summarize buttons are also available directly in the transcript panel toolbar
+
+### Plugin System
+
+Extend BITS Whisperer with custom transcription providers:
+
+- Drop `.py` plugin files into the plugins directory (configurable in Settings)
+- Plugins are discovered automatically and loaded on startup
+- Each plugin implements a `register(manager)` function to add new providers
+- Enable or disable individual plugins from **Tools, then Plugins**
+- Plugin metadata (name, version, author, description) is displayed in the management dialog
+
+---
+
 ## What's Next
 
-- Real-time microphone transcription
-- Translation and summarization
-- Plugin system for custom providers
+- Real-time streaming from cloud providers
+- Custom vocabulary and prompt templates
+- Multi-language simultaneous translation
+- Plugin marketplace
 
 ---
 

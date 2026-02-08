@@ -6,6 +6,9 @@ Purpose: Actionable guidance for AI coding agents working on the BITS Whisperer 
 
 **BITS Whisperer** is a consumer-grade WXPython desktop application for audio transcription.
 - **Hybrid**: 17 providers — cloud services (OpenAI, Google, Azure, Deepgram, AssemblyAI, AWS, Groq, Gemini, Rev.ai, Speechmatics, ElevenLabs, Auphonic) + on-device Whisper (faster-whisper) + on-device Vosk (Kaldi) + on-device Parakeet (NVIDIA NeMo) + Windows built-in (SAPI5/WinRT, Azure Embedded)
+- **AI services**: Translation (15+ languages) and summarization (concise/detailed/bullet points) via OpenAI, Anthropic Claude, or Azure OpenAI
+- **Live transcription**: Real-time microphone transcription using faster-whisper with energy-based VAD
+- **Plugin system**: Extensible architecture for custom transcription providers via `.py` plugins
 - **Auphonic integration**: Cloud audio post-production (leveling, loudness normalization, noise/hum reduction, filtering, silence/filler/cough cutting) with configurable speech recognition (Whisper/Google/Amazon/Speechmatics)
 - **Speaker diarization**: 10 cloud providers with built-in diarization + cloud-free local diarization via pyannote.audio + post-transcription speaker editing UI
 - **Accessibility-first**: WCAG 2.1/2.2 adapted for desktop; menu bar primary interface; full keyboard + screen reader support
@@ -56,6 +59,9 @@ src/bits_whisperer/
     transcoder.py             # ffmpeg audio normalisation
     updater.py                # GitHub Releases self-update
     job.py                    # Job data model
+    ai_service.py             # AI translation & summarization (OpenAI/Anthropic/Azure)
+    live_transcription.py     # Real-time microphone transcription
+    plugin_manager.py         # Plugin discovery, loading & lifecycle
   providers/               # 17 provider adapters (strategy pattern)
     base.py              # TranscriptionProvider ABC
     local_whisper.py     # faster-whisper (local, free)
@@ -92,6 +98,8 @@ src/bits_whisperer/
     add_provider_dialog.py   # Cloud provider onboarding
     setup_wizard.py      # First-run setup wizard (7 pages)
     tray_icon.py         # System tray (TaskBarIcon)
+    live_transcription_dialog.py  # Live microphone transcription dialog
+    ai_settings_dialog.py  # AI provider configuration dialog
   utils/
     accessibility.py     # a11y helpers
     constants.py         # App-wide constants & model registry

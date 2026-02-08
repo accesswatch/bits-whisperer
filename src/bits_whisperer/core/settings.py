@@ -178,6 +178,45 @@ class ProviderDefaultSettings:
 
 
 @dataclass
+class AISettings:
+    """AI service configuration for translation and summarization."""
+
+    selected_provider: str = "openai"  # "openai", "anthropic", "azure_openai"
+    openai_model: str = "gpt-4o-mini"
+    anthropic_model: str = "claude-sonnet-4-20250514"
+    azure_openai_deployment: str = ""
+    azure_openai_endpoint: str = ""
+    translation_target_language: str = "en"
+    summarization_style: str = "concise"  # "concise", "detailed", "bullet_points"
+    max_tokens: int = 4096
+    temperature: float = 0.3
+
+
+@dataclass
+class LiveTranscriptionSettings:
+    """Live microphone transcription configuration."""
+
+    enabled: bool = False
+    model: str = "base"
+    language: str = "auto"
+    silence_threshold_seconds: float = 0.8
+    sample_rate: int = 16000
+    chunk_duration_seconds: float = 3.0
+    vad_filter: bool = True
+    input_device: str = ""  # empty = system default
+
+
+@dataclass
+class PluginSettings:
+    """Plugin system configuration."""
+
+    enabled: bool = True
+    plugin_directory: str = ""  # empty = DATA_DIR / "plugins"
+    disabled_plugins: list[str] = field(default_factory=list)
+    auto_update: bool = False
+
+
+@dataclass
 class AdvancedSettings:
     """Limits, concurrency, chunking."""
 
@@ -212,6 +251,11 @@ class AppSettings:
     provider_settings: ProviderDefaultSettings = field(
         default_factory=ProviderDefaultSettings,
     )
+    ai: AISettings = field(default_factory=AISettings)
+    live_transcription: LiveTranscriptionSettings = field(
+        default_factory=LiveTranscriptionSettings,
+    )
+    plugins: PluginSettings = field(default_factory=PluginSettings)
 
     # ------------------------------------------------------------------ #
     # Persistence                                                          #
@@ -283,4 +327,10 @@ class AppSettings:
             advanced=_safe(AdvancedSettings, data.get("advanced")),
             diarization=diar,
             provider_settings=provider_settings,
+            ai=_safe(AISettings, data.get("ai")),
+            live_transcription=_safe(
+                LiveTranscriptionSettings,
+                data.get("live_transcription"),
+            ),
+            plugins=_safe(PluginSettings, data.get("plugins")),
         )

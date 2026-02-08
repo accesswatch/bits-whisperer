@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] — 2026-02-08
+
+### Added
+- **Live microphone transcription** — Real-time speech-to-text using faster-whisper with microphone input via sounddevice. Energy-based VAD, configurable model/language/device, pause/resume, full accessible dialog (Ctrl+L)
+- **AI translation & summarization** — Translate transcripts to 15+ languages and generate summaries (concise, detailed, bullet points) using OpenAI GPT-4o, Anthropic Claude, or Azure OpenAI. New AI menu with Ctrl+T (Translate) and Ctrl+Shift+S (Summarize)
+- **AI Provider Settings dialog** — Tabbed dialog for configuring AI API keys (OpenAI, Anthropic, Azure OpenAI), model selection, temperature, max tokens, and preferences
+- **Plugin system** — Extensible plugin architecture for custom transcription providers. Plugins are discovered from a configurable directory, loaded dynamically via `register(manager)` entry point, with enable/disable management
+- **3 new settings groups** — `AISettings` (provider, models, temperature, translation language, summarization style), `LiveTranscriptionSettings` (model, language, device, VAD, chunk duration), `PluginSettings` (enabled, directory, disabled list)
+- **4 new key store entries** — Anthropic API Key, Azure OpenAI API Key/Endpoint/Deployment stored securely in OS credential vault
+- **Translate & Summarize buttons** — Added to transcript panel toolbar for quick access
+- **numpy dependency** — Added to core dependencies for audio buffer processing
+- **Optional dependency groups** — `live` (sounddevice + faster-whisper), `ai-openai`, `ai-anthropic`, `ai-all` for selective installation
+
+---
+
 ## [1.0.0] — 2026-02-08
 
 ### Added
@@ -59,4 +74,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.1.0]: https://github.com/accesswatch/bits-whisperer/releases/tag/v1.1.0
 [1.0.0]: https://github.com/accesswatch/bits-whisperer/releases/tag/v1.0.0

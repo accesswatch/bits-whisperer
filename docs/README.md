@@ -36,6 +36,9 @@ BITS Whisperer is a desktop application that converts speech to text using **17 
 - **Disk space checks** — Pre-flight validation before every model download with 10% headroom; friendly warnings when space is low
 - **Cross-platform** — Runs on Windows 10+ and macOS 12+; auto-detect GPU (CUDA / Apple Silicon Metal)
 - **User guide** — Comprehensive built-in user guide covering every feature, provider, setting, and keyboard shortcut
+- **Live microphone transcription** — Real-time speech-to-text from your microphone using faster-whisper with energy-based VAD, configurable model/language/device via Tools, then Live Transcription (Ctrl+L)
+- **AI translation & summarization** — Translate transcripts to 15+ languages or generate summaries (concise/detailed/bullet points) using OpenAI GPT-4o, Anthropic Claude, or Azure OpenAI via AI menu (Ctrl+T / Ctrl+Shift+S)
+- **Plugin system** — Extend with custom transcription providers via `.py` plugins in a configurable directory; discover, load, enable/disable from Tools, then Plugins
 
 ## Quick Start
 
@@ -83,6 +86,9 @@ src/bits_whisperer/
     transcoder.py             # ffmpeg audio normalisation
     updater.py                # GitHub Releases self-update
     job.py                    # Job data model
+    ai_service.py             # AI translation & summarization (OpenAI/Anthropic/Azure)
+    live_transcription.py     # Real-time microphone transcription
+    plugin_manager.py         # Plugin discovery, loading & lifecycle
   providers/               # 17 provider adapters (strategy pattern)
     base.py              # TranscriptionProvider ABC
     local_whisper.py     # faster-whisper (local, free)
@@ -119,6 +125,8 @@ src/bits_whisperer/
     add_provider_dialog.py   # Cloud provider onboarding
     setup_wizard.py      # First-run setup wizard (7 pages)
     tray_icon.py         # System tray (TaskBarIcon)
+    live_transcription_dialog.py  # Live microphone transcription dialog
+    ai_settings_dialog.py  # AI provider configuration dialog
   utils/
     accessibility.py     # a11y helpers
     constants.py         # App-wide constants & model registry
@@ -144,6 +152,9 @@ MP3, WAV, OGG, Opus, FLAC, M4A, AAC, WebM, WMA, AIFF, AMR, MP4
 | Settings               | Ctrl+,            |
 | Manage Models          | Ctrl+M            |
 | Toggle Advanced Mode   | Ctrl+Shift+A      |
+| Live Transcription     | Ctrl+L             |
+| Translate Transcript   | Ctrl+T             |
+| Summarize Transcript   | Ctrl+Shift+S       |
 | Add Cloud Provider     | (Tools menu)      |
 | Check for Updates      | (Help menu)       |
 | Setup Wizard           | (Help menu)       |

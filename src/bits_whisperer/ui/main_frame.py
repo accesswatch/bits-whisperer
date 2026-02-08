@@ -49,6 +49,11 @@ ID_RECENT_CLEAR = wx.NewIdRef()
 ID_SETUP_WIZARD = wx.NewIdRef()
 ID_LEARN_MORE = wx.NewIdRef()
 ID_ADD_PROVIDER = wx.NewIdRef()
+ID_LIVE_TRANSCRIPTION = wx.NewIdRef()
+ID_AI_SETTINGS = wx.NewIdRef()
+ID_TRANSLATE = wx.NewIdRef()
+ID_SUMMARIZE = wx.NewIdRef()
+ID_PLUGINS = wx.NewIdRef()
 
 # Maximum recent-file entries
 _MAX_RECENT = 10
@@ -102,8 +107,16 @@ class MainFrame(wx.Frame):
         self.transcription_service.set_job_update_callback(self._on_job_update)
         self.transcription_service.set_batch_complete_callback(self._on_batch_complete)
 
+        # ---- Plugin manager ----
+        from bits_whisperer.core.plugin_manager import PluginManager
+
         # ---- Persistent settings ----
         self.app_settings: AppSettings = AppSettings.load()
+
+        self.plugin_manager = PluginManager(
+            self.app_settings.plugins, self.provider_manager
+        )
+        self.plugin_manager.load_all()
 
         # ---- State flags (synced from settings) ----
         self._advanced_mode = self.app_settings.general.experience_mode == "advanced"
@@ -191,6 +204,35 @@ class MainFrame(wx.Frame):
             "Add &Provider…",
             "Add and validate a cloud transcription provider",
         )
+        tools_menu.Append(
+            ID_AI_SETTINGS,
+            "&AI Provider Settings…",
+            "Configure AI providers for translation and summarization",
+        )
+        tools_menu.Append(
+            ID_PLUGINS,
+            "P&lugins…",
+            "View and manage installed plugins",
+        )
+        tools_menu.AppendSeparator()
+        tools_menu.Append(
+            ID_LIVE_TRANSCRIPTION,
+            "&Live Transcription…\tCtrl+L",
+            "Start real-time microphone transcription",
+        )
+
+        # -- AI --
+        ai_menu = wx.Menu()
+        ai_menu.Append(
+            ID_TRANSLATE,
+            "&Translate Transcript…\tCtrl+T",
+            "Translate the current transcript using AI",
+        )
+        ai_menu.Append(
+            ID_SUMMARIZE,
+            "&Summarize Transcript…\tCtrl+Shift+S",
+            "Summarize the current transcript using AI",
+        )
 
         # -- View --
         view_menu = wx.Menu()
@@ -241,6 +283,7 @@ class MainFrame(wx.Frame):
 
         menu_bar.Append(file_menu, "&File")
         menu_bar.Append(queue_menu, "&Queue")
+        menu_bar.Append(ai_menu, "&AI")
         menu_bar.Append(view_menu, "&View")
         menu_bar.Append(tools_menu, "&Tools")
         menu_bar.Append(help_menu, "&Help")
@@ -267,6 +310,11 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_toggle_auto_export, id=ID_AUTO_EXPORT)
         self.Bind(wx.EVT_MENU, self._on_view_log, id=ID_VIEW_LOG)
         self.Bind(wx.EVT_MENU, self._on_add_provider, id=ID_ADD_PROVIDER)
+        self.Bind(wx.EVT_MENU, self._on_live_transcription, id=ID_LIVE_TRANSCRIPTION)
+        self.Bind(wx.EVT_MENU, self._on_ai_settings, id=ID_AI_SETTINGS)
+        self.Bind(wx.EVT_MENU, self._on_translate, id=ID_TRANSLATE)
+        self.Bind(wx.EVT_MENU, self._on_summarize, id=ID_SUMMARIZE)
+        self.Bind(wx.EVT_MENU, self._on_plugins, id=ID_PLUGINS)
 
     def _build_accelerators(self) -> None:
         accel = wx.AcceleratorTable(
@@ -281,6 +329,9 @@ class MainFrame(wx.Frame):
                 wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("M"), ID_MODELS),
                 wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_F1, ID_ABOUT),
                 wx.AcceleratorEntry(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("A"), ID_ADVANCED_MODE),
+                wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("L"), ID_LIVE_TRANSCRIPTION),
+                wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("T"), ID_TRANSLATE),
+                wx.AcceleratorEntry(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("S"), ID_SUMMARIZE),
             ]
         )
         self.SetAcceleratorTable(accel)
@@ -563,6 +614,218 @@ class MainFrame(wx.Frame):
                 self,
                 "Provider activated — ready for transcription",
             )
+        dlg.Destroy()
+
+    def _on_live_transcription(self, _event: wx.CommandEvent) -> None:
+        """Open the live transcription dialog."""
+        from bits_whisperer.ui.live_transcription_dialog import LiveTranscriptionDialog
+
+        dlg = LiveTranscriptionDialog(self, main_frame=self)
+        dlg.ShowModal()
+        dlg.Destroy()
+
+    def _on_ai_settings(self, _event: wx.CommandEvent) -> None:
+        """Open the AI provider settings dialog."""
+        from bits_whisperer.ui.ai_settings_dialog import AISettingsDialog
+
+        dlg = AISettingsDialog(self, main_frame=self)
+        result = dlg.ShowModal()
+        if result == wx.ID_OK:
+            self.app_settings = AppSettings.load()
+            announce_status(self, "AI settings updated")
+        dlg.Destroy()
+
+    def _on_translate(self, _event: wx.CommandEvent) -> None:
+        """Translate the current transcript using AI."""
+        self._run_ai_action("translate")
+
+    def _on_summarize(self, _event: wx.CommandEvent) -> None:
+        """Summarize the current transcript using AI."""
+        self._run_ai_action("summarize")
+
+    def _run_ai_action(self, action: str) -> None:
+        """Run an AI action (translate or summarize) on the current transcript.
+
+        Args:
+            action: Either 'translate' or 'summarize'.
+        """
+        import threading
+
+        from bits_whisperer.core.ai_service import AIService
+
+        # Check for transcript
+        job = self.transcript_panel._current_job
+        if not job or not job.result:
+            wx.MessageBox(
+                "No transcript loaded. Transcribe a file first.",
+                "No Transcript",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            return
+
+        # Build text from transcript
+        text = job.result.full_text
+        if not text:
+            text = "\n".join(s.text for s in job.result.segments)
+
+        if not text.strip():
+            wx.MessageBox(
+                "The transcript is empty.",
+                "Empty Transcript",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            return
+
+        # Check AI service is configured
+        ai_service = AIService(self.key_store, self.app_settings.ai)
+        if not ai_service.is_configured():
+            result = wx.MessageBox(
+                "No AI provider is configured.\n\n"
+                "Would you like to open AI Settings to add an API key?",
+                "AI Not Configured",
+                wx.YES_NO | wx.ICON_QUESTION,
+                self,
+            )
+            if result == wx.YES:
+                self._on_ai_settings(None)
+            return
+
+        # Run in background thread
+        announce_status(
+            self,
+            f"{'Translating' if action == 'translate' else 'Summarizing'} transcript…",
+        )
+
+        def _do_action() -> None:
+            if action == "translate":
+                response = ai_service.translate(text)
+            else:
+                response = ai_service.summarize(text)
+
+            def _show_result() -> None:
+                if response.error:
+                    wx.MessageBox(
+                        f"AI {action} failed:\n\n{response.error}",
+                        f"{action.title()} Error",
+                        wx.OK | wx.ICON_ERROR,
+                        self,
+                    )
+                    return
+
+                # Show result in a dialog
+                dlg = wx.Dialog(
+                    self,
+                    title=f"{action.title()} Result",
+                    size=(700, 500),
+                    style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+                )
+                dlg.SetMinSize((400, 300))
+                sizer = wx.BoxSizer(wx.VERTICAL)
+
+                info = wx.StaticText(
+                    dlg,
+                    label=f"Provider: {response.provider} | Model: {response.model} "
+                    f"| Tokens: {response.tokens_used}",
+                )
+                sizer.Add(info, 0, wx.ALL, 10)
+
+                txt = wx.TextCtrl(
+                    dlg,
+                    value=response.text,
+                    style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_WORDWRAP,
+                )
+                font = wx.Font(
+                    11,
+                    wx.FONTFAMILY_DEFAULT,
+                    wx.FONTSTYLE_NORMAL,
+                    wx.FONTWEIGHT_NORMAL,
+                )
+                txt.SetFont(font)
+                sizer.Add(txt, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+
+                btn_row = wx.BoxSizer(wx.HORIZONTAL)
+                copy_btn = wx.Button(dlg, label="&Copy")
+                copy_btn.Bind(
+                    wx.EVT_BUTTON,
+                    lambda e: self._copy_text(response.text),
+                )
+                btn_row.Add(copy_btn, 0, wx.RIGHT, 8)
+
+                close_btn = wx.Button(dlg, wx.ID_CLOSE, label="&Close")
+                btn_row.Add(close_btn, 0)
+
+                sizer.Add(btn_row, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
+
+                dlg.SetSizer(sizer)
+                dlg.Bind(wx.EVT_BUTTON, lambda e: dlg.EndModal(wx.ID_CLOSE), id=wx.ID_CLOSE)
+                dlg.ShowModal()
+                dlg.Destroy()
+
+                announce_status(
+                    self,
+                    f"Transcript {action}d successfully",
+                )
+
+            safe_call_after(_show_result)
+
+        threading.Thread(target=_do_action, daemon=True).start()
+
+    def _copy_text(self, text: str) -> None:
+        """Copy text to clipboard.
+
+        Args:
+            text: Text to copy.
+        """
+        if wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(wx.TextDataObject(text))
+            wx.TheClipboard.Close()
+            announce_status(self, "Copied to clipboard")
+
+    def _on_plugins(self, _event: wx.CommandEvent) -> None:
+        """Open the plugins management dialog."""
+        from bits_whisperer.core.plugin_manager import PluginManager
+
+        plugin_mgr = PluginManager(self.app_settings.plugins, self.provider_manager)
+        plugins = plugin_mgr.discover()
+
+        if not plugins:
+            plugin_dir = plugin_mgr.get_plugin_dir()
+            wx.MessageBox(
+                f"No plugins found.\n\n"
+                f"To add plugins, place Python files in:\n{plugin_dir}\n\n"
+                f"Each plugin must define a register(manager) function.",
+                "No Plugins",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            return
+
+        # Show simple plugin list dialog
+        items = []
+        for p in plugins:
+            status = "Loaded" if p.is_loaded else ("Disabled" if not p.is_enabled else "Available")
+            items.append(f"{p.name} v{p.version} [{status}]")
+
+        dlg = wx.SingleChoiceDialog(
+            self,
+            f"Found {len(plugins)} plugin(s).\n"
+            "Select a plugin to toggle enabled/disabled:",
+            "Plugins",
+            items,
+        )
+        if dlg.ShowModal() == wx.ID_OK:
+            idx = dlg.GetSelection()
+            plugin = plugins[idx]
+            if plugin.is_enabled:
+                plugin_mgr.disable_plugin(plugin.module_name)
+                announce_status(self, f"Disabled plugin: {plugin.name}")
+            else:
+                plugin_mgr.enable_plugin(plugin.module_name)
+                plugin_mgr.load_plugin(plugin.module_name)
+                announce_status(self, f"Enabled plugin: {plugin.name}")
+            self.app_settings.save()
         dlg.Destroy()
 
     def _on_toggle_advanced(self, _event: wx.CommandEvent) -> None:

@@ -169,6 +169,27 @@
 <li><a href="#export-options-settings-then-output">Export Options (Settings, then Output)</a></li>
 </ul>
 </li>
+<li><a href="#live-microphone-transcription">Live Microphone Transcription</a><ul>
+<li><a href="#opening">Opening</a></li>
+<li><a href="#using-the-dialog">Using the Dialog</a></li>
+<li><a href="#how-it-works">How It Works</a></li>
+<li><a href="#settings">Settings</a></li>
+</ul>
+</li>
+<li><a href="#ai-translation-summarization">AI Translation &amp; Summarization</a><ul>
+<li><a href="#setup">Setup</a></li>
+<li><a href="#translating-a-transcript">Translating a Transcript</a></li>
+<li><a href="#summarizing-a-transcript">Summarizing a Transcript</a></li>
+<li><a href="#supported-ai-providers">Supported AI Providers</a></li>
+</ul>
+</li>
+<li><a href="#plugins">Plugins</a><ul>
+<li><a href="#creating-a-plugin">Creating a Plugin</a></li>
+<li><a href="#installing-plugins">Installing Plugins</a></li>
+<li><a href="#managing-plugins">Managing Plugins</a></li>
+<li><a href="#plugin-metadata">Plugin Metadata</a></li>
+</ul>
+</li>
 <li><a href="#providers_1">Providers</a><ul>
 <li><a href="#local-free-offline">Local (Free, Offline)</a></li>
 <li><a href="#cloud-paid-online">Cloud (Paid, Online)</a></li>
@@ -183,7 +204,7 @@
 <li><a href="#disk-space">Disk Space</a></li>
 </ul>
 </li>
-<li><a href="#settings">Settings</a><ul>
+<li><a href="#settings_1">Settings</a><ul>
 <li><a href="#tabs-overview">Tabs Overview</a></li>
 <li><a href="#basic-vs-advanced-mode">Basic vs. Advanced Mode</a></li>
 </ul>
@@ -228,6 +249,9 @@
 <li><a href="#transcription">Transcription</a></li>
 <li><a href="#viewing--editing-transcripts">Viewing &amp; Editing Transcripts</a></li>
 <li><a href="#exporting">Exporting</a></li>
+<li><a href="#live-microphone-transcription">Live Microphone Transcription</a></li>
+<li><a href="#ai-translation--summarization">AI Translation &amp; Summarization</a></li>
+<li><a href="#plugins">Plugins</a></li>
 <li><a href="#providers">Providers</a></li>
 <li><a href="#ai-models">AI Models</a></li>
 <li><a href="#settings">Settings</a></li>
@@ -494,6 +518,198 @@
 <li><strong>Encoding</strong> — UTF-8 (default), or other encodings</li>
 <li><strong>Overwrite</strong> — replace existing files or auto-number</li>
 </ul>
+<hr>
+<h2 id="live-microphone-transcription">Live Microphone Transcription</h2>
+<p>BITS Whisperer can transcribe speech from your microphone in real time.</p>
+<h3 id="opening">Opening</h3>
+<ul>
+<li><strong>Keyboard</strong>: Press <strong>Ctrl+L</strong></li>
+<li><strong>Menu</strong>: Go to <strong>Tools, then Live Transcription</strong></li>
+</ul>
+<h3 id="using-the-dialog">Using the Dialog</h3>
+<ol>
+<li><strong>Select your microphone</strong> — Choose from the available input devices dropdown</li>
+<li><strong>Select a Whisper model</strong> — Smaller models (Tiny, Base) are faster; larger models are more accurate</li>
+<li><strong>Press Start</strong> — Speech will be transcribed in real-time and displayed in the text area</li>
+<li><strong>Pause / Resume</strong> — Temporarily halt transcription without losing context</li>
+<li><strong>Copy All</strong> — Copy the full transcript to the clipboard</li>
+<li><strong>Clear</strong> — Clear the transcript display and start fresh</li>
+<li><strong>Stop</strong> — End the transcription session</li>
+</ol>
+<h3 id="how-it-works">How It Works</h3>
+<ul>
+<li>Audio is captured at 16 kHz mono using sounddevice</li>
+<li>Energy-based voice activity detection (VAD) identifies speech segments</li>
+<li>When silence exceeds the configured threshold, the buffered audio is sent to faster-whisper for transcription</li>
+<li>Results are displayed in the text area via thread-safe UI callbacks</li>
+</ul>
+<h3 id="settings">Settings</h3>
+<p>Configure live transcription in <strong>Settings, then Live Transcription</strong> or from the dialog:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model</td>
+<td>base</td>
+<td>Whisper model size</td>
+</tr>
+<tr>
+<td>Language</td>
+<td>auto</td>
+<td>Force a specific language or auto-detect</td>
+</tr>
+<tr>
+<td>Sample rate</td>
+<td>16000</td>
+<td>Audio capture sample rate in Hz</td>
+</tr>
+<tr>
+<td>Chunk duration</td>
+<td>3.0 s</td>
+<td>Minimum audio chunk before transcription</td>
+</tr>
+<tr>
+<td>Silence threshold</td>
+<td>0.8 s</td>
+<td>Silence duration to trigger transcription</td>
+</tr>
+<tr>
+<td>VAD filter</td>
+<td>On</td>
+<td>Voice activity detection in faster-whisper</td>
+</tr>
+<tr>
+<td>Input device</td>
+<td>(default)</td>
+<td>Preferred microphone device</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="ai-translation-summarization">AI Translation &amp; Summarization</h2>
+<p>Use AI to translate and summarize your transcripts using OpenAI, Anthropic Claude, or Azure OpenAI.</p>
+<h3 id="setup">Setup</h3>
+<ol>
+<li>Go to <strong>Tools, then AI Provider Settings</strong></li>
+<li>In the <strong>Providers</strong> tab, enter your API key for at least one provider:</li>
+<li><strong>OpenAI</strong> — Get a key from https://platform.openai.com/api-keys</li>
+<li><strong>Anthropic</strong> — Get a key from https://console.anthropic.com/</li>
+<li><strong>Azure OpenAI</strong> — Enter your endpoint URL, deployment name, and API key from the Azure portal</li>
+<li>Click <strong>Validate</strong> to test your key</li>
+<li>Choose your preferred default provider</li>
+<li>Set preferences in the <strong>Preferences</strong> tab (language, summarization style, temperature, max tokens)</li>
+</ol>
+<h3 id="translating-a-transcript">Translating a Transcript</h3>
+<ol>
+<li>Open or transcribe an audio file</li>
+<li>Press <strong>Ctrl+T</strong> or go to <strong>AI, then Translate</strong> (or click the <strong>Translate</strong> button in the transcript toolbar)</li>
+<li>The transcript will be translated to your configured target language</li>
+<li>A dialog shows the result with a <strong>Copy</strong> button</li>
+</ol>
+<h3 id="summarizing-a-transcript">Summarizing a Transcript</h3>
+<ol>
+<li>Open or transcribe an audio file</li>
+<li>Press <strong>Ctrl+Shift+S</strong> or go to <strong>AI, then Summarize</strong> (or click the <strong>Summarize</strong> button in the transcript toolbar)</li>
+<li>Choose a summarization style in AI Provider Settings:</li>
+<li><strong>Concise</strong> — Brief overview (default)</li>
+<li><strong>Detailed</strong> — Comprehensive summary</li>
+<li><strong>Bullet Points</strong> — Key points as a list</li>
+<li>A dialog shows the result with a <strong>Copy</strong> button</li>
+</ol>
+<h3 id="supported-ai-providers">Supported AI Providers</h3>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Models</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenAI</td>
+<td>gpt-4o, gpt-4o-mini</td>
+<td>Fastest, most reliable</td>
+</tr>
+<tr>
+<td>Anthropic</td>
+<td>Claude Sonnet 4, Claude Haiku</td>
+<td>Strong for long transcripts</td>
+</tr>
+<tr>
+<td>Azure OpenAI</td>
+<td>Configurable deployment</td>
+<td>Enterprise-grade, GDPR compliant</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="plugins">Plugins</h2>
+<p>Extend BITS Whisperer with custom transcription providers via the plugin system.</p>
+<h3 id="creating-a-plugin">Creating a Plugin</h3>
+<ol>
+<li>Create a <code>.py</code> file in the plugins directory</li>
+<li>Implement a <code>register(manager)</code> function that receives the <code>ProviderManager</code>:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><span class="n">PLUGIN_NAME</span> <span class="o">=</span> <span class="s2">&quot;My Custom Provider&quot;</span>
+<span class="n">PLUGIN_VERSION</span> <span class="o">=</span> <span class="s2">&quot;1.0.0&quot;</span>
+<span class="n">PLUGIN_AUTHOR</span> <span class="o">=</span> <span class="s2">&quot;Your Name&quot;</span>
+<span class="n">PLUGIN_DESCRIPTION</span> <span class="o">=</span> <span class="s2">&quot;Adds support for a custom transcription service&quot;</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">register</span><span class="p">(</span><span class="n">manager</span><span class="p">):</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">bits_whisperer.providers.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">TranscriptionProvider</span>
+    <span class="c1"># Create and register your provider class</span>
+    <span class="n">manager</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s2">&quot;my_provider&quot;</span><span class="p">,</span> <span class="n">MyProvider</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="installing-plugins">Installing Plugins</h3>
+<ol>
+<li>Copy your plugin <code>.py</code> file to the plugins directory</li>
+<li>Default: <code>%LOCALAPPDATA%\BITS Whisperer\plugins\</code> (Windows)</li>
+<li>Custom: Set in <strong>Settings, then Plugins, then Plugin Directory</strong></li>
+<li>Restart BITS Whisperer — plugins are loaded automatically on startup</li>
+</ol>
+<h3 id="managing-plugins">Managing Plugins</h3>
+<ol>
+<li>Go to <strong>Tools, then Plugins</strong></li>
+<li>View all discovered plugins with name, version, author, and status</li>
+<li>Enable or disable individual plugins</li>
+<li>Disabled plugins will not be loaded on next startup</li>
+</ol>
+<h3 id="plugin-metadata">Plugin Metadata</h3>
+<p>Plugins can include optional metadata constants:</p>
+<table>
+<thead>
+<tr>
+<th>Constant</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PLUGIN_NAME</code></td>
+<td>Display name</td>
+</tr>
+<tr>
+<td><code>PLUGIN_VERSION</code></td>
+<td>Version string</td>
+</tr>
+<tr>
+<td><code>PLUGIN_AUTHOR</code></td>
+<td>Author name</td>
+</tr>
+<tr>
+<td><code>PLUGIN_DESCRIPTION</code></td>
+<td>Short description</td>
+</tr>
+</tbody>
+</table>
 <hr>
 <h2 id="providers_1">Providers</h2>
 <p>BITS Whisperer supports <strong>17 transcription engines</strong> across three categories:</p>
@@ -819,7 +1035,7 @@
 <h3 id="disk-space">Disk Space</h3>
 <p>Before each download, the app checks you have enough free disk space (with 10% headroom). If you're low on space, you'll get a warning.</p>
 <hr>
-<h2 id="settings">Settings</h2>
+<h2 id="settings_1">Settings</h2>
 <p>Open <strong>Tools, then Settings</strong> (Ctrl+,) for all configuration options.</p>
 <h3 id="tabs-overview">Tabs Overview</h3>
 <table>
@@ -977,6 +1193,18 @@
 <td>Toggle Advanced Mode</td>
 </tr>
 <tr>
+<td>Ctrl+L</td>
+<td>Live Transcription</td>
+</tr>
+<tr>
+<td>Ctrl+T</td>
+<td>Translate Transcript</td>
+</tr>
+<tr>
+<td>Ctrl+Shift+S</td>
+<td>Summarize Transcript</td>
+</tr>
+<tr>
 <td>F5</td>
 <td>Start transcription</td>
 </tr>
@@ -1011,6 +1239,10 @@
 <tr>
 <td>Alt+T</td>
 <td>Tools menu</td>
+</tr>
+<tr>
+<td>Alt+A</td>
+<td>AI menu</td>
 </tr>
 <tr>
 <td>Alt+H</td>
@@ -1145,7 +1377,7 @@ A: Yes! BITS Whisperer runs on Windows 10+ and macOS 12+. Linux support is plann
 <p><strong>Q: How do I update?</strong>
 A: The app checks for updates on startup (configurable). When an update is available, you'll be prompted to download it. You can also check manually via <strong>Help, then Check for Updates</strong>.</p>
 <hr>
-<p><em>BITS Whisperer v1.0.0 — Developed by Blind Information Technology Solutions (BITS). Made with care for accessibility and privacy.</em></p>
+<p><em>BITS Whisperer v1.1.0 — Developed by Blind Information Technology Solutions (BITS). Made with care for accessibility and privacy.</em></p>
 <div class="footer">
   Generated from <code>USER_GUIDE.md</code> &mdash; BITS Whisperer Documentation
 </div>

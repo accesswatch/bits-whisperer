@@ -13,15 +13,18 @@ Welcome to **BITS Whisperer**, your desktop audio transcription companion. This 
 5. [Transcription](#transcription)
 6. [Viewing & Editing Transcripts](#viewing--editing-transcripts)
 7. [Exporting](#exporting)
-8. [Providers](#providers)
-9. [AI Models](#ai-models)
-10. [Settings](#settings)
-11. [Audio Preprocessing](#audio-preprocessing)
-12. [System Tray](#system-tray)
-13. [Keyboard Shortcuts](#keyboard-shortcuts)
-14. [Accessibility](#accessibility)
-15. [Troubleshooting](#troubleshooting)
-16. [FAQ](#faq)
+8. [Live Microphone Transcription](#live-microphone-transcription)
+9. [AI Translation & Summarization](#ai-translation--summarization)
+10. [Plugins](#plugins)
+11. [Providers](#providers)
+12. [AI Models](#ai-models)
+13. [Settings](#settings)
+14. [Audio Preprocessing](#audio-preprocessing)
+15. [System Tray](#system-tray)
+16. [Keyboard Shortcuts](#keyboard-shortcuts)
+17. [Accessibility](#accessibility)
+18. [Troubleshooting](#troubleshooting)
+19. [FAQ](#faq)
 
 ---
 
@@ -231,6 +234,138 @@ Enable in **Settings, then General, then Auto-export**. Transcripts are saved au
 
 ---
 
+## Live Microphone Transcription
+
+BITS Whisperer can transcribe speech from your microphone in real time.
+
+### Opening
+
+- **Keyboard**: Press **Ctrl+L**
+- **Menu**: Go to **Tools, then Live Transcription**
+
+### Using the Dialog
+
+1. **Select your microphone** — Choose from the available input devices dropdown
+2. **Select a Whisper model** — Smaller models (Tiny, Base) are faster; larger models are more accurate
+3. **Press Start** — Speech will be transcribed in real-time and displayed in the text area
+4. **Pause / Resume** — Temporarily halt transcription without losing context
+5. **Copy All** — Copy the full transcript to the clipboard
+6. **Clear** — Clear the transcript display and start fresh
+7. **Stop** — End the transcription session
+
+### How It Works
+
+- Audio is captured at 16 kHz mono using sounddevice
+- Energy-based voice activity detection (VAD) identifies speech segments
+- When silence exceeds the configured threshold, the buffered audio is sent to faster-whisper for transcription
+- Results are displayed in the text area via thread-safe UI callbacks
+
+### Settings
+
+Configure live transcription in **Settings, then Live Transcription** or from the dialog:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Model | base | Whisper model size |
+| Language | auto | Force a specific language or auto-detect |
+| Sample rate | 16000 | Audio capture sample rate in Hz |
+| Chunk duration | 3.0 s | Minimum audio chunk before transcription |
+| Silence threshold | 0.8 s | Silence duration to trigger transcription |
+| VAD filter | On | Voice activity detection in faster-whisper |
+| Input device | (default) | Preferred microphone device |
+
+---
+
+## AI Translation & Summarization
+
+Use AI to translate and summarize your transcripts using OpenAI, Anthropic Claude, or Azure OpenAI.
+
+### Setup
+
+1. Go to **Tools, then AI Provider Settings**
+2. In the **Providers** tab, enter your API key for at least one provider:
+   - **OpenAI** — Get a key from https://platform.openai.com/api-keys
+   - **Anthropic** — Get a key from https://console.anthropic.com/
+   - **Azure OpenAI** — Enter your endpoint URL, deployment name, and API key from the Azure portal
+3. Click **Validate** to test your key
+4. Choose your preferred default provider
+5. Set preferences in the **Preferences** tab (language, summarization style, temperature, max tokens)
+
+### Translating a Transcript
+
+1. Open or transcribe an audio file
+2. Press **Ctrl+T** or go to **AI, then Translate** (or click the **Translate** button in the transcript toolbar)
+3. The transcript will be translated to your configured target language
+4. A dialog shows the result with a **Copy** button
+
+### Summarizing a Transcript
+
+1. Open or transcribe an audio file
+2. Press **Ctrl+Shift+S** or go to **AI, then Summarize** (or click the **Summarize** button in the transcript toolbar)
+3. Choose a summarization style in AI Provider Settings:
+   - **Concise** — Brief overview (default)
+   - **Detailed** — Comprehensive summary
+   - **Bullet Points** — Key points as a list
+4. A dialog shows the result with a **Copy** button
+
+### Supported AI Providers
+
+| Provider | Models | Notes |
+|----------|--------|-------|
+| OpenAI | gpt-4o, gpt-4o-mini | Fastest, most reliable |
+| Anthropic | Claude Sonnet 4, Claude Haiku | Strong for long transcripts |
+| Azure OpenAI | Configurable deployment | Enterprise-grade, GDPR compliant |
+
+---
+
+## Plugins
+
+Extend BITS Whisperer with custom transcription providers via the plugin system.
+
+### Creating a Plugin
+
+1. Create a `.py` file in the plugins directory
+2. Implement a `register(manager)` function that receives the `ProviderManager`:
+
+```python
+PLUGIN_NAME = "My Custom Provider"
+PLUGIN_VERSION = "1.0.0"
+PLUGIN_AUTHOR = "Your Name"
+PLUGIN_DESCRIPTION = "Adds support for a custom transcription service"
+
+def register(manager):
+    from bits_whisperer.providers.base import TranscriptionProvider
+    # Create and register your provider class
+    manager.register("my_provider", MyProvider)
+```
+
+### Installing Plugins
+
+1. Copy your plugin `.py` file to the plugins directory
+   - Default: `%LOCALAPPDATA%\BITS Whisperer\plugins\` (Windows)
+   - Custom: Set in **Settings, then Plugins, then Plugin Directory**
+2. Restart BITS Whisperer — plugins are loaded automatically on startup
+
+### Managing Plugins
+
+1. Go to **Tools, then Plugins**
+2. View all discovered plugins with name, version, author, and status
+3. Enable or disable individual plugins
+4. Disabled plugins will not be loaded on next startup
+
+### Plugin Metadata
+
+Plugins can include optional metadata constants:
+
+| Constant | Description |
+|----------|-------------|
+| `PLUGIN_NAME` | Display name |
+| `PLUGIN_VERSION` | Version string |
+| `PLUGIN_AUTHOR` | Author name |
+| `PLUGIN_DESCRIPTION` | Short description |
+
+---
+
 ## Providers
 
 BITS Whisperer supports **17 transcription engines** across three categories:
@@ -414,6 +549,9 @@ BITS Whisperer can minimize to the system tray for background processing:
 | Ctrl+, | Open Settings |
 | Ctrl+M | Manage Models |
 | Ctrl+Shift+A | Toggle Advanced Mode |
+| Ctrl+L | Live Transcription |
+| Ctrl+T | Translate Transcript |
+| Ctrl+Shift+S | Summarize Transcript |
 | F5 | Start transcription |
 | F3 | Find next in transcript |
 | Ctrl+F | Find in transcript |
@@ -423,6 +561,7 @@ BITS Whisperer can minimize to the system tray for background processing:
 | Alt+Q | Queue menu |
 | Alt+V | View menu |
 | Alt+T | Tools menu |
+| Alt+A | AI menu |
 | Alt+H | Help menu |
 
 All menu items have keyboard mnemonics (underlined letters) for quick access.
@@ -558,4 +697,4 @@ A: The app checks for updates on startup (configurable). When an update is avail
 
 ---
 
-*BITS Whisperer v1.0.0 — Developed by Blind Information Technology Solutions (BITS). Made with care for accessibility and privacy.*
+*BITS Whisperer v1.1.0 — Developed by Blind Information Technology Solutions (BITS). Made with care for accessibility and privacy.*

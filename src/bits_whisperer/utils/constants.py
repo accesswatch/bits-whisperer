@@ -13,7 +13,7 @@ from platformdirs import user_data_dir
 # ---------------------------------------------------------------------------
 APP_NAME: Final[str] = "BITS Whisperer"
 APP_AUTHOR: Final[str] = "BITSWhisperer"
-APP_VERSION: Final[str] = "1.0.0"
+APP_VERSION: Final[str] = "1.1.0"
 
 # ---------------------------------------------------------------------------
 # GitHub updater
