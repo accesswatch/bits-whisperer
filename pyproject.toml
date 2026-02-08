@@ -24,7 +24,6 @@ dependencies = [
     "platformdirs>=4.0.0",
     "httpx>=0.25.0",
     "packaging>=23.0",
-    "numpy>=1.24.0",
     "winsdk>=1.0.0b10; sys_platform == 'win32'",
     "comtypes>=1.2.0; sys_platform == 'win32'",
 ]
@@ -43,7 +42,7 @@ groq = ["groq>=0.4.0"]
 rev-ai = ["rev-ai>=2.17.0"]
 speechmatics = ["speechmatics-python>=1.0.0"]
 # Live transcription (microphone capture)
-live = ["sounddevice>=0.4.6", "faster-whisper>=1.0.0"]
+live = ["sounddevice>=0.4.6", "faster-whisper>=1.0.0", "numpy>=1.24.0"]
 # AI services (translation / summarization)
 ai-openai = ["openai>=1.0.0"]
 ai-anthropic = ["anthropic>=0.30.0"]

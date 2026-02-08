@@ -21,12 +21,21 @@ import queue
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
-
-import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from bits_whisperer.core.settings import LiveTranscriptionSettings
 from bits_whisperer.utils.constants import MODELS_DIR
+
+if TYPE_CHECKING:
+    import numpy as np
+
+
+def _np():  # noqa: ANN202
+    """Lazily import and cache numpy."""
+    import numpy
+
+    return numpy
+
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +77,7 @@ class LiveTranscriptionService:
         self._settings = settings
         self._state = LiveTranscriptionState()
         self._text_callback: LiveTextCallback | None = None
-        self._audio_queue: queue.Queue[np.ndarray] = queue.Queue()
+        self._audio_queue: queue.Queue[Any] = queue.Queue()
         self._stop_event = threading.Event()
         self._pause_event = threading.Event()
         self._pause_event.set()  # Not paused initially
@@ -241,7 +250,7 @@ class LiveTranscriptionService:
 
     def _audio_callback(
         self,
-        indata: np.ndarray,
+        indata: np.ndarray,  # type: ignore[name-defined]
         frames: int,
         time_info: Any,
         status: Any,
@@ -274,7 +283,8 @@ class LiveTranscriptionService:
             self._state.is_running = False
             return
 
-        audio_buffer: list[np.ndarray] = []
+        np = _np()
+        audio_buffer: list[Any] = []
         buffer_duration = 0.0
         silence_duration = 0.0
         chunk_seconds = self._settings.chunk_duration_seconds
@@ -378,7 +388,7 @@ class LiveTranscriptionService:
             download_root=str(MODELS_DIR),
         )
 
-    def _transcribe_chunk(self, audio_data: np.ndarray) -> str:
+    def _transcribe_chunk(self, audio_data: Any) -> str:
         """Transcribe a chunk of audio data.
 
         Args:
@@ -392,6 +402,7 @@ class LiveTranscriptionService:
 
         try:
             # Flatten to 1-D float32
+            np = _np()
             audio = audio_data.flatten().astype(np.float32)
 
             # Skip very short chunks
