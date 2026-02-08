@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BITS Whisperer — User Guide</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --accent: #0969da;
+    --border: #d0d7de;
+    --code-bg: #f6f8fa;
+    --table-alt: #f6f8fa;
+    --blockquote: #57606a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --accent: #58a6ff;
+      --border: #30363d;
+      --code-bg: #161b22;
+      --table-alt: #161b22;
+      --blockquote: #8b949e;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+                 sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--fg);
+    background: var(--bg);
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+  h1 { font-size: 2em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+  h3 { font-size: 1.25em; }
+  p { margin: 0.5em 0 1em; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.875em;
+    background: var(--code-bg);
+    padding: 0.2em 0.4em;
+    border-radius: 6px;
+  }
+  pre {
+    background: var(--code-bg);
+    padding: 1em;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 1em 0;
+    line-height: 1.45;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+    font-size: 0.85em;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 0.5em 0.75em;
+    text-align: left;
+  }
+  th {
+    background: var(--code-bg);
+    font-weight: 600;
+  }
+  tr:nth-child(even) { background: var(--table-alt); }
+  blockquote {
+    border-left: 4px solid var(--accent);
+    padding: 0.5em 1em;
+    margin: 1em 0;
+    color: var(--blockquote);
+  }
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2em 0;
+  }
+  ul, ol { margin: 0.5em 0 1em 1.5em; }
+  li { margin: 0.25em 0; }
+  img { max-width: 100%; height: auto; }
+  .toc {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1em 1.5em;
+    margin: 1em 0 2em;
+  }
+  .toc ul { list-style: none; margin: 0; padding: 0; }
+  .toc ul ul { padding-left: 1.5em; }
+  .toc li { margin: 0.25em 0; }
+  strong { font-weight: 600; }
+  .footer {
+    margin-top: 3em;
+    padding-top: 1em;
+    border-top: 1px solid var(--border);
+    font-size: 0.85em;
+    color: var(--blockquote);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<nav class="toc"><strong>Table of Contents</strong>
+<div class="toc">
+<ul>
+<li><a href="#bits-whisperer-user-guide">BITS Whisperer — User Guide</a><ul>
+<li><a href="#table-of-contents">Table of Contents</a></li>
+<li><a href="#getting-started">Getting Started</a><ul>
+<li><a href="#system-requirements">System Requirements</a></li>
+<li><a href="#installation">Installation</a></li>
+<li><a href="#first-launch">First Launch</a></li>
+<li><a href="#on-demand-sdk-installation">On-Demand SDK Installation</a></li>
+</ul>
+</li>
+<li><a href="#setup-wizard">Setup Wizard</a><ul>
+<li><a href="#step-1-welcome">Step 1: Welcome</a></li>
+<li><a href="#step-2-hardware-detection">Step 2: Hardware Detection</a></li>
+<li><a href="#step-3-model-selection">Step 3: Model Selection</a></li>
+<li><a href="#step-4-cloud-services-optional">Step 4: Cloud Services (Optional)</a></li>
+<li><a href="#step-5-preferences">Step 5: Preferences</a></li>
+<li><a href="#step-6-summary">Step 6: Summary</a></li>
+</ul>
+</li>
+<li><a href="#main-window">Main Window</a><ul>
+<li><a href="#splitter">Splitter</a></li>
+</ul>
+</li>
+<li><a href="#adding-files">Adding Files</a><ul>
+<li><a href="#methods">Methods</a></li>
+<li><a href="#supported-formats">Supported Formats</a></li>
+<li><a href="#limits-configurable-in-advanced-settings">Limits (configurable in Advanced Settings)</a></li>
+</ul>
+</li>
+<li><a href="#transcription">Transcription</a><ul>
+<li><a href="#starting">Starting</a></li>
+<li><a href="#providers">Providers</a></li>
+<li><a href="#batch-processing">Batch Processing</a></li>
+<li><a href="#background-processing">Background Processing</a></li>
+</ul>
+</li>
+<li><a href="#viewing-editing-transcripts">Viewing &amp; Editing Transcripts</a><ul>
+<li><a href="#speaker-management">Speaker Management</a></li>
+</ul>
+</li>
+<li><a href="#exporting">Exporting</a><ul>
+<li><a href="#manual-export">Manual Export</a></li>
+<li><a href="#auto-export">Auto-Export</a></li>
+<li><a href="#export-formats">Export Formats</a></li>
+<li><a href="#export-options-settings-then-output">Export Options (Settings, then Output)</a></li>
+</ul>
+</li>
+<li><a href="#providers_1">Providers</a><ul>
+<li><a href="#local-free-offline">Local (Free, Offline)</a></li>
+<li><a href="#cloud-paid-online">Cloud (Paid, Online)</a></li>
+<li><a href="#cloud-audio-processing">Cloud + Audio Processing</a></li>
+<li><a href="#setting-up-cloud-providers">Setting Up Cloud Providers</a></li>
+<li><a href="#choosing-a-provider">Choosing a Provider</a></li>
+</ul>
+</li>
+<li><a href="#ai-models">AI Models</a><ul>
+<li><a href="#managing-models">Managing Models</a></li>
+<li><a href="#hardware-requirements">Hardware Requirements</a></li>
+<li><a href="#disk-space">Disk Space</a></li>
+</ul>
+</li>
+<li><a href="#settings">Settings</a><ul>
+<li><a href="#tabs-overview">Tabs Overview</a></li>
+<li><a href="#basic-vs-advanced-mode">Basic vs. Advanced Mode</a></li>
+</ul>
+</li>
+<li><a href="#audio-preprocessing">Audio Preprocessing</a></li>
+<li><a href="#system-tray">System Tray</a></li>
+<li><a href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
+<li><a href="#accessibility">Accessibility</a><ul>
+<li><a href="#screen-readers">Screen Readers</a></li>
+<li><a href="#keyboard-navigation">Keyboard Navigation</a></li>
+<li><a href="#visual">Visual</a></li>
+<li><a href="#tips">Tips</a></li>
+</ul>
+</li>
+<li><a href="#troubleshooting">Troubleshooting</a><ul>
+<li><a href="#model-download-failed">"Model download failed"</a></li>
+<li><a href="#transcription-failed">"Transcription failed"</a></li>
+<li><a href="#provider-key-invalid">"Provider key invalid"</a></li>
+<li><a href="#application-wont-start">"Application won't start"</a></li>
+<li><a href="#ffmpeg-not-found">"ffmpeg not found"</a></li>
+<li><a href="#slow-transcription">"Slow transcription"</a></li>
+<li><a href="#sdk-installation-failed">"SDK installation failed"</a></li>
+<li><a href="#provider-not-available-after-sdk-install">"Provider not available after SDK install"</a></li>
+<li><a href="#resetting-the-app">Resetting the App</a></li>
+</ul>
+</li>
+<li><a href="#faq">FAQ</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</nav>
+<h1 id="bits-whisperer-user-guide">BITS Whisperer — User Guide</h1>
+<p>Welcome to <strong>BITS Whisperer</strong>, your desktop audio transcription companion. This guide walks you through every feature so you can get the most out of the app.</p>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#getting-started">Getting Started</a></li>
+<li><a href="#setup-wizard">Setup Wizard</a></li>
+<li><a href="#main-window">Main Window</a></li>
+<li><a href="#adding-files">Adding Files</a></li>
+<li><a href="#transcription">Transcription</a></li>
+<li><a href="#viewing--editing-transcripts">Viewing &amp; Editing Transcripts</a></li>
+<li><a href="#exporting">Exporting</a></li>
+<li><a href="#providers">Providers</a></li>
+<li><a href="#ai-models">AI Models</a></li>
+<li><a href="#settings">Settings</a></li>
+<li><a href="#audio-preprocessing">Audio Preprocessing</a></li>
+<li><a href="#system-tray">System Tray</a></li>
+<li><a href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
+<li><a href="#accessibility">Accessibility</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+<li><a href="#faq">FAQ</a></li>
+</ol>
+<hr>
+<h2 id="getting-started">Getting Started</h2>
+<h3 id="system-requirements">System Requirements</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Minimum</th>
+<th>Recommended</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OS</td>
+<td>Windows 10 / macOS 12+</td>
+<td>Windows 11 / macOS 14+</td>
+</tr>
+<tr>
+<td>RAM</td>
+<td>4 GB</td>
+<td>8 GB+</td>
+</tr>
+<tr>
+<td>Disk Space</td>
+<td>500 MB (app only)</td>
+<td>5 GB+ (with AI models)</td>
+</tr>
+<tr>
+<td>GPU</td>
+<td>Not required</td>
+<td>NVIDIA with 4+ GB VRAM</td>
+</tr>
+<tr>
+<td>Internet</td>
+<td>For cloud providers only</td>
+<td>Broadband for model downloads</td>
+</tr>
+</tbody>
+</table>
+<h3 id="installation">Installation</h3>
+<ol>
+<li>Download the latest installer from <a href="https://github.com/accesswatch/bits-whisperer/releases">GitHub Releases</a>.</li>
+<li>Run the installer and follow the on-screen instructions.</li>
+<li>Launch BITS Whisperer from your Start Menu (Windows) or Applications folder (macOS).</li>
+</ol>
+<h3 id="first-launch">First Launch</h3>
+<p>On first launch, the <strong>Setup Wizard</strong> guides you through initial configuration. You can skip it and configure everything later from the <strong>Tools</strong> menu.</p>
+<p>After the wizard, BITS Whisperer checks for required external tools (like <strong>ffmpeg</strong>). If ffmpeg is missing, the app will offer to install it automatically using the Windows Package Manager (winget). If winget is unavailable, you'll see step-by-step manual installation instructions. ffmpeg is needed for audio preprocessing and format conversion.</p>
+<h3 id="on-demand-sdk-installation">On-Demand SDK Installation</h3>
+<p>BITS Whisperer uses a lightweight installer — provider SDKs (such as the OpenAI client, Google Cloud libraries, or the faster-whisper AI engine) are <strong>not bundled</strong> with the application. Instead, they are downloaded and installed automatically the first time you use a provider.</p>
+<p>When you start a transcription or download a local model, the app will:</p>
+<ol>
+<li>Check if the required SDK is already installed.</li>
+<li>If not, show a dialog explaining what will be downloaded and the approximate size.</li>
+<li>Download the packages from PyPI and install them in a local folder managed by BITS Whisperer.</li>
+<li>This only happens once per provider — subsequent uses are instant.</li>
+</ol>
+<p><strong>No system Python or pip is required.</strong> The app handles everything internally.</p>
+<p>SDKs are stored in: <code>%LOCALAPPDATA%\BITS Whisperer\BITSWhisperer\site-packages\</code> (Windows) or <code>~/Library/Application Support/BITS Whisperer/site-packages/</code> (macOS).</p>
+<hr>
+<h2 id="setup-wizard">Setup Wizard</h2>
+<p>The setup wizard appears automatically on your first launch and walks you through five steps:</p>
+<h3 id="step-1-welcome">Step 1: Welcome</h3>
+<p>A brief overview of what BITS Whisperer does and what the wizard will configure.</p>
+<h3 id="step-2-hardware-detection">Step 2: Hardware Detection</h3>
+<p>The app scans your computer and shows:
+- <strong>Processor, RAM, GPU</strong> — what you're working with
+- <strong>Free disk space</strong> — how much room for AI models
+- <strong>Recommendation</strong> — which models fit your hardware best</p>
+<h3 id="step-3-model-selection">Step 3: Model Selection</h3>
+<p>Choose which AI models to download for offline transcription:
+- A <strong>star</strong> marks the recommended model for your hardware
+- Check the boxes for models you want
+- Total download size and disk space are shown
+- Click <strong>Download Selected Models Now</strong> to start
+- Downloads happen in the background — you'll get a notification when each model is ready</p>
+<h3 id="step-4-cloud-services-optional">Step 4: Cloud Services (Optional)</h3>
+<p>Enter API keys for any cloud transcription service you use:
+- Keys are stored in your operating system's secure credential vault
+- Each service shows pricing and a direct link to get a key
+- Skip this step if you only want local (offline) transcription</p>
+<h3 id="step-5-preferences">Step 5: Preferences</h3>
+<p>Set your basics:
+- <strong>Language</strong> — your primary transcription language
+- <strong>Export format</strong> — default output format (Text, Markdown, Word, SRT)
+- <strong>Auto-export</strong> — automatically save transcripts when done
+- <strong>Timestamps</strong> — include time markers in transcripts
+- <strong>Minimize to tray</strong> — keep running in the background
+- <strong>Notifications</strong> — get alerts when transcription completes
+- <strong>Update checks</strong> — automatically check for new versions</p>
+<h3 id="step-6-summary">Step 6: Summary</h3>
+<p>Review your choices and click <strong>Finish</strong> to start using the app.</p>
+<blockquote>
+<p><strong>Tip</strong>: You can always re-configure everything from <strong>Tools, then Settings</strong> (Ctrl+,) or <strong>Tools, then Manage Models</strong> (Ctrl+M).</p>
+</blockquote>
+<hr>
+<h2 id="main-window">Main Window</h2>
+<p>The main window has four areas:</p>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Menu Bar</strong></td>
+<td>All actions — File, Queue, View, Tools, Help</td>
+</tr>
+<tr>
+<td><strong>File Queue</strong> (left panel)</td>
+<td>Files waiting to be transcribed</td>
+</tr>
+<tr>
+<td><strong>Transcript Viewer</strong> (right panel)</td>
+<td>View/edit completed transcripts</td>
+</tr>
+<tr>
+<td><strong>Status Bar</strong></td>
+<td>Current activity, provider, job count</td>
+</tr>
+</tbody>
+</table>
+<h3 id="splitter">Splitter</h3>
+<p>A movable divider separates the queue and transcript panels. Drag it to resize, or use <strong>View, then Focus Queue / Focus Transcript</strong> from the menu.</p>
+<hr>
+<h2 id="adding-files">Adding Files</h2>
+<h3 id="methods">Methods</h3>
+<ul>
+<li><strong>Drag &amp; Drop</strong> — drag audio files onto the window</li>
+<li><strong>File, then Add Files</strong> (Ctrl+O) — browse and select files</li>
+<li><strong>File, then Add Folder</strong> — add all audio files in a folder</li>
+<li><strong>Recent Files</strong> — re-open files from <strong>File, then Recent Files</strong></li>
+</ul>
+<h3 id="supported-formats">Supported Formats</h3>
+<p>MP3, WAV, OGG, Opus, FLAC, M4A, AAC, WebM, WMA, AIFF, AMR, MP4</p>
+<h3 id="limits-configurable-in-advanced-settings">Limits (configurable in Advanced Settings)</h3>
+<ul>
+<li>Max file size: 500 MB</li>
+<li>Max duration: 4 hours</li>
+<li>Max batch: 100 files / 10 GB</li>
+</ul>
+<hr>
+<h2 id="transcription">Transcription</h2>
+<h3 id="starting">Starting</h3>
+<ol>
+<li>Add files to the queue.</li>
+<li>Press <strong>F5</strong> or <strong>Queue, then Start Transcription</strong>.</li>
+<li>Watch progress in the queue panel and status bar.</li>
+</ol>
+<h3 id="providers">Providers</h3>
+<p>By default, BITS Whisperer uses the <strong>Local Whisper</strong> provider (free, offline). Change your default provider in <strong>Tools, then Settings, then General</strong>.</p>
+<h3 id="batch-processing">Batch Processing</h3>
+<p>Add multiple files and they'll be processed sequentially (or in parallel if configured). The status bar shows overall progress.</p>
+<h3 id="background-processing">Background Processing</h3>
+<p>If you minimize to the system tray, transcription continues in the background. You'll get a desktop notification when each file finishes.</p>
+<hr>
+<h2 id="viewing-editing-transcripts">Viewing &amp; Editing Transcripts</h2>
+<p>After transcription completes, click a file in the queue to see its transcript in the right panel.</p>
+<ul>
+<li><strong>Edit</strong> — make corrections directly in the transcript viewer</li>
+<li><strong>Find</strong> — use Ctrl+F to search within the transcript; F3 for Find Next</li>
+<li><strong>Timestamps</strong> — shown inline if enabled in settings</li>
+<li><strong>Speakers</strong> — speaker labels appear if the provider supports diarization</li>
+</ul>
+<h3 id="speaker-management">Speaker Management</h3>
+<p>When speakers are detected, a <strong>Speakers</strong> bar appears above the transcript showing all identified speakers.</p>
+<h4 id="renaming-speakers">Renaming Speakers</h4>
+<ol>
+<li>Click <strong>Manage Speakers...</strong> to open the rename dialog.</li>
+<li>Replace generic IDs (Speaker 1, Speaker 2) with real names (Alice, Bob).</li>
+<li>Click <strong>OK</strong> — all instances update instantly throughout the transcript.</li>
+</ol>
+<h4 id="reassigning-segments">Reassigning Segments</h4>
+<ol>
+<li>Right-click any line in the transcript.</li>
+<li>Choose <strong>Assign to Speaker</strong> and select the correct speaker.</li>
+<li>Or choose <strong>New Speaker...</strong> to create a new speaker and assign the line.</li>
+</ol>
+<h4 id="speaker-display-format">Speaker Display Format</h4>
+<p>Transcripts with speakers use the format:</p>
+<div class="highlight"><pre><span></span><code>[00:05]  Alice: Welcome to our meeting.
+[00:12]  Bob: Thanks for having me.
+</code></pre></div>
+
+<h4 id="cloud-free-local-diarization">Cloud-Free Local Diarization</h4>
+<p>If your transcription provider doesn't support speaker detection, enable <strong>local diarization</strong> in Settings:
+1. Install pyannote.audio: <code>pip install pyannote.audio</code>
+2. Set up a HuggingFace auth token (some models are gated)
+3. Enable: Settings &gt; Diarization &gt; Use local diarization
+4. Local diarization runs automatically as post-processing on any provider's output</p>
+<hr>
+<h2 id="exporting">Exporting</h2>
+<h3 id="manual-export">Manual Export</h3>
+<ol>
+<li>Select a transcript.</li>
+<li><strong>File, then Export</strong> (Ctrl+E).</li>
+<li>Choose format and location.</li>
+</ol>
+<h3 id="auto-export">Auto-Export</h3>
+<p>Enable in <strong>Settings, then General, then Auto-export</strong>. Transcripts are saved automatically when done, in your chosen format and location.</p>
+<h3 id="export-formats">Export Formats</h3>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Extension</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plain Text</td>
+<td>.txt</td>
+<td>Simple sharing, email</td>
+</tr>
+<tr>
+<td>Markdown</td>
+<td>.md</td>
+<td>Documentation, GitHub</td>
+</tr>
+<tr>
+<td>HTML</td>
+<td>.html</td>
+<td>Web publishing</td>
+</tr>
+<tr>
+<td>Microsoft Word</td>
+<td>.docx</td>
+<td>Reports, editing</td>
+</tr>
+<tr>
+<td>SubRip Subtitles</td>
+<td>.srt</td>
+<td>Video subtitles</td>
+</tr>
+<tr>
+<td>WebVTT</td>
+<td>.vtt</td>
+<td>Web video captions</td>
+</tr>
+<tr>
+<td>JSON</td>
+<td>.json</td>
+<td>Data processing, APIs</td>
+</tr>
+</tbody>
+</table>
+<h3 id="export-options-settings-then-output">Export Options (Settings, then Output)</h3>
+<ul>
+<li><strong>Filename template</strong> — custom naming with <code>{stem}</code>, <code>{date}</code>, etc.</li>
+<li><strong>Include header/metadata</strong> — add file info at the top</li>
+<li><strong>Encoding</strong> — UTF-8 (default), or other encodings</li>
+<li><strong>Overwrite</strong> — replace existing files or auto-number</li>
+</ul>
+<hr>
+<h2 id="providers_1">Providers</h2>
+<p>BITS Whisperer supports <strong>17 transcription engines</strong> across three categories:</p>
+<h3 id="local-free-offline">Local (Free, Offline)</h3>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Description</th>
+<th style="text-align: center;">Key Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Local Whisper</strong></td>
+<td>On-device AI (faster-whisper). Free, private, no internet needed.</td>
+<td style="text-align: center;">No</td>
+</tr>
+<tr>
+<td><strong>Windows Speech</strong></td>
+<td>Built-in Windows SAPI5/WinRT recognition.</td>
+<td style="text-align: center;">No</td>
+</tr>
+<tr>
+<td><strong>Azure Embedded</strong></td>
+<td>Microsoft offline speech engine.</td>
+<td style="text-align: center;">No</td>
+</tr>
+<tr>
+<td><strong>Vosk</strong></td>
+<td>Lightweight offline ASR (Kaldi). 20+ languages, 40-50 MB models.</td>
+<td style="text-align: center;">No</td>
+</tr>
+<tr>
+<td><strong>Parakeet</strong></td>
+<td>NVIDIA NeMo high-accuracy English ASR. 600M–1.1B param models.</td>
+<td style="text-align: center;">No</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cloud-paid-online">Cloud (Paid, Online)</h3>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Speed</th>
+<th>Price/min</th>
+<th>Free Tier</th>
+<th style="text-align: center;">Key Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>OpenAI Whisper</strong></td>
+<td>Fast</td>
+<td>$0.006</td>
+<td>—</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+<tr>
+<td><strong>Google Speech</strong></td>
+<td>Fast</td>
+<td>$0.016</td>
+<td>60 min/mo</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+<tr>
+<td><strong>Google Gemini</strong></td>
+<td>Fast</td>
+<td>$0.0002</td>
+<td>Generous</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+<tr>
+<td><strong>Azure Speech</strong></td>
+<td>Fast</td>
+<td>$0.017</td>
+<td>5 hrs/mo</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+<tr>
+<td><strong>Deepgram Nova-2</strong></td>
+<td>Very fast</td>
+<td>$0.013</td>
+<td>$200 credit</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+<tr>
+<td><strong>AssemblyAI</strong></td>
+<td>Fast</td>
+<td>$0.011</td>
+<td>—</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+<tr>
+<td><strong>AWS Transcribe</strong></td>
+<td>Fast</td>
+<td>$0.024</td>
+<td>60 min/mo</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+<tr>
+<td><strong>Groq Whisper</strong></td>
+<td>188x real-time</td>
+<td>$0.003</td>
+<td>—</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+<tr>
+<td><strong>Rev.ai</strong></td>
+<td>Fast</td>
+<td>$0.020</td>
+<td>—</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+<tr>
+<td><strong>Speechmatics</strong></td>
+<td>Fast</td>
+<td>$0.016</td>
+<td>—</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+<tr>
+<td><strong>ElevenLabs Scribe</strong></td>
+<td>Fast</td>
+<td>$0.005</td>
+<td>—</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cloud-audio-processing">Cloud + Audio Processing</h3>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Description</th>
+<th>Free Tier</th>
+<th style="text-align: center;">Key Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Auphonic</strong></td>
+<td>Audio post-production (noise reduction, leveling, loudness) + Whisper transcription</td>
+<td>2 hrs/mo</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+</tbody>
+</table>
+<h3 id="setting-up-cloud-providers">Setting Up Cloud Providers</h3>
+<p>BITS Whisperer provides two ways to configure cloud providers:</p>
+<h4 id="method-1-add-provider-wizard-recommended">Method 1: Add Provider Wizard (Recommended)</h4>
+<ol>
+<li>Go to <strong>Tools, then Add Provider</strong>.</li>
+<li>Select a cloud provider from the dropdown (12 available).</li>
+<li>Read the description and pricing information.</li>
+<li>Enter your API key (and any auxiliary credentials like AWS Region).</li>
+<li>Click <strong>Validate &amp; Activate</strong> — the app tests your key with a real API call.</li>
+<li>On success, the provider is activated and ready for transcription.</li>
+</ol>
+<p>The Add Provider wizard validates every credential with a live API call before activation. This catches typos, expired keys, and configuration issues immediately.</p>
+<h4 id="method-2-settings-dialog">Method 2: Settings Dialog</h4>
+<ol>
+<li>Go to <strong>Tools, then Settings, then Providers and Keys</strong> (or during the Setup Wizard).</li>
+<li>Enter your API key for the desired service.</li>
+<li>Click the <strong>Test</strong> button to validate the key.</li>
+<li>Keys are stored in your OS credential vault (Windows Credential Manager / macOS Keychain).</li>
+</ol>
+<blockquote>
+<p><strong>Note</strong>: In Basic mode, only activated cloud providers appear in the provider dropdown. Use Add Provider to activate them, or switch to Advanced mode to see all providers.</p>
+</blockquote>
+<h3 id="choosing-a-provider">Choosing a Provider</h3>
+<ul>
+<li><strong>Privacy first</strong>: Local Whisper (your audio never leaves your computer)</li>
+<li><strong>Best English accuracy</strong>: Parakeet TDT 1.1B (local) or Large v3 (local) or OpenAI Whisper (cloud)</li>
+<li><strong>Cheapest cloud</strong>: Gemini ($0.0002/min) or Groq ($0.003/min)</li>
+<li><strong>Fastest cloud</strong>: Groq (188x real-time) or Deepgram</li>
+<li><strong>Speaker labels</strong>: Azure, Google, Deepgram, AssemblyAI, ElevenLabs, Rev.ai, Speechmatics, Amazon, Gemini (10 providers) or local pyannote.audio</li>
+<li><strong>Audio cleanup</strong>: Auphonic (noise/hum removal + transcription)</li>
+</ul>
+<hr>
+<h2 id="ai-models">AI Models</h2>
+<p>BITS Whisperer includes <strong>14 Whisper model variants</strong> for local transcription:</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Size</th>
+<th>Speed</th>
+<th>Accuracy</th>
+<th>Languages</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tiny</td>
+<td>75 MB</td>
+<td>5 of 5</td>
+<td>2 of 5</td>
+<td>99</td>
+<td>Quick drafts</td>
+</tr>
+<tr>
+<td>Tiny (English)</td>
+<td>75 MB</td>
+<td>5 of 5</td>
+<td>2 of 5</td>
+<td>EN only</td>
+<td>Fast English drafts</td>
+</tr>
+<tr>
+<td>Base</td>
+<td>142 MB</td>
+<td>4 of 5</td>
+<td>3 of 5</td>
+<td>99</td>
+<td>Clear recordings</td>
+</tr>
+<tr>
+<td>Base (English)</td>
+<td>142 MB</td>
+<td>4 of 5</td>
+<td>3 of 5</td>
+<td>EN only</td>
+<td>English podcasts</td>
+</tr>
+<tr>
+<td>Small</td>
+<td>466 MB</td>
+<td>3 of 5</td>
+<td>4 of 5</td>
+<td>99</td>
+<td>Most recordings</td>
+</tr>
+<tr>
+<td>Small (English)</td>
+<td>466 MB</td>
+<td>3 of 5</td>
+<td>4 of 5</td>
+<td>EN only</td>
+<td>English meetings</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>1.5 GB</td>
+<td>2 of 5</td>
+<td>4 of 5</td>
+<td>99</td>
+<td>Important recordings</td>
+</tr>
+<tr>
+<td>Medium (English)</td>
+<td>1.5 GB</td>
+<td>2 of 5</td>
+<td>5 of 5</td>
+<td>EN only</td>
+<td>Professional English</td>
+</tr>
+<tr>
+<td>Large v1</td>
+<td>3 GB</td>
+<td>1 of 5</td>
+<td>5 of 5</td>
+<td>99</td>
+<td>Professional work</td>
+</tr>
+<tr>
+<td>Large v2</td>
+<td>3 GB</td>
+<td>1 of 5</td>
+<td>5 of 5</td>
+<td>99</td>
+<td>Professional work</td>
+</tr>
+<tr>
+<td>Large v3</td>
+<td>3 GB</td>
+<td>1 of 5</td>
+<td>5 of 5</td>
+<td>99</td>
+<td>Best accuracy</td>
+</tr>
+<tr>
+<td>Large v3 Turbo</td>
+<td>1.6 GB</td>
+<td>3 of 5</td>
+<td>5 of 5</td>
+<td>99</td>
+<td>Best value with GPU</td>
+</tr>
+<tr>
+<td>Distil Large v2</td>
+<td>1.5 GB</td>
+<td>4 of 5</td>
+<td>4 of 5</td>
+<td>EN only</td>
+<td>Fast English + GPU</td>
+</tr>
+<tr>
+<td>Distil Large v3</td>
+<td>1.5 GB</td>
+<td>4 of 5</td>
+<td>4 of 5</td>
+<td>EN only</td>
+<td>Fast English + GPU</td>
+</tr>
+</tbody>
+</table>
+<h3 id="managing-models">Managing Models</h3>
+<p>Open <strong>Tools, then Manage Models</strong> (Ctrl+M) to:
+- See which models are downloaded
+- Download new models
+- Delete models to free disk space
+- Check hardware compatibility
+- See disk space usage</p>
+<h3 id="hardware-requirements">Hardware Requirements</h3>
+<p>The app automatically checks your hardware and classifies each model as:
+- <strong>Ready</strong> — runs comfortably on your machine
+- <strong>Slow</strong> — will work but may be slower than ideal
+- <strong>Too big</strong> — won’t run (not enough RAM/GPU memory)</p>
+<h3 id="disk-space">Disk Space</h3>
+<p>Before each download, the app checks you have enough free disk space (with 10% headroom). If you're low on space, you'll get a warning.</p>
+<hr>
+<h2 id="settings">Settings</h2>
+<p>Open <strong>Tools, then Settings</strong> (Ctrl+,) for all configuration options.</p>
+<h3 id="tabs-overview">Tabs Overview</h3>
+<table>
+<thead>
+<tr>
+<th>Tab</th>
+<th>What It Controls</th>
+<th>Visibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>General</strong></td>
+<td>Language, provider, model, tray, notifications, updates</td>
+<td>Always</td>
+</tr>
+<tr>
+<td><strong>Transcription</strong></td>
+<td>Timestamps, speakers, VAD, temperature, beam size</td>
+<td>Always</td>
+</tr>
+<tr>
+<td><strong>Output</strong></td>
+<td>Default format, directory, filename template, encoding</td>
+<td>Always</td>
+</tr>
+<tr>
+<td><strong>Providers &amp; Keys</strong></td>
+<td>API keys for all cloud services with Test buttons</td>
+<td>Always</td>
+</tr>
+<tr>
+<td><strong>Paths &amp; Storage</strong></td>
+<td>Model directory, temp directory, log file</td>
+<td>Always</td>
+</tr>
+<tr>
+<td><strong>Audio Processing</strong></td>
+<td>7-filter preprocessing chain</td>
+<td>Advanced only</td>
+</tr>
+<tr>
+<td><strong>Advanced</strong></td>
+<td>File limits, concurrency, GPU settings, log level</td>
+<td>Advanced only</td>
+</tr>
+</tbody>
+</table>
+<h3 id="basic-vs-advanced-mode">Basic vs. Advanced Mode</h3>
+<p><strong>Basic Mode</strong> (default):
+- Shows 5 tabs: General, Transcription, Output, Providers &amp; Keys, Paths &amp; Storage
+- Only local providers and <strong>activated</strong> cloud providers appear in the provider dropdown
+- Use <strong>Tools, then Add Provider</strong> to activate cloud providers
+- Recommended for everyday use</p>
+<p><strong>Advanced Mode</strong>:
+- Shows all 7 tabs including Audio Processing and Advanced
+- All cloud providers visible in the provider dropdown (activation not required)
+- Full control over audio preprocessing, GPU settings, concurrency, and chunking
+- Toggle via <strong>View, then Advanced Mode</strong> (Ctrl+Shift+A)</p>
+<p>Your mode preference is saved between sessions. You can also set it in the Setup Wizard.</p>
+<hr>
+<h2 id="audio-preprocessing">Audio Preprocessing</h2>
+<p>BITS Whisperer applies a 7-filter audio cleanup chain before transcription to improve accuracy:</p>
+<table>
+<thead>
+<tr>
+<th>Filter</th>
+<th style="text-align: center;">Default</th>
+<th>What It Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>High-pass</td>
+<td style="text-align: center;">80 Hz</td>
+<td>Removes rumble and low-frequency noise</td>
+</tr>
+<tr>
+<td>Low-pass</td>
+<td style="text-align: center;">8 kHz</td>
+<td>Removes hiss and high-frequency noise</td>
+</tr>
+<tr>
+<td>Noise gate</td>
+<td style="text-align: center;">-40 dB</td>
+<td>Silences quiet background noise</td>
+</tr>
+<tr>
+<td>De-esser</td>
+<td style="text-align: center;">Off</td>
+<td>Reduces harsh "s" sounds</td>
+</tr>
+<tr>
+<td>Compressor</td>
+<td style="text-align: center;">-20 dB</td>
+<td>Evens out volume differences</td>
+</tr>
+<tr>
+<td>Loudness normalization</td>
+<td style="text-align: center;">-16 LUFS</td>
+<td>Standardizes overall volume</td>
+</tr>
+<tr>
+<td>Silence trimming</td>
+<td style="text-align: center;">-40 dB, 1s</td>
+<td>Removes long pauses</td>
+</tr>
+</tbody>
+</table>
+<p>Configure in <strong>Settings, then Audio Processing</strong>. Disable individual filters or turn off the entire chain.</p>
+<blockquote>
+<p><strong>Note</strong>: Auphonic does its own professional-grade audio processing in the cloud. If using Auphonic, you may want to disable local preprocessing.</p>
+</blockquote>
+<hr>
+<h2 id="system-tray">System Tray</h2>
+<p>BITS Whisperer can minimize to the system tray for background processing:</p>
+<ul>
+<li><strong>Close with tray enabled</strong>: the app minimizes to tray instead of quitting</li>
+<li><strong>Tray icon menu</strong>: right-click for Show, Start, Pause, Settings, Quit</li>
+<li><strong>Notifications</strong>: desktop balloon notifications when transcription completes</li>
+<li><strong>Configure</strong>: Settings, then General, then "Minimize to system tray"</li>
+</ul>
+<hr>
+<h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
+<table>
+<thead>
+<tr>
+<th>Shortcut</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ctrl+O</td>
+<td>Add files</td>
+</tr>
+<tr>
+<td>Ctrl+E</td>
+<td>Export transcript</td>
+</tr>
+<tr>
+<td>Ctrl+S</td>
+<td>Save (manual save)</td>
+</tr>
+<tr>
+<td>Ctrl+,</td>
+<td>Open Settings</td>
+</tr>
+<tr>
+<td>Ctrl+M</td>
+<td>Manage Models</td>
+</tr>
+<tr>
+<td>Ctrl+Shift+A</td>
+<td>Toggle Advanced Mode</td>
+</tr>
+<tr>
+<td>F5</td>
+<td>Start transcription</td>
+</tr>
+<tr>
+<td>F3</td>
+<td>Find next in transcript</td>
+</tr>
+<tr>
+<td>Ctrl+F</td>
+<td>Find in transcript</td>
+</tr>
+<tr>
+<td>Ctrl+W</td>
+<td>Close file</td>
+</tr>
+<tr>
+<td>Ctrl+Q</td>
+<td>Quit</td>
+</tr>
+<tr>
+<td>Alt+F</td>
+<td>File menu</td>
+</tr>
+<tr>
+<td>Alt+Q</td>
+<td>Queue menu</td>
+</tr>
+<tr>
+<td>Alt+V</td>
+<td>View menu</td>
+</tr>
+<tr>
+<td>Alt+T</td>
+<td>Tools menu</td>
+</tr>
+<tr>
+<td>Alt+H</td>
+<td>Help menu</td>
+</tr>
+</tbody>
+</table>
+<p>All menu items have keyboard mnemonics (underlined letters) for quick access.</p>
+<hr>
+<h2 id="accessibility">Accessibility</h2>
+<p>BITS Whisperer is designed for full accessibility:</p>
+<h3 id="screen-readers">Screen Readers</h3>
+<ul>
+<li>All controls have accessible names and descriptions</li>
+<li>Status updates are announced via the status bar</li>
+<li>Progress is reported through gauges and text</li>
+<li>Tested with NVDA on Windows</li>
+</ul>
+<h3 id="keyboard-navigation">Keyboard Navigation</h3>
+<ul>
+<li>Full Tab/Shift+Tab navigation through all controls</li>
+<li>All actions available through the menu bar with mnemonics</li>
+<li>Accelerator keys for common actions (see Shortcuts above)</li>
+<li>Arrow keys for list navigation</li>
+</ul>
+<h3 id="visual">Visual</h3>
+<ul>
+<li>Respects system high-contrast settings</li>
+<li>No hard-coded colors — uses system theme</li>
+<li>Resizable dialogs and panels</li>
+<li>Clear text labels on all controls</li>
+</ul>
+<h3 id="tips">Tips</h3>
+<ul>
+<li>Press <strong>Alt</strong> to activate the menu bar, then use arrow keys</li>
+<li>Press <strong>Tab</strong> to move between panels</li>
+<li>Press <strong>Enter</strong> to activate buttons</li>
+<li>Press <strong>Space</strong> to toggle checkboxes</li>
+</ul>
+<hr>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="model-download-failed">"Model download failed"</h3>
+<ul>
+<li>Check your internet connection</li>
+<li>Ensure you have enough disk space (the app will warn you)</li>
+<li>Try again — downloads can be interrupted by network issues</li>
+<li>Check the log file: <strong>Help, then View Log</strong></li>
+</ul>
+<h3 id="transcription-failed">"Transcription failed"</h3>
+<ul>
+<li>Check the file is a supported audio format</li>
+<li>Try a different provider</li>
+<li>For local models, ensure the model is downloaded</li>
+<li>For cloud services, verify your API key is correct</li>
+<li>Check file size is within limits (default: 500 MB)</li>
+<li>View the error in the log: <strong>Help, then View Log</strong></li>
+</ul>
+<h3 id="provider-key-invalid">"Provider key invalid"</h3>
+<ul>
+<li>Double-check the key in <strong>Settings, then Providers and Keys</strong></li>
+<li>Keys are validated on save — the app will confirm whether the key is valid or invalid</li>
+<li>Some services require billing to be enabled before the API works</li>
+<li>Re-generate the key on the provider's website if needed</li>
+</ul>
+<h3 id="application-wont-start">"Application won't start"</h3>
+<ul>
+<li>Check the log file at: <code>%LOCALAPPDATA%\BITS Whisperer\app.log</code> (Windows) or <code>~/Library/Application Support/BITS Whisperer/app.log</code> (macOS)</li>
+<li>Delete <code>settings.json</code> to reset to defaults (same directory)</li>
+<li>Reinstall if the issue persists</li>
+</ul>
+<h3 id="ffmpeg-not-found">"ffmpeg not found"</h3>
+<ul>
+<li>BITS Whisperer will try to install ffmpeg automatically on first launch</li>
+<li>If automatic installation didn't work, install manually:</li>
+<li><strong>winget</strong>: <code>winget install Gyan.FFmpeg</code></li>
+<li><strong>Chocolatey</strong>: <code>choco install ffmpeg</code></li>
+<li><strong>Manual</strong>: Download from https://www.gyan.dev/ffmpeg/builds/ and add the <code>bin</code> folder to your PATH</li>
+<li>Restart BITS Whisperer after installing ffmpeg</li>
+</ul>
+<h3 id="slow-transcription">"Slow transcription"</h3>
+<ul>
+<li>Use a smaller model (Tiny or Base)</li>
+<li>Enable GPU acceleration if you have an NVIDIA GPU</li>
+<li>Close other applications to free up RAM</li>
+<li>Use a cloud provider for faster processing</li>
+<li>Enable audio preprocessing — cleaner audio transcribes faster</li>
+</ul>
+<h3 id="sdk-installation-failed">"SDK installation failed"</h3>
+<ul>
+<li>Check your internet connection — SDKs are downloaded from PyPI.</li>
+<li>Ensure you have enough disk space. Some SDKs (like Local Whisper) need ~220 MB.</li>
+<li>Check the log file (<strong>Tools, then View Log</strong>) for detailed error messages.</li>
+<li>Try again — the download may have been interrupted by network issues.</li>
+<li>As a fallback, you can install the SDK manually:</li>
+<li>Open a command prompt</li>
+<li>Run: <code>pip install --target "%LOCALAPPDATA%\BITS Whisperer\BITSWhisperer\site-packages" &lt;package-name&gt;</code></li>
+<li>Restart BITS Whisperer</li>
+</ul>
+<h3 id="provider-not-available-after-sdk-install">"Provider not available after SDK install"</h3>
+<ul>
+<li>Restart BITS Whisperer — some SDKs require a fresh start to load correctly.</li>
+<li>Check that the API key is configured in <strong>Settings, then Providers and Keys</strong>.</li>
+<li>View the log file for import errors: <strong>Tools, then View Log</strong>.</li>
+</ul>
+<h3 id="resetting-the-app">Resetting the App</h3>
+<p>To start fresh:
+1. Delete the data directory:
+   - Windows: <code>%LOCALAPPDATA%\BITS Whisperer\</code>
+   - macOS: <code>~/Library/Application Support/BITS Whisperer/</code>
+2. This removes settings, downloaded models, and the job database.
+3. The Setup Wizard will appear again on next launch.</p>
+<hr>
+<h2 id="faq">FAQ</h2>
+<p><strong>Q: Is my audio sent to the internet?</strong>
+A: Only if you use a cloud provider. Local Whisper processes everything on your computer. Your audio files are never uploaded without your explicit choice.</p>
+<p><strong>Q: Do I need an internet connection?</strong>
+A: No — once you've downloaded a local model, BITS Whisperer works entirely offline. You only need internet to download models or use cloud providers.</p>
+<p><strong>Q: Which model should I use?</strong>
+A: The Setup Wizard recommends one based on your hardware. As a rule of thumb:
+- <strong>4 GB RAM, no GPU</strong>: Base
+- <strong>8 GB RAM, no GPU</strong>: Small
+- <strong>GPU with 4+ GB VRAM</strong>: Large v3 Turbo
+- <strong>GPU with 6+ GB VRAM</strong>: Large v3</p>
+<p><strong>Q: How are my API keys stored?</strong>
+A: Keys are stored in your operating system's credential vault (Windows Credential Manager or macOS Keychain) — the same system used by web browsers and other apps. They are never written to plain-text files or logs.</p>
+<p><strong>Q: Can I use multiple providers for different files?</strong>
+A: Yes! You can set a default provider and change it per file from the queue or Settings.</p>
+<p><strong>Q: How much disk space do I need?</strong>
+A: The app itself needs about 100 MB. Models range from 75 MB (Tiny) to 3 GB (Large). Download only the models you need — you can always add more later.</p>
+<p><strong>Q: Does it work on macOS?</strong>
+A: Yes! BITS Whisperer runs on Windows 10+ and macOS 12+. Linux support is planned.</p>
+<p><strong>Q: How do I update?</strong>
+A: The app checks for updates on startup (configurable). When an update is available, you'll be prompted to download it. You can also check manually via <strong>Help, then Check for Updates</strong>.</p>
+<hr>
+<p><em>BITS Whisperer v1.0.0 — Developed by Blind Information Technology Solutions (BITS). Made with care for accessibility and privacy.</em></p>
+<div class="footer">
+  Generated from <code>USER_GUIDE.md</code> &mdash; BITS Whisperer Documentation
+</div>
+</body>
+</html>

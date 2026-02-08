@@ -1,0 +1,2054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BITS Whisperer — Product Requirements Document</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --accent: #0969da;
+    --border: #d0d7de;
+    --code-bg: #f6f8fa;
+    --table-alt: #f6f8fa;
+    --blockquote: #57606a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --accent: #58a6ff;
+      --border: #30363d;
+      --code-bg: #161b22;
+      --table-alt: #161b22;
+      --blockquote: #8b949e;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+                 sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--fg);
+    background: var(--bg);
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+  h1 { font-size: 2em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+  h3 { font-size: 1.25em; }
+  p { margin: 0.5em 0 1em; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.875em;
+    background: var(--code-bg);
+    padding: 0.2em 0.4em;
+    border-radius: 6px;
+  }
+  pre {
+    background: var(--code-bg);
+    padding: 1em;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 1em 0;
+    line-height: 1.45;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+    font-size: 0.85em;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 0.5em 0.75em;
+    text-align: left;
+  }
+  th {
+    background: var(--code-bg);
+    font-weight: 600;
+  }
+  tr:nth-child(even) { background: var(--table-alt); }
+  blockquote {
+    border-left: 4px solid var(--accent);
+    padding: 0.5em 1em;
+    margin: 1em 0;
+    color: var(--blockquote);
+  }
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2em 0;
+  }
+  ul, ol { margin: 0.5em 0 1em 1.5em; }
+  li { margin: 0.25em 0; }
+  img { max-width: 100%; height: auto; }
+  .toc {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1em 1.5em;
+    margin: 1em 0 2em;
+  }
+  .toc ul { list-style: none; margin: 0; padding: 0; }
+  .toc ul ul { padding-left: 1.5em; }
+  .toc li { margin: 0.25em 0; }
+  strong { font-weight: 600; }
+  .footer {
+    margin-top: 3em;
+    padding-top: 1em;
+    border-top: 1px solid var(--border);
+    font-size: 0.85em;
+    color: var(--blockquote);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<nav class="toc"><strong>Table of Contents</strong>
+<div class="toc">
+<ul>
+<li><a href="#bits-whisperer-product-requirements-document">BITS Whisperer — Product Requirements Document</a><ul>
+<li><a href="#1-purpose-vision">1. Purpose &amp; Vision</a><ul>
+<li><a href="#design-pillars">Design Pillars</a></li>
+</ul>
+</li>
+<li><a href="#2-target-users">2. Target Users</a></li>
+<li><a href="#3-whisper-models-local-inference">3. Whisper Models (Local Inference)</a></li>
+<li><a href="#4-transcription-providers">4. Transcription Providers</a><ul>
+<li><a href="#provider-selection">Provider Selection</a></li>
+<li><a href="#cloud-provider-onboarding">Cloud Provider Onboarding</a></li>
+<li><a href="#auphonic-integration">Auphonic Integration</a></li>
+<li><a href="#provider-specific-settings">Provider-Specific Settings</a></li>
+<li><a href="#speaker-diarization">Speaker Diarization</a></li>
+</ul>
+</li>
+<li><a href="#5-audio-preprocessing-pipeline">5. Audio Preprocessing Pipeline</a></li>
+<li><a href="#6-audio-format-support">6. Audio Format Support</a></li>
+<li><a href="#7-batch-folder-processing">7. Batch &amp; Folder Processing</a></li>
+<li><a href="#8-background-processing-system-tray">8. Background Processing &amp; System Tray</a><ul>
+<li><a href="#system-tray-icon-uitray_iconpy">System Tray Icon (ui/tray_icon.py)</a></li>
+<li><a href="#minimize-to-tray">Minimize to Tray</a></li>
+<li><a href="#notifications">Notifications</a></li>
+</ul>
+</li>
+<li><a href="#9-output-export">9. Output &amp; Export</a><ul>
+<li><a href="#7-export-formats">7 Export Formats</a></li>
+<li><a href="#auto-export-on-completion">Auto-Export on Completion</a></li>
+</ul>
+</li>
+<li><a href="#10-user-interface">10. User Interface</a><ul>
+<li><a href="#layout">Layout</a></li>
+<li><a href="#menu-structure">Menu Structure</a></li>
+<li><a href="#settings-dialog-7-tabs">Settings Dialog (7 tabs)</a></li>
+<li><a href="#simple-vs-advanced-mode">Simple vs Advanced Mode</a></li>
+<li><a href="#recent-files">Recent Files</a></li>
+</ul>
+</li>
+<li><a href="#11-self-update-system">11. Self-Update System</a></li>
+<li><a href="#12-architecture">12. Architecture</a><ul>
+<li><a href="#file-tree">File Tree</a></li>
+<li><a href="#threading-model">Threading Model</a></li>
+</ul>
+</li>
+<li><a href="#13-data-model">13. Data Model</a><ul>
+<li><a href="#job-corejobpy">Job (core/job.py)</a></li>
+<li><a href="#transcriptionresult">TranscriptionResult</a></li>
+<li><a href="#persistence">Persistence</a></li>
+</ul>
+</li>
+<li><a href="#14-privacy-security">14. Privacy &amp; Security</a></li>
+<li><a href="#15-accessibility-requirements-non-negotiable">15. Accessibility Requirements (Non-Negotiable)</a></li>
+<li><a href="#16-keyboard-shortcuts">16. Keyboard Shortcuts</a></li>
+<li><a href="#17-paths-directories">17. Paths &amp; Directories</a></li>
+<li><a href="#18-dependencies">18. Dependencies</a></li>
+<li><a href="#19-implementation-status">19. Implementation Status</a></li>
+<li><a href="#20-success-metrics">20. Success Metrics</a></li>
+<li><a href="#21-decisions-log">21. Decisions Log</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</nav>
+<h1 id="bits-whisperer-product-requirements-document">BITS Whisperer — Product Requirements Document</h1>
+<blockquote>
+<p><strong>Version:</strong> 1.0 - <strong>Updated:</strong> 2026-02-08 - <strong>Status:</strong> Implementation Complete</p>
+<p>Developed by <strong>Blind Information Technology Solutions (BITS)</strong></p>
+</blockquote>
+<hr>
+<h2 id="1-purpose-vision">1. Purpose &amp; Vision</h2>
+<p><strong>BITS Whisperer</strong> is a consumer-grade WXPython desktop application for audio
+transcription. It targets Windows and macOS users who need reliable speech-to-text without
+technical expertise — journalists, students, researchers, accessibility
+advocates, and content creators.</p>
+<h3 id="design-pillars">Design Pillars</h3>
+<table>
+<thead>
+<tr>
+<th>Pillar</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Accessible</strong></td>
+<td>WCAG 2.1/2.2 adapted for desktop; menu bar primary interface; full keyboard + screen reader support</td>
+</tr>
+<tr>
+<td><strong>Private</strong></td>
+<td>Local transcript storage by default; API keys in OS credential store; offline-capable providers</td>
+</tr>
+<tr>
+<td><strong>Versatile</strong></td>
+<td>17 transcription providers (cloud + local); 14 Whisper models; 7 export formats; Auphonic audio post-production</td>
+</tr>
+<tr>
+<td><strong>Simple</strong></td>
+<td>Consumer-friendly defaults; Basic mode hides advanced controls and unactivated providers; first-run setup wizard with experience mode selection; one-click transcription</td>
+</tr>
+<tr>
+<td><strong>Background-aware</strong></td>
+<td>System tray integration; balloon notifications; minimize-to-tray for long batches</td>
+</tr>
+<tr>
+<td><strong>Cross-platform</strong></td>
+<td>Windows 10+ and macOS 12+; CUDA and Apple Silicon Metal GPU detection</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="2-target-users">2. Target Users</h2>
+<table>
+<thead>
+<tr>
+<th>Persona</th>
+<th>Pain Point</th>
+<th>BITS Whisperer Solution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Journalist</strong></td>
+<td>Needs accurate transcripts of interviews</td>
+<td>Batch processing, speaker diarization, auto-export</td>
+</tr>
+<tr>
+<td><strong>Student</strong></td>
+<td>Lecture recordings on a budget</td>
+<td>Free local Whisper models, simple mode</td>
+</tr>
+<tr>
+<td><strong>Researcher</strong></td>
+<td>Large datasets of recordings</td>
+<td>Folder import, concurrent workers, background mode</td>
+</tr>
+<tr>
+<td><strong>Content Creator</strong></td>
+<td>Episode transcripts for SEO &amp; subtitles</td>
+<td>SRT/VTT export, multiple providers for quality comparison</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="3-whisper-models-local-inference">3. Whisper Models (Local Inference)</h2>
+<p>14 model variants via <strong>faster-whisper</strong> on CPU or CUDA GPU:</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Params</th>
+<th>Disk</th>
+<th>Min RAM</th>
+<th>Min VRAM</th>
+<th>Speed</th>
+<th>Accuracy</th>
+<th>Languages</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tiny</td>
+<td>39 M</td>
+<td>75 MB</td>
+<td>2 GB</td>
+<td>CPU-OK</td>
+<td>5 of 5</td>
+<td>2 of 5</td>
+<td>99</td>
+</tr>
+<tr>
+<td>Tiny (English)</td>
+<td>39 M</td>
+<td>75 MB</td>
+<td>2 GB</td>
+<td>CPU-OK</td>
+<td>5 of 5</td>
+<td>2 of 5</td>
+<td>English only</td>
+</tr>
+<tr>
+<td>Base</td>
+<td>74 M</td>
+<td>142 MB</td>
+<td>2 GB</td>
+<td>CPU-OK</td>
+<td>4 of 5</td>
+<td>3 of 5</td>
+<td>99</td>
+</tr>
+<tr>
+<td>Base (English)</td>
+<td>74 M</td>
+<td>142 MB</td>
+<td>2 GB</td>
+<td>CPU-OK</td>
+<td>4 of 5</td>
+<td>3 of 5</td>
+<td>English only</td>
+</tr>
+<tr>
+<td>Small</td>
+<td>244 M</td>
+<td>466 MB</td>
+<td>4 GB</td>
+<td>2 GB</td>
+<td>3 of 5</td>
+<td>4 of 5</td>
+<td>99</td>
+</tr>
+<tr>
+<td>Small (English)</td>
+<td>244 M</td>
+<td>466 MB</td>
+<td>4 GB</td>
+<td>2 GB</td>
+<td>3 of 5</td>
+<td>4 of 5</td>
+<td>English only</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>769 M</td>
+<td>1.5 GB</td>
+<td>8 GB</td>
+<td>4 GB</td>
+<td>2 of 5</td>
+<td>4 of 5</td>
+<td>99</td>
+</tr>
+<tr>
+<td>Medium (English)</td>
+<td>769 M</td>
+<td>1.5 GB</td>
+<td>8 GB</td>
+<td>4 GB</td>
+<td>2 of 5</td>
+<td>5 of 5</td>
+<td>English only</td>
+</tr>
+<tr>
+<td>Large v1</td>
+<td>1.55 B</td>
+<td>3 GB</td>
+<td>12 GB</td>
+<td>6 GB</td>
+<td>1 of 5</td>
+<td>5 of 5</td>
+<td>99</td>
+</tr>
+<tr>
+<td>Large v2</td>
+<td>1.55 B</td>
+<td>3 GB</td>
+<td>12 GB</td>
+<td>6 GB</td>
+<td>1 of 5</td>
+<td>5 of 5</td>
+<td>99</td>
+</tr>
+<tr>
+<td>Large v3</td>
+<td>1.55 B</td>
+<td>3 GB</td>
+<td>12 GB</td>
+<td>6 GB</td>
+<td>1 of 5</td>
+<td>5 of 5</td>
+<td>99</td>
+</tr>
+<tr>
+<td>Large v3 Turbo</td>
+<td>809 M</td>
+<td>1.6 GB</td>
+<td>8 GB</td>
+<td>4 GB</td>
+<td>3 of 5</td>
+<td>5 of 5</td>
+<td>99</td>
+</tr>
+<tr>
+<td>Distil Large v2 (EN)</td>
+<td>756 M</td>
+<td>1.5 GB</td>
+<td>8 GB</td>
+<td>4 GB</td>
+<td>4 of 5</td>
+<td>4 of 5</td>
+<td>English only</td>
+</tr>
+<tr>
+<td>Distil Large v3 (EN)</td>
+<td>756 M</td>
+<td>1.5 GB</td>
+<td>8 GB</td>
+<td>4 GB</td>
+<td>4 of 5</td>
+<td>4 of 5</td>
+<td>English only</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>Model Manager</strong> (Ctrl+M) downloads models from HuggingFace and shows
+hardware eligibility -- models are tagged as eligible, cautioned, or ineligible
+based on the user's CPU, RAM, and GPU detected via <code>DeviceProbe</code>.</p>
+<hr>
+<h2 id="4-transcription-providers">4. Transcription Providers</h2>
+<p>17 adapters implementing <code>TranscriptionProvider</code> ABC:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Provider</th>
+<th>Module</th>
+<th>Type</th>
+<th>Rate/min</th>
+<th>Key Required</th>
+<th>Highlights</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Local Whisper</td>
+<td><code>local_whisper.py</code></td>
+<td>Local</td>
+<td>Free</td>
+<td>No</td>
+<td>Offline, private, GPU-accelerated</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Windows Speech</td>
+<td><code>windows_speech.py</code></td>
+<td>Local</td>
+<td>Free</td>
+<td>No</td>
+<td>SAPI5 + WinRT, offline (Windows only)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Azure Embedded Speech</td>
+<td><code>azure_embedded.py</code></td>
+<td>Local</td>
+<td>Free</td>
+<td>No</td>
+<td>Microsoft neural models, offline</td>
+</tr>
+<tr>
+<td>4</td>
+<td>OpenAI Whisper</td>
+<td><code>openai_whisper.py</code></td>
+<td>Cloud</td>
+<td>$0.006</td>
+<td>Yes</td>
+<td>Fast, reliable, verbose timestamps</td>
+</tr>
+<tr>
+<td>5</td>
+<td>ElevenLabs Scribe</td>
+<td><code>elevenlabs_provider.py</code></td>
+<td>Cloud</td>
+<td>$0.005</td>
+<td>Yes</td>
+<td>99+ languages, best-in-class accuracy</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Groq Whisper</td>
+<td><code>groq_whisper.py</code></td>
+<td>Cloud</td>
+<td>$0.003</td>
+<td>Yes</td>
+<td>188x real-time on LPU hardware</td>
+</tr>
+<tr>
+<td>7</td>
+<td>AssemblyAI</td>
+<td><code>assemblyai_provider.py</code></td>
+<td>Cloud</td>
+<td>$0.011</td>
+<td>Yes</td>
+<td>Speaker labels, auto-chapters</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Deepgram Nova-2</td>
+<td><code>deepgram_provider.py</code></td>
+<td>Cloud</td>
+<td>$0.013</td>
+<td>Yes</td>
+<td>Smart formatting, fast streaming</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Azure Speech Services</td>
+<td><code>azure_speech.py</code></td>
+<td>Cloud</td>
+<td>$0.017</td>
+<td>Yes</td>
+<td>100+ languages, continuous recognition</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Google Speech-to-Text</td>
+<td><code>google_speech.py</code></td>
+<td>Cloud</td>
+<td>$0.024</td>
+<td>Yes</td>
+<td>Diarization, enhanced models</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Google Gemini</td>
+<td><code>gemini_provider.py</code></td>
+<td>Cloud</td>
+<td>$0.0002</td>
+<td>Yes</td>
+<td>Cheapest cloud, multimodal AI</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Amazon Transcribe</td>
+<td><code>aws_transcribe.py</code></td>
+<td>Cloud</td>
+<td>$0.024</td>
+<td>Yes</td>
+<td>S3 integration, medical vocabularies</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Rev.ai</td>
+<td><code>rev_ai_provider.py</code></td>
+<td>Cloud</td>
+<td>$0.020</td>
+<td>Yes</td>
+<td>Human-hybrid option, high accuracy</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Speechmatics</td>
+<td><code>speechmatics_provider.py</code></td>
+<td>Cloud</td>
+<td>$0.017</td>
+<td>Yes</td>
+<td>50+ languages, real-time streaming</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Vosk</td>
+<td><code>vosk_provider.py</code></td>
+<td>Local</td>
+<td>Free</td>
+<td>No</td>
+<td>Lightweight offline ASR (Kaldi). 20+ languages, 40-50 MB models. Works on very low-end hardware.</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Parakeet</td>
+<td><code>parakeet_provider.py</code></td>
+<td>Local</td>
+<td>Free</td>
+<td>No</td>
+<td>NVIDIA NeMo high-accuracy English ASR. 600M–1.1B param models.</td>
+</tr>
+<tr>
+<td>17</td>
+<td>Auphonic</td>
+<td><code>auphonic_provider.py</code></td>
+<td>Cloud</td>
+<td>~$0.01</td>
+<td>Yes</td>
+<td>Audio post-production + Whisper transcription</td>
+</tr>
+</tbody>
+</table>
+<h3 id="provider-selection">Provider Selection</h3>
+<p>The <code>ProviderManager</code> maintains a registry of all adapters. The user selects a
+provider in Settings, Provider tab. API keys are stored and retrieved via
+<code>KeyStore</code> (backed by <code>keyring</code> / Windows Credential Manager). The
+<code>TranscriptionService</code> resolves keys automatically at runtime — including
+composite keys for AWS (access key + secret key + region).</p>
+<h3 id="cloud-provider-onboarding">Cloud Provider Onboarding</h3>
+<p>Cloud providers must be <strong>activated</strong> before they appear in Basic
+mode. The <code>AddProviderDialog</code> (Tools, then Add Provider) guides the user through
+a three-step workflow:</p>
+<ol>
+<li><strong>Select</strong> a cloud provider from the 12 available options</li>
+<li><strong>Enter</strong> the required API key (and any auxiliary credentials like AWS region)</li>
+<li><strong>Validate</strong> the key with a live test API call</li>
+</ol>
+<p>On successful validation, the provider's key is stored in <code>KeyStore</code>, and its
+identifier is added to <code>GeneralSettings.activated_providers</code>. In Basic mode,
+only local providers and activated cloud providers appear in the provider
+dropdown. In Advanced mode, all providers are visible regardless of activation.</p>
+<p>Each cloud provider's <code>validate_api_key()</code> method makes a real API call:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Validation Method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenAI</td>
+<td><code>client.models.list()</code></td>
+</tr>
+<tr>
+<td>Google Speech</td>
+<td><code>ListOperations</code> via service account credentials</td>
+</tr>
+<tr>
+<td>Azure Speech</td>
+<td>Silent WAV <code>recognize_once()</code></td>
+</tr>
+<tr>
+<td>Groq</td>
+<td><code>client.models.list()</code></td>
+</tr>
+<tr>
+<td>Deepgram</td>
+<td><code>GET /v1/projects</code></td>
+</tr>
+<tr>
+<td>AssemblyAI</td>
+<td><code>GET /v2/transcript?limit=1</code></td>
+</tr>
+<tr>
+<td>AWS Transcribe</td>
+<td><code>list_transcription_jobs(MaxResults=1)</code></td>
+</tr>
+<tr>
+<td>Gemini</td>
+<td><code>genai.list_models()</code></td>
+</tr>
+<tr>
+<td>Rev.ai</td>
+<td><code>client.get_account()</code></td>
+</tr>
+<tr>
+<td>Speechmatics</td>
+<td><code>GET /v2/jobs?limit=1</code></td>
+</tr>
+<tr>
+<td>ElevenLabs</td>
+<td><code>GET /v1/models</code></td>
+</tr>
+<tr>
+<td>Auphonic</td>
+<td><code>GET /api/user.json</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="auphonic-integration">Auphonic Integration</h3>
+<p>Auphonic provides professional cloud-based audio post-production with built-in
+speech recognition. BITS Whisperer integrates Auphonic both as:</p>
+<ol>
+<li><strong>Transcription Provider</strong> (<code>AuphonicProvider</code>): Creates an Auphonic
+   production, applies audio algorithms, runs Whisper speech recognition, and
+   returns the transcript.</li>
+<li><strong>Standalone Audio Service</strong> (<code>AuphonicService</code>): Processes audio through
+   Auphonic's algorithms without transcription — useful as a cloud-based
+   preprocessing step.</li>
+</ol>
+<h4 id="auphonic-api-capabilities">Auphonic API Capabilities</h4>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Adaptive Leveler</strong></td>
+<td>Corrects level differences between speakers, music, and speech</td>
+</tr>
+<tr>
+<td><strong>Loudness Normalization</strong></td>
+<td>Target LUFS (-16 podcast, -23 broadcast, -24 TV US)</td>
+</tr>
+<tr>
+<td><strong>Noise &amp; Hum Reduction</strong></td>
+<td>Automatic detection; configurable amount (3-100 dB)</td>
+</tr>
+<tr>
+<td><strong>Filtering</strong></td>
+<td>High-pass, auto-EQ, bandwidth extension</td>
+</tr>
+<tr>
+<td><strong>Silence &amp; Filler Cutting</strong></td>
+<td>Remove silences, filler words, coughs, music segments</td>
+</tr>
+<tr>
+<td><strong>Intro/Outro</strong></td>
+<td>Automatically prepend/append audio/video segments</td>
+</tr>
+<tr>
+<td><strong>Chapter Marks</strong></td>
+<td>Import/export chapter marks for enhanced podcasts</td>
+</tr>
+<tr>
+<td><strong>Audio Inserts</strong></td>
+<td>Insert audio segments at specific offsets (dynamic ad insertion)</td>
+</tr>
+<tr>
+<td><strong>Speech Recognition</strong></td>
+<td>Built-in Whisper or external (Google, Amazon, Speechmatics)</td>
+</tr>
+<tr>
+<td><strong>Automatic Shownotes</strong></td>
+<td>AI-generated summaries, tags, and chapters (paid feature)</td>
+</tr>
+<tr>
+<td><strong>Multitrack</strong></td>
+<td>Process multi-speaker recordings with per-track settings</td>
+</tr>
+<tr>
+<td><strong>Output Formats</strong></td>
+<td>MP3, AAC, FLAC, WAV, Opus, Vorbis, ALAC, video</td>
+</tr>
+<tr>
+<td><strong>Publishing</strong></td>
+<td>Export to Dropbox, SoundCloud, YouTube, FTP, SFTP, S3, etc.</td>
+</tr>
+<tr>
+<td><strong>Presets</strong></td>
+<td>Save and reuse processing configurations</td>
+</tr>
+<tr>
+<td><strong>Webhooks</strong></td>
+<td>HTTP POST callbacks when processing completes</td>
+</tr>
+<tr>
+<td><strong>Cuts</strong></td>
+<td>Manual cut regions with start/end times</td>
+</tr>
+<tr>
+<td><strong>Fade In/Out</strong></td>
+<td>Configurable fade time (0–5000 ms)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="auphonic-authentication">Auphonic Authentication</h4>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Use Case</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>API Key</strong></td>
+<td>Personal scripts, BITS Whisperer</td>
+<td>Bearer token from Account Settings page</td>
+</tr>
+<tr>
+<td><strong>HTTP Basic Auth</strong></td>
+<td>Simple scripts</td>
+<td>Username + password (not recommended for apps)</td>
+</tr>
+<tr>
+<td><strong>OAuth 2.0 (Web)</strong></td>
+<td>Third-party web applications</td>
+<td>Client ID/Secret + redirect URI + grant code</td>
+</tr>
+<tr>
+<td><strong>OAuth 2.0 (Desktop)</strong></td>
+<td>Desktop/mobile apps</td>
+<td>Client ID/Secret + username/password exchange</td>
+</tr>
+</tbody>
+</table>
+<p>BITS Whisperer uses <strong>API Key authentication</strong>. The user generates a token at
+https://auphonic.com/accounts/settings/#api-key and stores it via the Providers
+&amp; Keys settings tab. The key is persisted in <code>KeyStore</code> (Windows Credential
+Manager) as <code>"auphonic"</code> to <code>"Auphonic API Token"</code>.</p>
+<h4 id="auphonic-pricing">Auphonic Pricing</h4>
+<table>
+<thead>
+<tr>
+<th>Plan</th>
+<th>Recurring Credits</th>
+<th>One-Time Credits</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Free</td>
+<td>2 hours/month</td>
+<td>None</td>
+<td>$0</td>
+</tr>
+<tr>
+<td>Starter</td>
+<td>9 hours/month</td>
+<td>None</td>
+<td>$11/month</td>
+</tr>
+<tr>
+<td>Professional</td>
+<td>45 hours/month</td>
+<td>None</td>
+<td>$49/month</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>Custom</td>
+<td>Custom</td>
+<td>Contact</td>
+</tr>
+<tr>
+<td>Pay-as-you-go</td>
+<td>None</td>
+<td>Purchased blocks</td>
+<td>~$0.01/min</td>
+</tr>
+</tbody>
+</table>
+<h4 id="auphonic-api-endpoints">Auphonic API Endpoints</h4>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Method</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/api/user.json</code></td>
+<td>GET</td>
+<td>Account info &amp; credits</td>
+</tr>
+<tr>
+<td><code>/api/productions.json</code></td>
+<td>POST</td>
+<td>Create production</td>
+</tr>
+<tr>
+<td><code>/api/production/{uuid}.json</code></td>
+<td>GET</td>
+<td>Get/update production details</td>
+</tr>
+<tr>
+<td><code>/api/production/{uuid}/upload.json</code></td>
+<td>POST</td>
+<td>Upload audio/image files</td>
+</tr>
+<tr>
+<td><code>/api/production/{uuid}/start.json</code></td>
+<td>POST</td>
+<td>Start audio processing</td>
+</tr>
+<tr>
+<td><code>/api/production/{uuid}/status.json</code></td>
+<td>GET</td>
+<td>Poll production status</td>
+</tr>
+<tr>
+<td><code>/api/production/{uuid}/publish.json</code></td>
+<td>POST</td>
+<td>Publish to outgoing services</td>
+</tr>
+<tr>
+<td><code>/api/simple/productions.json</code></td>
+<td>POST</td>
+<td>Simple API (one-shot upload+process)</td>
+</tr>
+<tr>
+<td><code>/api/presets.json</code></td>
+<td>GET/POST</td>
+<td>List/create presets</td>
+</tr>
+<tr>
+<td><code>/api/preset/{uuid}.json</code></td>
+<td>GET</td>
+<td>Get preset details</td>
+</tr>
+<tr>
+<td><code>/api/services.json</code></td>
+<td>GET</td>
+<td>List external services</td>
+</tr>
+<tr>
+<td><code>/api/info/algorithms.json</code></td>
+<td>GET</td>
+<td>Available audio algorithms</td>
+</tr>
+<tr>
+<td><code>/api/info/output_files.json</code></td>
+<td>GET</td>
+<td>Available output formats</td>
+</tr>
+<tr>
+<td><code>/api/info/production_status.json</code></td>
+<td>GET</td>
+<td>Status code reference</td>
+</tr>
+<tr>
+<td><code>/api/download/audio-result/{uuid}/{file}</code></td>
+<td>GET</td>
+<td>Download processed files</td>
+</tr>
+</tbody>
+</table>
+<h3 id="provider-specific-settings">Provider-Specific Settings</h3>
+<p>Each cloud provider exposes its unique configurable options during onboarding
+via the Add Provider dialog. Settings are stored in <code>ProviderDefaultSettings</code>
+and applied automatically via the <code>configure()</code> method before each transcription.</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Configurable Settings</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Auphonic</td>
+<td>Leveler, loudness target, noise/hum reduction, silence/filler/cough cutting, speech engine, output format, crosstalk</td>
+</tr>
+<tr>
+<td>Deepgram</td>
+<td>Model (nova-2/nova/enhanced/base), smart format, punctuation, paragraphs, utterances</td>
+</tr>
+<tr>
+<td>AssemblyAI</td>
+<td>Punctuation, formatting, auto chapters, content safety, sentiment analysis, entity detection</td>
+</tr>
+<tr>
+<td>Google Speech</td>
+<td>Recognition model, max speaker count</td>
+</tr>
+<tr>
+<td>Azure</td>
+<td>Custom endpoint ID</td>
+</tr>
+<tr>
+<td>AWS</td>
+<td>Max speaker labels</td>
+</tr>
+<tr>
+<td>Speechmatics</td>
+<td>Operating point (enhanced/standard)</td>
+</tr>
+<tr>
+<td>ElevenLabs</td>
+<td>Timestamp granularity (segment/word)</td>
+</tr>
+<tr>
+<td>OpenAI</td>
+<td>Model, temperature</td>
+</tr>
+<tr>
+<td>Groq</td>
+<td>Model (v3-turbo/v3/distil)</td>
+</tr>
+<tr>
+<td>Gemini</td>
+<td>Model (2.0-flash/1.5-flash/1.5-pro)</td>
+</tr>
+<tr>
+<td>Rev.ai</td>
+<td>Skip diarization</td>
+</tr>
+</tbody>
+</table>
+<h3 id="speaker-diarization">Speaker Diarization</h3>
+<p>Speaker diarization (identifying who spoke when) is supported through two mechanisms:</p>
+<h4 id="cloud-provider-diarization">Cloud Provider Diarization</h4>
+<p>10 cloud providers support built-in diarization when "Include speaker labels" is enabled:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Max Speakers</th>
+<th>Implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Azure Speech</td>
+<td>Configurable</td>
+<td><code>ConversationTranscriber</code> with <code>speaker_id</code> extraction</td>
+</tr>
+<tr>
+<td>Google Speech</td>
+<td>Configurable</td>
+<td><code>diarization_config</code> on recognition request</td>
+</tr>
+<tr>
+<td>Deepgram</td>
+<td>Auto</td>
+<td>Nova-2 <code>diarize=true</code> parameter</td>
+</tr>
+<tr>
+<td>AssemblyAI</td>
+<td>Auto</td>
+<td><code>speaker_labels=True</code> feature</td>
+</tr>
+<tr>
+<td>Amazon Transcribe</td>
+<td>Configurable</td>
+<td><code>ShowSpeakerLabels</code> in settings</td>
+</tr>
+<tr>
+<td>ElevenLabs</td>
+<td>Auto</td>
+<td>Built-in <code>diarize</code> parameter</td>
+</tr>
+<tr>
+<td>Rev.ai</td>
+<td>Auto</td>
+<td>Automatic speaker detection</td>
+</tr>
+<tr>
+<td>Speechmatics</td>
+<td>Auto</td>
+<td>Speaker change detection</td>
+</tr>
+<tr>
+<td>Google Gemini</td>
+<td>Auto</td>
+<td>Multimodal speaker detection</td>
+</tr>
+<tr>
+<td>Auphonic</td>
+<td>n/a</td>
+<td>Post-production only (no diarization)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="cloud-free-local-diarization-corediarizationpy">Cloud-Free Local Diarization (<code>core/diarization.py</code>)</h4>
+<p>Optional privacy-first speaker detection using <strong>pyannote.audio</strong>:</p>
+<ul>
+<li><strong><code>LocalDiarizer</code></strong> class wraps <code>pyannote.audio.Pipeline</code> with lazy loading</li>
+<li><strong><code>diarize(audio_path, min_speakers, max_speakers)</code></strong> returns <code>list[SpeakerTurn]</code></li>
+<li><strong><code>apply_to_transcript(result, turns)</code></strong> merges diarization with transcription
+  segments by temporal overlap</li>
+<li><strong><code>apply_speaker_map(result, speaker_map)</code></strong> renames speakers post-transcription</li>
+<li>Requires HuggingFace auth token for gated models (stored in <code>KeyStore</code>)</li>
+<li>Works as post-processing on ANY provider's output</li>
+</ul>
+<p>Configuration via <code>DiarizationSettings</code>:
+- <code>enabled</code> (default True), <code>max_speakers</code> (10), <code>min_speakers</code> (2)
+- <code>use_local_diarization</code> (False), <code>local_engine</code> ("pyannote")
+- <code>pyannote_model</code> ("pyannote/speaker-diarization-3.1")
+- <code>speaker_map</code> (dict mapping internal IDs to display names)</p>
+<h4 id="speaker-editing-post-transcription">Speaker Editing (Post-Transcription)</h4>
+<p>The transcript panel provides speaker management after transcription:</p>
+<ul>
+<li><strong>Manage Speakers</strong> button opens <code>SpeakerRenameDialog</code> with editable name
+  fields for all detected speakers (e.g., rename "Speaker 1" to "Alice")</li>
+<li><strong>Right-click context menu</strong> on any transcript line offers "Assign to Speaker"
+  submenu and "New Speaker..." option</li>
+<li><strong>Display format</strong>: <code>[timestamp]  SpeakerName: text</code> for natural reading</li>
+<li><strong>Instant global updates</strong> -- all renames applied immediately to the full
+  transcript via the <code>speaker_map</code> on <code>TranscriptionResult</code></li>
+</ul>
+<hr>
+<h2 id="5-audio-preprocessing-pipeline">5. Audio Preprocessing Pipeline</h2>
+<p>A 7-filter ffmpeg filter chain applied before transcoding to maximise
+speech recognition accuracy (<code>AudioPreprocessor</code> class):</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Filter</th>
+<th>Default</th>
+<th>ffmpeg Filter</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>High-pass (80 Hz)</td>
+<td>On</td>
+<td><code>highpass=f=80</code></td>
+<td>Remove low-frequency rumble</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Low-pass (8 kHz)</td>
+<td>On</td>
+<td><code>lowpass=f=8000</code></td>
+<td>Cut high-frequency hiss</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Noise gate (-40 dB)</td>
+<td>On</td>
+<td><code>agate</code></td>
+<td>Suppress background noise</td>
+</tr>
+<tr>
+<td>4</td>
+<td>De-esser (5 kHz)</td>
+<td>Off</td>
+<td><code>equalizer</code></td>
+<td>Reduce sibilance</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Dynamic range compressor</td>
+<td>On</td>
+<td><code>acompressor</code></td>
+<td>Even out volume levels</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Loudness normalisation</td>
+<td>On</td>
+<td><code>loudnorm</code> (EBU R128)</td>
+<td>Standardise to -16 LUFS</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Silence trimming</td>
+<td>On</td>
+<td><code>silenceremove</code></td>
+<td>Remove leading/trailing silence</td>
+</tr>
+</tbody>
+</table>
+<p>All filter parameters (frequency, threshold, ratio, attack, release) are
+user-configurable via the Settings, Audio Processing tab (Advanced Mode only).
+The preprocessor is skipped if ffmpeg is not available — the transcoder handles
+the fallback path.</p>
+<hr>
+<h2 id="6-audio-format-support">6. Audio Format Support</h2>
+<p>12 input formats detected by file extension:</p>
+<div class="highlight"><pre><span></span><code>MP3, WAV, OGG, Opus, FLAC, M4A, AAC, WebM, WMA, AIFF, AMR, MP4
+</code></pre></div>
+
+<p>All files are transcoded to 16 kHz mono WAV (<code>pcm_s16le</code>) before being sent
+to the provider for consistent results across all engines.</p>
+<hr>
+<h2 id="7-batch-folder-processing">7. Batch &amp; Folder Processing</h2>
+<ul>
+<li><strong>File, Add Files</strong> (Ctrl+O): Multi-select file dialog with audio-type filter.</li>
+<li><strong>File, Add Folder</strong> (Ctrl+Shift+O): Recursively scans a folder for
+  supported audio files.</li>
+<li><strong>Concurrent workers</strong>: Configurable (default: 2). Each worker picks from a
+  shared <code>queue.Queue</code> and runs preprocess, transcode, then transcribe.</li>
+<li><strong>Limits</strong> (configurable in Advanced Settings):</li>
+<li>Max file size: 500 MB</li>
+<li>Max duration: 4 hours</li>
+<li>Max batch files: 100</li>
+<li>Max batch size: 10 GB</li>
+<li>Chunk duration: 30 min (with 2 s overlap)</li>
+<li><strong>Pause / Resume</strong> (F6): Pauses the queue; active jobs continue.</li>
+<li><strong>Cancel Selected</strong> (Delete): Cancels a single job.</li>
+<li><strong>Clear Queue</strong> (Ctrl+Shift+Del): Removes all unstarted jobs.</li>
+</ul>
+<hr>
+<h2 id="8-background-processing-system-tray">8. Background Processing &amp; System Tray</h2>
+<h3 id="system-tray-icon-uitray_iconpy">System Tray Icon (<code>ui/tray_icon.py</code>)</h3>
+<p>A <code>wx.adv.TaskBarIcon</code> that provides background-mode support:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tray icon</strong></td>
+<td>Programmatic 16x16 "B" icon; always present when app is running</td>
+</tr>
+<tr>
+<td><strong>Tooltip progress</strong></td>
+<td>Shows "Transcribing X/Y (Z%)" or "Idle" on hover</td>
+</tr>
+<tr>
+<td><strong>Left-click</strong></td>
+<td>Toggle window visibility (show/hide)</td>
+</tr>
+<tr>
+<td><strong>Right-click menu</strong></td>
+<td>Show/Hide • Pause/Resume • Progress summary • Quit</td>
+</tr>
+<tr>
+<td><strong>Balloon notifications</strong></td>
+<td>Job complete, batch complete, and error notifications</td>
+</tr>
+</tbody>
+</table>
+<h3 id="minimize-to-tray">Minimize to Tray</h3>
+<ul>
+<li><strong>View, Minimize to System Tray</strong> (default: on): When enabled, closing the
+  window hides it to the tray instead of quitting. Processing continues.</li>
+<li>The <strong>close</strong> button and <strong>Alt+F4</strong> hide the window; the tray context menu's
+  <strong>Quit</strong> item is the true exit.</li>
+<li>When a batch completes while minimised, the app restores itself automatically.</li>
+<li><code>EVT_ICONIZE</code> also hides to tray on minimize.</li>
+</ul>
+<h3 id="notifications">Notifications</h3>
+<ul>
+<li><strong>Balloon/toast</strong>: Job completion, batch completion, and error notifications
+  appear via <code>ShowBalloon()</code> when the window is hidden.</li>
+<li>A <strong>system bell</strong> (<code>wx.Bell()</code>) sounds on batch completion.</li>
+<li>Notification settings (enable/disable, sound on/off) configurable in
+  Settings, General, Behaviour section.</li>
+</ul>
+<hr>
+<h2 id="9-output-export">9. Output &amp; Export</h2>
+<h3 id="7-export-formats">7 Export Formats</h3>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Module</th>
+<th>Extension</th>
+<th>Timestamps</th>
+<th>Diarization</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plain Text</td>
+<td><code>plain_text.py</code></td>
+<td><code>.txt</code></td>
+<td>Optional</td>
+<td>Optional</td>
+</tr>
+<tr>
+<td>Markdown</td>
+<td><code>markdown.py</code></td>
+<td><code>.md</code></td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>HTML</td>
+<td><code>html_export.py</code></td>
+<td><code>.html</code></td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Word</td>
+<td><code>word_export.py</code></td>
+<td><code>.docx</code></td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>SRT</td>
+<td><code>srt.py</code></td>
+<td><code>.srt</code></td>
+<td>Required</td>
+<td>No</td>
+</tr>
+<tr>
+<td>VTT</td>
+<td><code>vtt.py</code></td>
+<td><code>.vtt</code></td>
+<td>Required</td>
+<td>No</td>
+</tr>
+<tr>
+<td>JSON</td>
+<td><code>json_export.py</code></td>
+<td><code>.json</code></td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<h3 id="auto-export-on-completion">Auto-Export on Completion</h3>
+<p>When enabled (<strong>View, Auto-Export on Completion</strong>), each completed transcript
+is automatically saved as a <code>.txt</code> file alongside the source audio file. If a
+file with the same name exists, a numeric suffix is appended (e.g.,
+<code>interview_1.txt</code>, <code>interview_2.txt</code>).</p>
+<hr>
+<h2 id="10-user-interface">10. User Interface</h2>
+<h3 id="layout">Layout</h3>
+<div class="highlight"><pre><span></span><code>Layout:
+  Top:      Menu Bar (File, Queue, View, Tools, Help)
+  Left:     Queue Panel (file list)
+  Right:    Transcript Panel (viewer / editor)
+  Bottom:   Status Bar [status] [progress gauge] [hw]
+</code></pre></div>
+
+<h3 id="menu-structure">Menu Structure</h3>
+<p><strong>File</strong>
+- Add Files… (Ctrl+O)
+- Add Folder… (Ctrl+Shift+O)
+- Recent Files (numbered list, Clear Recent Files)
+- Export Transcript… (Ctrl+E)
+- Exit (Alt+F4)</p>
+<p><strong>Queue</strong>
+- Start Transcription (F5)
+- Pause (F6)
+- Cancel Selected (Delete)
+- Clear Queue (Ctrl+Shift+Del)</p>
+<p><strong>View</strong>
+- Advanced Mode (Ctrl+Shift+A) — toggle check item
+- Minimize to System Tray — toggle check item (default: on)
+- Auto-Export on Completion — toggle check item (default: off)</p>
+<p><strong>Tools</strong>
+- Settings… (Ctrl+,)
+- Manage Models… (Ctrl+M)
+- Add Provider…
+- Hardware Info…
+- View Log…</p>
+<p><strong>Help</strong>
+- Setup Wizard…
+- Check for Updates…
+- Learn more about BITS
+- About… (F1)</p>
+<h3 id="settings-dialog-7-tabs">Settings Dialog (7 tabs)</h3>
+<table>
+<thead>
+<tr>
+<th>Tab</th>
+<th>Visibility</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>General</strong></td>
+<td>Always</td>
+<td>Provider selection, language, timestamps, diarization, Behaviour section (minimize-to-tray, auto-export, notifications, sound)</td>
+</tr>
+<tr>
+<td><strong>Transcription</strong></td>
+<td>Always</td>
+<td>Timestamps, speakers, confidence, word-level, segmentation, VAD, temperature, beam size, compute type</td>
+</tr>
+<tr>
+<td><strong>Output</strong></td>
+<td>Always</td>
+<td>Default export format, output directory, filename template, encoding</td>
+</tr>
+<tr>
+<td><strong>Providers &amp; Keys</strong></td>
+<td>Always</td>
+<td>API key entry per provider with Test button validation</td>
+</tr>
+<tr>
+<td><strong>Paths &amp; Storage</strong></td>
+<td>Always</td>
+<td>Output dir, models dir, temp dir, log file</td>
+</tr>
+<tr>
+<td><strong>Audio Processing</strong></td>
+<td>Advanced Mode</td>
+<td>All 7 preprocessing filter toggles &amp; parameters</td>
+</tr>
+<tr>
+<td><strong>Advanced</strong></td>
+<td>Advanced Mode</td>
+<td>Max file size, duration, batch limits, concurrency, chunking, GPU, log level</td>
+</tr>
+</tbody>
+</table>
+<h3 id="simple-vs-advanced-mode">Simple vs Advanced Mode</h3>
+<ul>
+<li><strong>Basic Mode</strong> (default): Shows General, Transcription, Output, Providers &amp; Keys, and Paths &amp; Storage tabs.
+  Audio Processing and Advanced tabs are hidden. Only local providers and
+  <strong>activated</strong> cloud providers appear in the provider dropdown. Cloud providers
+  must be activated via the Add Provider wizard before they become available.
+  Sensible defaults are applied automatically.</li>
+<li><strong>Advanced Mode</strong> (Ctrl+Shift+A): Reveals all 7 settings tabs. All cloud
+  providers appear in the provider dropdown regardless of activation status.
+  Full control over audio preprocessing, GPU settings, concurrency, and
+  chunking parameters.</li>
+<li><strong>Experience Mode Setting</strong>: Persisted in <code>settings.json</code> as
+  <code>general.experience_mode</code> ("basic" or "advanced"). Set during the Setup
+  Wizard or toggled via View, then Advanced Mode.</li>
+</ul>
+<h3 id="recent-files">Recent Files</h3>
+<ul>
+<li>Persisted to <code>DATA_DIR/recent_files.json</code> (max 10 entries).</li>
+<li>Accessible via File, Recent Files submenu with numbered mnemonics (&amp;1 ...).</li>
+<li>Clear Recent Files option at the bottom.</li>
+<li>Non-existent files are silently removed when selected.</li>
+</ul>
+<hr>
+<h2 id="11-self-update-system">11. Self-Update System</h2>
+<p><code>core/updater.py</code> implements GitHub Releases-based update checking:</p>
+<ol>
+<li><strong>Startup check</strong>: Silent background check 3 seconds after launch. If a
+   newer version exists, the status bar shows a notification.</li>
+<li><strong>Manual check</strong>: Help, Check for Updates opens a dialog with version
+   comparison and a link to the release page.</li>
+<li><strong>Version comparison</strong> uses <code>packaging.version.Version</code> for correct semver.</li>
+<li><strong>No auto-install</strong> — the user downloads the new version manually.</li>
+</ol>
+<hr>
+<h2 id="12-architecture">12. Architecture</h2>
+<h3 id="file-tree">File Tree</h3>
+<div class="highlight"><pre><span></span><code>src/bits_whisperer/
+  __main__.py              # Entry point
+  app.py                   # wx.App subclass
+  core/
+    transcription_service.py  # Job queue, workers, orchestration
+    provider_manager.py       # Provider registry &amp; routing
+    audio_preprocessor.py     # 7-filter ffmpeg preprocessing chain
+    dependency_checker.py     # Startup dependency verification &amp; install
+    device_probe.py           # Hardware detection (CPU/RAM/GPU/CUDA)
+    diarization.py            # Cloud-free local speaker diarization (pyannote)
+    model_manager.py          # Whisper model download &amp; cache
+    sdk_installer.py          # On-demand provider SDK installer
+    wheel_installer.py        # PyPI wheel downloader/extractor (frozen builds)
+    settings.py               # Persistent settings (JSON-backed dataclass)
+    transcoder.py             # ffmpeg WAV normalisation
+    updater.py                # GitHub Releases self-update
+    job.py                    # Job / TranscriptionResult data models
+  providers/                    # 17 provider adapters (strategy pattern)
+    base.py                   # TranscriptionProvider ABC + ProviderCapabilities
+    local_whisper.py          # faster-whisper (local, free)
+    openai_whisper.py         # OpenAI Whisper API
+    google_speech.py          # Google Cloud Speech-to-Text
+    gemini_provider.py        # Google Gemini
+    azure_speech.py           # Microsoft Azure Speech Services
+    azure_embedded.py         # Microsoft Azure Embedded Speech (offline)
+    aws_transcribe.py         # Amazon Transcribe
+    deepgram_provider.py      # Deepgram Nova-2
+    assemblyai_provider.py    # AssemblyAI
+    groq_whisper.py           # Groq LPU Whisper
+    rev_ai_provider.py        # Rev.ai
+    speechmatics_provider.py  # Speechmatics
+    elevenlabs_provider.py    # ElevenLabs Scribe
+    windows_speech.py         # Windows SAPI5 + WinRT (offline)
+    vosk_provider.py          # Vosk offline speech (Kaldi-based)
+    parakeet_provider.py      # NVIDIA Parakeet (NeMo ASR, English)
+    auphonic_provider.py      # Auphonic audio post-production + transcription
+  export/                       # Output formatters
+    base.py                   # ExportFormatter ABC
+    plain_text.py, markdown.py, html_export.py
+    word_export.py, srt.py, vtt.py, json_export.py
+  storage/
+    database.py               # SQLite (WAL mode) for job metadata
+    key_store.py              # keyring-backed credential store
+  ui/
+    main_frame.py             # Menu bar, splitter, status bar, tray integration
+    queue_panel.py            # File queue list
+    transcript_panel.py       # Transcript viewer / editor with speaker management
+    settings_dialog.py        # Tabbed settings (7 tabs)
+    progress_dialog.py        # Batch progress display
+    model_manager_dialog.py   # Model download &amp; management
+    add_provider_dialog.py    # Cloud provider onboarding wizard
+    setup_wizard.py           # First-run setup wizard (7 pages)
+    tray_icon.py              # System tray (TaskBarIcon)
+  utils/
+    accessibility.py          # a11y helpers (announce, set_name, safe_call_after)
+    constants.py              # App constants, model registry, path definitions
+    platform_utils.py         # Cross-platform helpers (file open, disk space, CPU/GPU detection)
+</code></pre></div>
+
+<h3 id="threading-model">Threading Model</h3>
+<ul>
+<li><strong>Main thread</strong>: wxPython event loop and all UI operations.</li>
+<li><strong>Worker threads</strong>: <code>TranscriptionService</code> spawns N daemon threads (default 2)
+  that process jobs from a <code>queue.Queue</code>.</li>
+<li><strong>Thread safety</strong>: All UI updates go through <code>wx.CallAfter()</code> via
+  <code>safe_call_after()</code>. The service uses a <code>threading.Lock</code> for shared state.</li>
+<li><strong>Update checker</strong>: Runs in a separate daemon thread (startup + manual).</li>
+</ul>
+<hr>
+<h2 id="13-data-model">13. Data Model</h2>
+<h3 id="job-corejobpy">Job (<code>core/job.py</code>)</h3>
+<div class="highlight"><pre><span></span><code>Job
+  - id: str (UUID)
+  - file_path, file_name, file_size_bytes
+  - duration_seconds: float
+  - status: JobStatus (PENDING to TRANSCODING to TRANSCRIBING to COMPLETED | FAILED | CANCELLED)
+  - provider, model, language
+  - created_at, started_at, completed_at: ISO timestamps
+  - progress_percent: 0-100
+  - cost_estimate, cost_actual: float (USD)
+  - transcript_path: str
+  - error_message: str
+  - include_timestamps, include_diarization: bool
+  - result: TranscriptionResult | None
+</code></pre></div>
+
+<h3 id="transcriptionresult">TranscriptionResult</h3>
+<div class="highlight"><pre><span></span><code>TranscriptionResult
+  - job_id, audio_file, provider, model, language
+  - duration_seconds
+  - segments: list[TranscriptSegment]
+      - start, end: float (seconds)
+      - text: str
+      - confidence: float (0-1)
+      - speaker: str
+  - full_text: str
+  - speaker_map: dict[str, str]  # internal ID -&gt; display name
+  - created_at: str
+</code></pre></div>
+
+<h3 id="persistence">Persistence</h3>
+<table>
+<thead>
+<tr>
+<th>Store</th>
+<th>Backend</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Job metadata</td>
+<td>SQLite (WAL mode)</td>
+<td>Job history, status, paths</td>
+</tr>
+<tr>
+<td>API keys</td>
+<td>keyring (Credential Mgr)</td>
+<td>Provider API keys (15 entries)</td>
+</tr>
+<tr>
+<td>Recent files</td>
+<td>JSON file</td>
+<td>Last 10 opened file paths</td>
+</tr>
+<tr>
+<td>Whisper models</td>
+<td>File system (models dir)</td>
+<td>Downloaded faster-whisper models</td>
+</tr>
+<tr>
+<td>Provider SDKs</td>
+<td>File system (site-packages)</td>
+<td>On-demand installed Python packages</td>
+</tr>
+<tr>
+<td>Transcripts</td>
+<td>File system (transcripts)</td>
+<td>Default export location</td>
+</tr>
+<tr>
+<td>App log</td>
+<td>File system</td>
+<td>Rotating log at <code>DATA_DIR/app.log</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="14-privacy-security">14. Privacy &amp; Security</h2>
+<ul>
+<li><strong>Local by default</strong>: Transcripts stored in user data directory
+  (Windows: <code>%LOCALAPPDATA%/BITS Whisperer/</code>, macOS: <code>~/Library/Application Support/BITS Whisperer/</code>).</li>
+<li><strong>API keys</strong>: Stored in OS credential vault (Windows Credential Manager /
+  macOS Keychain) via <code>keyring</code> — never logged, printed, or committed.</li>
+<li><strong>Key validation</strong>: Dry-run API call on save to verify keys are working.</li>
+<li><strong>No telemetry</strong>: The app sends no usage data. Update checks are opt-in
+  REST calls to the GitHub Releases API.</li>
+<li><strong>Offline-capable</strong>: 3 local providers (Local Whisper, Windows SAPI5/WinRT,
+  Azure Embedded Speech) work without any internet connection.</li>
+</ul>
+<hr>
+<h2 id="15-accessibility-requirements-non-negotiable">15. Accessibility Requirements (Non-Negotiable)</h2>
+<p>Adapted from WCAG 2.1/2.2 for desktop; detailed rules in
+<code>.github/accessibility.agent.md</code>.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Requirement</th>
+<th>Implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Every control has an accessible name</td>
+<td><code>SetName()</code> on all widgets</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Label association for all inputs</td>
+<td><code>wx.StaticText</code> + <code>SetName()</code> pairing</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Full keyboard reachability</td>
+<td>Tab order, mnemonics, accelerators</td>
+</tr>
+<tr>
+<td>4</td>
+<td>All actions available from menu bar</td>
+<td>Mnemonics (&amp;) + accelerator keys</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Progress reporting for screen readers</td>
+<td><code>wx.Gauge</code> + status bar text updates</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Cross-thread UI safety</td>
+<td><code>wx.CallAfter()</code> / <code>safe_call_after()</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>High contrast support</td>
+<td><code>wx.SystemSettings.GetColour()</code>, no hard-coded colours</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Screen reader compatibility</td>
+<td>Tested with NVDA keyboard-only</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Focus management on dialog open/close</td>
+<td>Focus set to first interactive control</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Status announcements for state changes</td>
+<td><code>announce_status()</code> helper</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Consistent navigation patterns</td>
+<td>Splitter, Tab, List, Action pattern</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="16-keyboard-shortcuts">16. Keyboard Shortcuts</h2>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Shortcut</th>
+<th>Context</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Add Files</td>
+<td>Ctrl+O</td>
+<td>Global</td>
+</tr>
+<tr>
+<td>Add Folder</td>
+<td>Ctrl+Shift+O</td>
+<td>Global</td>
+</tr>
+<tr>
+<td>Export Transcript</td>
+<td>Ctrl+E</td>
+<td>Global</td>
+</tr>
+<tr>
+<td>Find Next</td>
+<td>F3</td>
+<td>Transcript</td>
+</tr>
+<tr>
+<td>Start Transcription</td>
+<td>F5</td>
+<td>Global</td>
+</tr>
+<tr>
+<td>Pause / Resume</td>
+<td>F6</td>
+<td>Global</td>
+</tr>
+<tr>
+<td>Cancel Selected</td>
+<td>Delete</td>
+<td>Queue</td>
+</tr>
+<tr>
+<td>Clear Queue</td>
+<td>Ctrl+Shift+Del</td>
+<td>Queue</td>
+</tr>
+<tr>
+<td>Settings</td>
+<td>Ctrl+,</td>
+<td>Global</td>
+</tr>
+<tr>
+<td>Manage Models</td>
+<td>Ctrl+M</td>
+<td>Global</td>
+</tr>
+<tr>
+<td>Toggle Advanced Mode</td>
+<td>Ctrl+Shift+A</td>
+<td>Global</td>
+</tr>
+<tr>
+<td>About</td>
+<td>F1</td>
+<td>Global</td>
+</tr>
+<tr>
+<td>Exit (or minimize to tray)</td>
+<td>Alt+F4</td>
+<td>Global</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="17-paths-directories">17. Paths &amp; Directories</h2>
+<p>All user data is stored under <code>%LOCALAPPDATA%/BITS Whisperer/BITSWhisperer/</code>
+(via <code>platformdirs.user_data_dir</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;DATA_DIR&gt;/</code></td>
+<td>Application data root</td>
+</tr>
+<tr>
+<td><code>transcripts/</code></td>
+<td>Default transcript export location</td>
+</tr>
+<tr>
+<td><code>models/</code></td>
+<td>Downloaded Whisper model files</td>
+</tr>
+<tr>
+<td><code>site-packages/</code></td>
+<td>On-demand installed provider SDKs</td>
+</tr>
+<tr>
+<td><code>bits_whisperer.db</code></td>
+<td>SQLite job database</td>
+</tr>
+<tr>
+<td><code>app.log</code></td>
+<td>Application log file</td>
+</tr>
+<tr>
+<td><code>recent_files.json</code></td>
+<td>Recent file history</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="18-dependencies">18. Dependencies</h2>
+<p>From <code>pyproject.toml</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>wxPython ≥ 4.2.0</td>
+<td>Desktop UI framework</td>
+</tr>
+<tr>
+<td>faster-whisper ≥ 1.0.0</td>
+<td>Local Whisper inference</td>
+</tr>
+<tr>
+<td>openai ≥ 1.0.0</td>
+<td>OpenAI Whisper API</td>
+</tr>
+<tr>
+<td>google-cloud-speech ≥ 2.20.0</td>
+<td>Google Speech-to-Text</td>
+</tr>
+<tr>
+<td>azure-cognitiveservices-speech ≥ 1.32.0</td>
+<td>Azure Speech Services</td>
+</tr>
+<tr>
+<td>deepgram-sdk ≥ 3.0.0</td>
+<td>Deepgram Nova-2</td>
+</tr>
+<tr>
+<td>assemblyai ≥ 0.20.0</td>
+<td>AssemblyAI</td>
+</tr>
+<tr>
+<td>boto3 ≥ 1.28.0</td>
+<td>Amazon Transcribe (AWS)</td>
+</tr>
+<tr>
+<td>google-genai ≥ 0.4.0</td>
+<td>Google Gemini</td>
+</tr>
+<tr>
+<td>groq ≥ 0.4.0</td>
+<td>Groq LPU Whisper</td>
+</tr>
+<tr>
+<td>rev-ai ≥ 2.17.0</td>
+<td>Rev.ai</td>
+</tr>
+<tr>
+<td>speechmatics-python ≥ 1.0.0</td>
+<td>Speechmatics</td>
+</tr>
+<tr>
+<td>keyring ≥ 24.0.0</td>
+<td>OS credential store</td>
+</tr>
+<tr>
+<td>python-docx ≥ 1.0.0</td>
+<td>Word export</td>
+</tr>
+<tr>
+<td>markdown ≥ 3.5</td>
+<td>Markdown rendering</td>
+</tr>
+<tr>
+<td>Jinja2 ≥ 3.1.0</td>
+<td>HTML template export</td>
+</tr>
+<tr>
+<td>pydub ≥ 0.25.1</td>
+<td>Audio duration detection</td>
+</tr>
+<tr>
+<td>psutil ≥ 5.9.0</td>
+<td>System resource monitoring</td>
+</tr>
+<tr>
+<td>platformdirs ≥ 4.0.0</td>
+<td>Cross-platform data dirs</td>
+</tr>
+<tr>
+<td>httpx ≥ 0.25.0</td>
+<td>HTTP client (update checker)</td>
+</tr>
+<tr>
+<td>packaging ≥ 23.0</td>
+<td>Version comparison</td>
+</tr>
+<tr>
+<td>winsdk ≥ 1.0.0b10</td>
+<td>Windows Speech Runtime (Win)</td>
+</tr>
+<tr>
+<td>comtypes ≥ 1.2.0</td>
+<td>COM interop (Win)</td>
+</tr>
+</tbody>
+</table>
+<p>Dev dependencies: pytest, pytest-cov, black, ruff, mypy.</p>
+<hr>
+<h2 id="19-implementation-status">19. Implementation Status</h2>
+<ul>
+<li>[x] Core transcription pipeline (preprocess, transcode, transcribe)</li>
+<li>[x] 17 transcription provider adapters (including Auphonic, Vosk, Parakeet)</li>
+<li>[x] 14 Whisper model definitions with hardware eligibility</li>
+<li>[x] 7-filter audio preprocessing with ffmpeg</li>
+<li>[x] 7 export format adapters</li>
+<li>[x] WXPython main frame with splitter layout</li>
+<li>[x] Queue panel with file list</li>
+<li>[x] Transcript panel with viewer/editor and speaker management</li>
+<li>[x] Settings dialog (7 tabs, Basic/Advanced visibility)</li>
+<li>[x] Model Manager dialog with download &amp; eligibility</li>
+<li>[x] Hardware detection (CPU, RAM, GPU, CUDA)</li>
+<li>[x] API key storage via keyring</li>
+<li>[x] Cloud provider onboarding (Add Provider wizard with live validation)</li>
+<li>[x] Provider-specific settings (per-provider configuration during onboarding)</li>
+<li>[x] Speaker diarization (10 cloud providers + cloud-free pyannote.audio)</li>
+<li>[x] Speaker editing UI (rename, reassign, create speakers post-transcription)</li>
+<li>[x] Full Auphonic API integration (all audio algorithms, speech services, output formats)</li>
+<li>[x] SQLite database for job metadata</li>
+<li>[x] Batch processing with concurrent workers</li>
+<li>[x] Progress reporting (gauge + status bar + screen reader)</li>
+<li>[x] System tray icon with progress tooltip</li>
+<li>[x] Balloon notifications (job complete, batch complete, errors)</li>
+<li>[x] Minimize to tray / background processing</li>
+<li>[x] Auto-export on completion</li>
+<li>[x] Recent files menu (persistent, max 10)</li>
+<li>[x] Self-update via GitHub Releases (startup + manual)</li>
+<li>[x] Basic/Advanced mode toggle with persistent experience_mode setting</li>
+<li>[x] View Log (opens app.log)</li>
+<li>[x] Full accessibility (names, labels, keyboard, screen reader)</li>
+<li>[x] First-run setup wizard (7-page guided experience with mode selection)</li>
+<li>[x] Cross-platform support (Windows 10+ and macOS 12+)</li>
+<li>[x] Disk space pre-checks before model downloads</li>
+<li>[x] Comprehensive user guide (docs/USER_GUIDE.md)</li>
+<li>[x] Automatic ffmpeg dependency installation (winget on Windows, manual instructions fallback)</li>
+<li>[x] Persistent application settings (JSON-backed dataclass)</li>
+<li>[x] On-demand provider SDK installer (WheelInstaller + sdk_installer)</li>
+<li>[x] Pre-transcription SDK checks (ensure_sdk before job dispatch)</li>
+<li>[x] Lightweight PyInstaller packaging (~40 MB with lean build)</li>
+<li>[x] Inno Setup Windows installer script</li>
+<li>[x] Queue panel context menu with wired handlers</li>
+<li>[x] Find Next (F3) in transcript search</li>
+<li>[x] Setup Wizard accessible from Help menu</li>
+<li>[x] Learn more about BITS link in Help menu</li>
+<li>[x] Add Provider menu item in Tools menu</li>
+<li>[x] Provider activation tracking (activated_providers in settings)</li>
+</ul>
+<hr>
+<h2 id="20-success-metrics">20. Success Metrics</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Time to first transcription</td>
+<td>&lt; 2 minutes from install</td>
+</tr>
+<tr>
+<td>Keyboard-only task completion</td>
+<td>100% of features</td>
+</tr>
+<tr>
+<td>Screen reader compatibility</td>
+<td>NVDA pass on all workflows</td>
+</tr>
+<tr>
+<td>Provider switch time</td>
+<td>&lt; 30 seconds</td>
+</tr>
+<tr>
+<td>Batch throughput (local)</td>
+<td>Limited only by hardware</td>
+</tr>
+<tr>
+<td>Cold start time</td>
+<td>&lt; 5 seconds</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="21-decisions-log">21. Decisions Log</h2>
+<table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Reasoning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WXPython over Electron/Qt</td>
+<td>Best native accessibility (MSAA/UIA) on Windows</td>
+</tr>
+<tr>
+<td>faster-whisper over openai-whisper</td>
+<td>CTranslate2 -- 4x faster, lower memory, same accuracy</td>
+</tr>
+<tr>
+<td>Menu bar as primary interface</td>
+<td>Screen reader–friendly; discoverable via mnemonics</td>
+</tr>
+<tr>
+<td>keyring for API keys</td>
+<td>OS credential store &gt; env vars or config files</td>
+</tr>
+<tr>
+<td>Simple/Advanced mode toggle</td>
+<td>Consumer-friendly defaults; power users opt in; mode persisted across sessions</td>
+</tr>
+<tr>
+<td>Basic mode provider filtering</td>
+<td>Only show activated cloud providers in Basic mode to reduce clutter</td>
+</tr>
+<tr>
+<td>Cloud provider onboarding</td>
+<td>Three-step wizard with live API validation before activation</td>
+</tr>
+<tr>
+<td>Minimize to tray by default</td>
+<td>Long batch jobs shouldn't block the taskbar</td>
+</tr>
+<tr>
+<td>Balloon notifications</td>
+<td>Native Windows toast API via wx.adv; no extra deps</td>
+</tr>
+<tr>
+<td>JSON for recent files</td>
+<td>Lightweight; no schema migration needed</td>
+</tr>
+<tr>
+<td>No auto-install for updates</td>
+<td>Security -- user controls what runs on their machine</td>
+</tr>
+<tr>
+<td>On-demand SDK install</td>
+<td>Keeps installer ~40 MB; SDKs downloaded on first use from PyPI</td>
+</tr>
+<tr>
+<td>WheelInstaller over pip</td>
+<td>Frozen apps have no Python interpreter; direct wheel extraction works everywhere</td>
+</tr>
+<tr>
+<td>ffmpeg for preprocessing</td>
+<td>Ubiquitous; no native lib compilation needed</td>
+</tr>
+<tr>
+<td>pyannote.audio for local diarization</td>
+<td>Best open-source speaker diarization; optional dependency</td>
+</tr>
+<tr>
+<td>Provider configure() method</td>
+<td>Data-driven settings injection; no provider subclass modification needed</td>
+</tr>
+<tr>
+<td>SpeakerRenameDialog over inline</td>
+<td>Global rename is safer and clearer than per-line editing</td>
+</tr>
+<tr>
+<td>speaker_map on TranscriptionResult</td>
+<td>Separates internal IDs from display names; lossless rename</td>
+</tr>
+</tbody>
+</table>
+<div class="footer">
+  Generated from <code>PRD.md</code> &mdash; BITS Whisperer Documentation
+</div>
+</body>
+</html>

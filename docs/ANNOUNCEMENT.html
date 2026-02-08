@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BITS Whisperer — Announcement</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --accent: #0969da;
+    --border: #d0d7de;
+    --code-bg: #f6f8fa;
+    --table-alt: #f6f8fa;
+    --blockquote: #57606a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --accent: #58a6ff;
+      --border: #30363d;
+      --code-bg: #161b22;
+      --table-alt: #161b22;
+      --blockquote: #8b949e;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+                 sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--fg);
+    background: var(--bg);
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+  h1 { font-size: 2em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+  h3 { font-size: 1.25em; }
+  p { margin: 0.5em 0 1em; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.875em;
+    background: var(--code-bg);
+    padding: 0.2em 0.4em;
+    border-radius: 6px;
+  }
+  pre {
+    background: var(--code-bg);
+    padding: 1em;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 1em 0;
+    line-height: 1.45;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+    font-size: 0.85em;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 0.5em 0.75em;
+    text-align: left;
+  }
+  th {
+    background: var(--code-bg);
+    font-weight: 600;
+  }
+  tr:nth-child(even) { background: var(--table-alt); }
+  blockquote {
+    border-left: 4px solid var(--accent);
+    padding: 0.5em 1em;
+    margin: 1em 0;
+    color: var(--blockquote);
+  }
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2em 0;
+  }
+  ul, ol { margin: 0.5em 0 1em 1.5em; }
+  li { margin: 0.25em 0; }
+  img { max-width: 100%; height: auto; }
+  .toc {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1em 1.5em;
+    margin: 1em 0 2em;
+  }
+  .toc ul { list-style: none; margin: 0; padding: 0; }
+  .toc ul ul { padding-left: 1.5em; }
+  .toc li { margin: 0.25em 0; }
+  strong { font-weight: 600; }
+  .footer {
+    margin-top: 3em;
+    padding-top: 1em;
+    border-top: 1px solid var(--border);
+    font-size: 0.85em;
+    color: var(--blockquote);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<nav class="toc"><strong>Table of Contents</strong>
+<div class="toc">
+<ul>
+<li><a href="#bits-whisperer-your-audio-your-words-your-way">BITS Whisperer — Your Audio, Your Words, Your Way</a><ul>
+<li><a href="#what-is-bits-whisperer">What Is BITS Whisperer?</a></li>
+<li><a href="#key-features">Key Features</a><ul>
+<li><a href="#17-transcription-engines-one-app">17 Transcription Engines — One App</a></li>
+<li><a href="#cloud-provider-onboarding">Cloud Provider Onboarding</a></li>
+<li><a href="#deeply-configurable-transcription">Deeply Configurable Transcription</a></li>
+<li><a href="#7-export-formats">7 Export Formats</a></li>
+<li><a href="#audio-preprocessing-pipeline">Audio Preprocessing Pipeline</a></li>
+<li><a href="#batch-processing">Batch Processing</a></li>
+<li><a href="#accessibility-first">Accessibility First</a></li>
+<li><a href="#privacy-security">Privacy &amp; Security</a></li>
+<li><a href="#modern-desktop-experience">Modern Desktop Experience</a></li>
+</ul>
+</li>
+<li><a href="#system-requirements">System Requirements</a></li>
+<li><a href="#getting-started">Getting Started</a><ul>
+<li><a href="#install-from-source">Install from Source</a></li>
+<li><a href="#install-from-requirements">Install from Requirements</a></li>
+<li><a href="#build-a-standalone-executable">Build a Standalone Executable</a></li>
+<li><a href="#build-a-windows-installer">Build a Windows Installer</a></li>
+</ul>
+</li>
+<li><a href="#who-is-this-for">Who Is This For?</a></li>
+<li><a href="#whats-next">What's Next</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</nav>
+<h1 id="bits-whisperer-your-audio-your-words-your-way">BITS Whisperer — Your Audio, Your Words, Your Way</h1>
+<p><strong>The free, privacy-first desktop app that turns audio into text — fast, accurate, and fully accessible.</strong></p>
+<hr>
+<h2 id="what-is-bits-whisperer">What Is BITS Whisperer?</h2>
+<p>BITS Whisperer is a powerful yet easy-to-use desktop application for Windows and macOS that converts speech to text. Whether you're a journalist, podcaster, student, researcher, content creator, or anyone who works with audio — BITS Whisperer gives you professional-quality transcription right from your desktop.</p>
+<p>No subscriptions. No cloud lock-in. No data harvesting. Just drag, drop, and transcribe.</p>
+<hr>
+<h2 id="key-features">Key Features</h2>
+<h3 id="17-transcription-engines-one-app">17 Transcription Engines — One App</h3>
+<p>Choose the best tool for the job:</p>
+<ul>
+<li><strong>On-device AI</strong> — Whisper models from OpenAI run locally on your own hardware — your audio never leaves your computer. Choose from 14 model sizes (Tiny to Large v3 Turbo) matched to your hardware.</li>
+<li><strong>Cloud providers</strong> — When you need maximum accuracy or speed, connect to OpenAI, Google Cloud Speech, Azure Speech, Deepgram, AssemblyAI, AWS Transcribe, Groq, Gemini, Rev.ai, Speechmatics, ElevenLabs, Auphonic, and more.</li>
+<li><strong>Auphonic integration</strong> — Professional audio post-production (leveling, loudness normalization, noise &amp; hum reduction, filtering, silence/filler/cough cutting) with configurable speech recognition (Whisper, Google, Amazon, Speechmatics). Provider-specific settings let you configure loudness targets, output formats, and which audio algorithms to apply.</li>
+<li><strong>Windows built-in</strong> — Use the Windows Speech Recognizer (no setup required) or Azure Embedded Speech for offline cloud-quality results.</li>
+<li><strong>Vosk offline</strong> — Lightweight, Kaldi-based speech recognition with 20+ language models (40-50 MB). Runs on the lowest-end hardware where even Whisper Tiny is too heavy.</li>
+<li><strong>NVIDIA Parakeet</strong> — State-of-the-art English ASR via NeMo. 600M and 1.1B parameter models with CTC and TDT decoders for excellent accuracy and timestamp precision.</li>
+<li><strong>Smart routing</strong> — BITS Whisperer automatically recommends the best model for your hardware and workload.</li>
+</ul>
+<h3 id="cloud-provider-onboarding">Cloud Provider Onboarding</h3>
+<p>BITS Whisperer makes it easy to add cloud transcription services:</p>
+<ul>
+<li><strong>Add Provider wizard</strong> — Go to Tools, then Add Provider to walk through a guided setup for any of the 12 cloud providers</li>
+<li><strong>Live API validation</strong> — Your credentials are tested with a real API call before activation — no guessing whether your key works</li>
+<li><strong>One-click activation</strong> — Once validated, the provider appears in your settings and is ready for transcription</li>
+<li><strong>Secure storage</strong> — API keys stored in your OS credential vault (Windows Credential Manager / macOS Keychain)</li>
+</ul>
+<h3 id="deeply-configurable-transcription">Deeply Configurable Transcription</h3>
+<p>Fine-tune every detail of your output:</p>
+<ul>
+<li><strong>Timestamps</strong> — Toggle timestamps on/off, choose between <code>hh:mm:ss</code>, <code>mm:ss</code>, or seconds format</li>
+<li><strong>Speaker labels</strong> — Identify who's speaking (diarization) via 10 cloud providers or cloud-free local pyannote.audio. Post-transcription speaker editing lets you rename speakers and reassign segments with a right-click</li>
+<li><strong>Confidence scores</strong> — See how certain the model is about each segment</li>
+<li><strong>Word-level timing</strong> — Get precise start/end times for every single word</li>
+<li><strong>Language detection</strong> — Auto-detect from 99+ languages, or lock to a specific language</li>
+<li><strong>Paragraph segmentation</strong> — Automatically group sentences into readable paragraphs</li>
+<li><strong>Segment merging</strong> — Merge short fragments for cleaner output</li>
+<li><strong>VAD filtering</strong> — Voice Activity Detection removes silence before transcription for faster, cleaner results</li>
+<li><strong>Model tuning</strong> — Control temperature, beam size, compute type, and initial prompts for exact control over inference</li>
+</ul>
+<h3 id="7-export-formats">7 Export Formats</h3>
+<p>Save your transcripts exactly how you need them:</p>
+<ul>
+<li><strong>Plain Text</strong> (.txt) — Simple and universal</li>
+<li><strong>Markdown</strong> (.md) — Formatted for blogs, wikis, and documentation</li>
+<li><strong>HTML</strong> (.html) — Ready for the web</li>
+<li><strong>Microsoft Word</strong> (.docx) — Professional documents with formatting</li>
+<li><strong>SubRip</strong> (.srt) — Industry-standard subtitles</li>
+<li><strong>WebVTT</strong> (.vtt) — Web-native captions</li>
+<li><strong>JSON</strong> (.json) — Structured data for developers and integrations</li>
+</ul>
+<h3 id="audio-preprocessing-pipeline">Audio Preprocessing Pipeline</h3>
+<p>Noisy recording? Uneven volume? BITS Whisperer cleans it up before transcription:</p>
+<ul>
+<li><strong>High-pass filter</strong> — Removes low rumble and wind noise</li>
+<li><strong>Low-pass filter</strong> — Cuts ultrasonic interference</li>
+<li><strong>Noise gate</strong> — Silences background hiss</li>
+<li><strong>De-esser</strong> — Tames harsh sibilance</li>
+<li><strong>Compressor</strong> — Evens out volume differences between speakers</li>
+<li><strong>Loudness normalization</strong> — EBU R128 broadcast-standard leveling</li>
+<li><strong>Silence trimming</strong> — Removes dead air</li>
+</ul>
+<p>Each filter is independently configurable — enable what you need, skip what you don't.</p>
+<h3 id="batch-processing">Batch Processing</h3>
+<ul>
+<li>Drag and drop entire folders of audio files</li>
+<li>Process up to 100 files per batch</li>
+<li>Multiple concurrent transcription jobs</li>
+<li><strong>Background processing</strong> — Minimize to the system tray and let BITS Whisperer work while you do other things</li>
+<li><strong>Auto-export</strong> — Finished transcripts are automatically saved in your chosen format</li>
+<li><strong>Notifications</strong> — Balloon/toast notifications when jobs complete (even when minimized)</li>
+<li><strong>Progress tracking</strong> — Real-time progress in the status bar and system tray tooltip</li>
+</ul>
+<h3 id="accessibility-first">Accessibility First</h3>
+<p>BITS Whisperer is built from the ground up to be usable by everyone:</p>
+<ul>
+<li><strong>Full keyboard navigation</strong> — Every feature is reachable without a mouse</li>
+<li><strong>Screen reader friendly</strong> — Tested with NVDA; all controls are labeled and announced</li>
+<li><strong>Menu bar primary interface</strong> — All actions have keyboard mnemonics and accelerators</li>
+<li><strong>High contrast support</strong> — Uses system colors; works with any Windows theme</li>
+<li><strong>Accessible settings dialog</strong> — Tab, Shift+Tab, Ctrl+Tab, and Ctrl+Shift+Tab all work as expected</li>
+</ul>
+<h3 id="privacy-security">Privacy &amp; Security</h3>
+<ul>
+<li><strong>Local storage</strong> — Transcripts stay on your computer by default</li>
+<li><strong>Secure credential storage</strong> — API keys are stored in your OS credential vault (Windows Credential Manager / macOS Keychain) — never in plain text</li>
+<li><strong>No telemetry</strong> — We don't track you, period</li>
+<li><strong>Open source</strong> — Inspect every line of code</li>
+</ul>
+<h3 id="modern-desktop-experience">Modern Desktop Experience</h3>
+<ul>
+<li><strong>First-run setup wizard</strong> — Guided 7-page wizard that scans your hardware, lets you choose Basic or Advanced experience mode, recommends models, offers downloads, and configures everything in one magical experience</li>
+<li><strong>Basic &amp; Advanced modes</strong> — Start with a clean, simple interface (Basic) or unlock full control with all settings tabs, audio processing, and every provider (Advanced). Choose during setup or toggle anytime from the View menu (Ctrl+Shift+A)</li>
+<li><strong>Automatic dependency setup</strong> — Detects missing ffmpeg at startup and offers one-click install via winget (Windows), with manual instructions fallback</li>
+<li><strong>On-demand SDK installer</strong> — Provider SDKs are not bundled in the installer, keeping it small (~40 MB). When you first use a provider, the required SDK is downloaded and installed automatically — no system Python or pip needed</li>
+<li><strong>System tray</strong> — Minimize and keep working; restore with a click</li>
+<li><strong>Recent files</strong> — Quick access to your last 10 audio files</li>
+<li><strong>Hardware detection</strong> — Automatically identifies your CPU, RAM, and GPU to recommend compatible models</li>
+<li><strong>Disk space checks</strong> — Pre-flight validation before every model download; friendly warnings when space is low</li>
+<li><strong>Auto-update</strong> — Checks GitHub for new releases on startup</li>
+<li><strong>Cross-platform</strong> — Runs on Windows 10+ and macOS 12+ with GPU acceleration (CUDA / Apple Silicon Metal)</li>
+<li><strong>Settings persistence</strong> — All your preferences are saved between sessions</li>
+<li><strong>Comprehensive user guide</strong> — Built-in documentation covering every feature, shortcut, and troubleshooting step</li>
+<li><strong>Professional Windows installer</strong> — Inno Setup-based installer with Start Menu shortcuts, optional desktop shortcut, and clean uninstaller</li>
+<li><strong>Setup Wizard in Help menu</strong> — Re-run the setup wizard anytime from Help, then Setup Wizard</li>
+<li><strong>Learn more about BITS</strong> — Quick link to the BITS website from the Help menu</li>
+</ul>
+<hr>
+<h2 id="system-requirements">System Requirements</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Minimum</th>
+<th>Recommended</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OS</td>
+<td>Windows 10 / macOS 12+</td>
+<td>Windows 11 / macOS 14+</td>
+</tr>
+<tr>
+<td>Python</td>
+<td>3.10+</td>
+<td>3.11+</td>
+</tr>
+<tr>
+<td>RAM</td>
+<td>4 GB</td>
+<td>16 GB</td>
+</tr>
+<tr>
+<td>GPU</td>
+<td>Not required</td>
+<td>NVIDIA with 4+ GB VRAM</td>
+</tr>
+<tr>
+<td>Disk</td>
+<td>500 MB</td>
+<td>5 GB (for large models)</td>
+</tr>
+<tr>
+<td>ffmpeg</td>
+<td>Required</td>
+<td>Auto-installed on first launch</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="getting-started">Getting Started</h2>
+<h3 id="install-from-source">Install from Source</h3>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/accesswatch/bits-whisperer.git
+<span class="nb">cd</span><span class="w"> </span>bits-whisperer
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[dev]&quot;</span>
+bits-whisperer
+</code></pre></div>
+
+<h3 id="install-from-requirements">Install from Requirements</h3>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+python<span class="w"> </span>-m<span class="w"> </span>bits_whisperer
+</code></pre></div>
+
+<h3 id="build-a-standalone-executable">Build a Standalone Executable</h3>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>pyinstaller
+python<span class="w"> </span>build_installer.py<span class="w"> </span>--lean
+</code></pre></div>
+
+<p>The built application will be in <code>dist/BITS Whisperer/</code>.</p>
+<h3 id="build-a-windows-installer">Build a Windows Installer</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Requires Inno Setup 6+ (https://jrsoftware.org/isinfo.php)</span>
+iscc<span class="w"> </span>installer.iss
+</code></pre></div>
+
+<p>Output: <code>dist/BITS_Whisperer_Setup.exe</code></p>
+<hr>
+<h2 id="who-is-this-for">Who Is This For?</h2>
+<ul>
+<li><strong>Journalists</strong> — Interview transcription without expensive subscriptions</li>
+<li><strong>Students</strong> — Record and transcribe lectures automatically</li>
+<li><strong>Podcasters</strong> — Generate show notes and transcripts for accessibility</li>
+<li><strong>Content creators</strong> — Subtitle your videos in multiple formats</li>
+<li><strong>Researchers</strong> — Transcribe interviews and focus groups with confidence scores</li>
+<li><strong>Accessibility advocates</strong> — Make audio content available to everyone</li>
+<li><strong>Privacy-conscious professionals</strong> — Keep sensitive recordings off the cloud</li>
+<li><strong>Power users</strong> — Maximum control over every aspect of transcription</li>
+</ul>
+<hr>
+<h2 id="whats-next">What's Next</h2>
+<ul>
+<li>Real-time microphone transcription</li>
+<li>Translation and summarization</li>
+<li>Plugin system for custom providers</li>
+</ul>
+<hr>
+<p><strong>BITS Whisperer</strong> — because your words matter.</p>
+<p><em>Free. Open source. Accessible. Private.</em></p>
+<p>Developed by <strong>Blind Information Technology Solutions (BITS)</strong>.</p>
+<div class="footer">
+  Generated from <code>ANNOUNCEMENT.md</code> &mdash; BITS Whisperer Documentation
+</div>
+</body>
+</html>

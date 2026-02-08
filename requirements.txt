@@ -1,0 +1,19 @@
+# BITS Whisperer — core runtime dependencies
+# Install: pip install -r requirements.txt
+#
+# Provider SDKs are installed on demand at first use.
+# To install everything up front:
+#   pip install -r requirements.txt -r requirements-providers.txt
+
+wxPython>=4.2.0
+keyring>=24.0.0
+python-docx>=1.0.0
+markdown>=3.5
+Jinja2>=3.1.0
+pydub>=0.25.1
+psutil>=5.9.0
+platformdirs>=4.0.0
+httpx>=0.25.0
+packaging>=23.0
+winsdk>=1.0.0b10; sys_platform == "win32"
+comtypes>=1.2.0; sys_platform == "win32"

@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BITS Whisperer — README</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --accent: #0969da;
+    --border: #d0d7de;
+    --code-bg: #f6f8fa;
+    --table-alt: #f6f8fa;
+    --blockquote: #57606a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --accent: #58a6ff;
+      --border: #30363d;
+      --code-bg: #161b22;
+      --table-alt: #161b22;
+      --blockquote: #8b949e;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+                 sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--fg);
+    background: var(--bg);
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+  h1 { font-size: 2em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+  h3 { font-size: 1.25em; }
+  p { margin: 0.5em 0 1em; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.875em;
+    background: var(--code-bg);
+    padding: 0.2em 0.4em;
+    border-radius: 6px;
+  }
+  pre {
+    background: var(--code-bg);
+    padding: 1em;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 1em 0;
+    line-height: 1.45;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+    font-size: 0.85em;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 0.5em 0.75em;
+    text-align: left;
+  }
+  th {
+    background: var(--code-bg);
+    font-weight: 600;
+  }
+  tr:nth-child(even) { background: var(--table-alt); }
+  blockquote {
+    border-left: 4px solid var(--accent);
+    padding: 0.5em 1em;
+    margin: 1em 0;
+    color: var(--blockquote);
+  }
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2em 0;
+  }
+  ul, ol { margin: 0.5em 0 1em 1.5em; }
+  li { margin: 0.25em 0; }
+  img { max-width: 100%; height: auto; }
+  .toc {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1em 1.5em;
+    margin: 1em 0 2em;
+  }
+  .toc ul { list-style: none; margin: 0; padding: 0; }
+  .toc ul ul { padding-left: 1.5em; }
+  .toc li { margin: 0.25em 0; }
+  strong { font-weight: 600; }
+  .footer {
+    margin-top: 3em;
+    padding-top: 1em;
+    border-top: 1px solid var(--border);
+    font-size: 0.85em;
+    color: var(--blockquote);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<nav class="toc"><strong>Table of Contents</strong>
+<div class="toc">
+<ul>
+<li><a href="#bits-whisperer">BITS Whisperer</a><ul>
+<li><a href="#features">Features</a></li>
+<li><a href="#quick-start">Quick Start</a><ul>
+<li><a href="#prerequisites">Prerequisites</a></li>
+<li><a href="#install">Install</a></li>
+<li><a href="#run">Run</a></li>
+</ul>
+</li>
+<li><a href="#architecture">Architecture</a></li>
+<li><a href="#supported-audio-formats">Supported Audio Formats</a></li>
+<li><a href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
+<li><a href="#development">Development</a></li>
+<li><a href="#building-packaging">Building &amp; Packaging</a><ul>
+<li><a href="#pyinstaller-portable">PyInstaller (Portable)</a></li>
+<li><a href="#windows-installer-inno-setup">Windows Installer (Inno Setup)</a></li>
+</ul>
+</li>
+<li><a href="#transcription-providers">Transcription Providers</a></li>
+<li><a href="#speaker-diarization">Speaker Diarization</a><ul>
+<li><a href="#cloud-provider-diarization">Cloud Provider Diarization</a></li>
+<li><a href="#cloud-free-local-diarization">Cloud-Free Local Diarization</a></li>
+<li><a href="#speaker-editing-post-transcription">Speaker Editing (Post-Transcription)</a></li>
+</ul>
+</li>
+<li><a href="#provider-specific-settings">Provider-Specific Settings</a></li>
+<li><a href="#auphonic-integration">Auphonic Integration</a><ul>
+<li><a href="#auphonic-capabilities">Auphonic Capabilities</a></li>
+<li><a href="#auphonic-authentication">Auphonic Authentication</a></li>
+<li><a href="#auphonic-pricing">Auphonic Pricing</a></li>
+</ul>
+</li>
+<li><a href="#audio-preprocessing">Audio Preprocessing</a></li>
+<li><a href="#license">License</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</nav>
+<h1 id="bits-whisperer">BITS Whisperer</h1>
+<p><strong>Consumer-grade audio transcription for Windows and macOS.</strong>\
+<em>Developed by Blind Information Technology Solutions (BITS).</em></p>
+<p>BITS Whisperer is a desktop application that converts speech to text using <strong>17 transcription providers</strong> — cloud services from Microsoft, Google, Amazon, OpenAI, and more, plus on-device Whisper models for complete privacy. Built with accessibility as a core requirement — every feature works with keyboard-only navigation and screen readers.</p>
+<hr>
+<h2 id="features">Features</h2>
+<ul>
+<li><strong>17 transcription providers</strong> — Every major cloud platform plus free on-device options (see table below)</li>
+<li><strong>Auphonic integration</strong> — Professional cloud audio post-production (leveling, loudness normalization, noise reduction, silence/filler/cough cutting, hum reduction) with configurable speech recognition (Whisper, Google, Amazon, Speechmatics) and output formats</li>
+<li><strong>Speaker diarization</strong> — Automatic speaker detection via cloud providers (Azure, Google, Deepgram, AssemblyAI, Rev.ai, Speechmatics, ElevenLabs, Amazon, Gemini) or cloud-free local diarization using pyannote.audio</li>
+<li><strong>Speaker editing</strong> — Post-transcription speaker management: rename speakers, reassign segments via right-click, create new speakers, with display format "Speaker: text" for natural reading</li>
+<li><strong>Provider-specific settings</strong> — Configure each provider's unique features during onboarding (Auphonic loudness/silence/filler settings, Deepgram model/smart format, AssemblyAI chapters, Azure custom endpoints, and more)</li>
+<li><strong>14 Whisper models</strong> — Tiny through Large-v3, plus Turbo and Distil variants, with plain-English descriptions and hardware eligibility checks</li>
+<li><strong>Audio preprocessing</strong> — 7-filter ffmpeg pipeline (high-pass, low-pass, noise gate, de-esser, compressor, loudness normalisation, silence trim) to maximise transcription accuracy</li>
+<li><strong>Batch processing</strong> — Drag-and-drop files or entire folders with concurrent workers</li>
+<li><strong>Background processing</strong> — Minimize to system tray and keep transcribing; balloon notifications on completion or errors</li>
+<li><strong>System tray</strong> — Progress tooltip, left-click show/hide, right-click context menu (pause/resume, progress summary, quit)</li>
+<li><strong>Real-time progress</strong> — Per-file progress in the queue panel, status bar gauge, and tray tooltip</li>
+<li><strong>Cloud provider onboarding</strong> — Add cloud providers via Tools, then Add Provider with step-by-step credential entry, live API validation, and one-click activation</li>
+<li><strong>Basic &amp; Advanced modes</strong> — Choose your experience level in the Setup Wizard or toggle anytime via View, then Advanced Mode (Ctrl+Shift+A). Basic mode shows a streamlined interface with only activated providers; Advanced mode unlocks all providers, audio processing, and power-user settings</li>
+<li><strong>7 export formats</strong> — Plain Text, Markdown, HTML, Word (.docx), SRT, VTT, JSON</li>
+<li><strong>Auto-export</strong> — Optionally save each transcript as <code>.txt</code> alongside the audio file on completion</li>
+<li><strong>Recent files</strong> — Quick access to the last 10 opened files via File, then Recent Files</li>
+<li><strong>Self-update</strong> — Help, then Check for Updates fetches the latest release from GitHub; silent startup check notifies you when a new version is available</li>
+<li><strong>View log</strong> — Tools, then View Log opens the application log in your default text editor</li>
+<li><strong>Accessible</strong> — Full keyboard navigation, screen reader support (NVDA/JAWS), high contrast, WCAG 2.1 adapted for desktop</li>
+<li><strong>Privacy-first</strong> — Local transcript storage, API keys in Windows Credential Manager</li>
+<li><strong>Smart hardware detection</strong> — Automatically identifies eligible Whisper models for your CPU, RAM, and GPU</li>
+<li><strong>Automatic dependency setup</strong> — Detects missing ffmpeg at startup and offers one-click install via winget (Windows), with manual instructions fallback</li>
+<li><strong>On-demand SDK installer</strong> — Provider SDKs are not bundled in the installer. When you first use a cloud or local provider, BITS Whisperer automatically downloads and installs only the packages needed — keeping the installer small (~40 MB) and startup fast</li>
+<li><strong>First-run setup wizard</strong> — Guided 7-page wizard on first launch: experience mode selection, hardware scan, model recommendations, downloads, provider setup, preferences, and summary — all in one handholding experience</li>
+<li><strong>Disk space checks</strong> — Pre-flight validation before every model download with 10% headroom; friendly warnings when space is low</li>
+<li><strong>Cross-platform</strong> — Runs on Windows 10+ and macOS 12+; auto-detect GPU (CUDA / Apple Silicon Metal)</li>
+<li><strong>User guide</strong> — Comprehensive built-in user guide covering every feature, provider, setting, and keyboard shortcut</li>
+</ul>
+<h2 id="quick-start">Quick Start</h2>
+<h3 id="prerequisites">Prerequisites</h3>
+<ul>
+<li><strong>Python 3.10+</strong></li>
+<li><strong>Windows 10/11</strong> or <strong>macOS 12+</strong></li>
+<li><strong>ffmpeg</strong> on PATH (auto-installed on first launch if missing)</li>
+<li><strong>NVIDIA GPU</strong> (optional, for larger Whisper models on Windows/Linux)</li>
+<li><strong>Apple Silicon</strong> (optional, Metal acceleration on macOS)</li>
+</ul>
+<h3 id="install">Install</h3>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/accesswatch/bits-whisperer.git
+<span class="nb">cd</span><span class="w"> </span>bits-whisperer
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[dev]&quot;</span>
+</code></pre></div>
+
+<h3 id="run">Run</h3>
+<div class="highlight"><pre><span></span><code>bits-whisperer
+<span class="c1"># or</span>
+python<span class="w"> </span>-m<span class="w"> </span>bits_whisperer
+</code></pre></div>
+
+<h2 id="architecture">Architecture</h2>
+<div class="highlight"><pre><span></span><code>src/bits_whisperer/
+  __main__.py              # Entry point
+  app.py                   # wx.App subclass
+  core/                    # Business logic
+    transcription_service.py  # Job queue &amp; orchestration
+    provider_manager.py       # Provider registry &amp; routing
+    audio_preprocessor.py     # 7-filter ffmpeg preprocessing
+    dependency_checker.py     # Startup dependency verification &amp; install
+    device_probe.py           # Hardware detection (CPU/RAM/GPU)
+    diarization.py            # Cloud-free local speaker diarization (pyannote)
+    model_manager.py          # Whisper model download/cache
+    sdk_installer.py          # On-demand provider SDK installer
+    wheel_installer.py        # PyPI wheel downloader/extractor (frozen builds)
+    settings.py               # Persistent settings (JSON-backed)
+    transcoder.py             # ffmpeg audio normalisation
+    updater.py                # GitHub Releases self-update
+    job.py                    # Job data model
+  providers/               # 17 provider adapters (strategy pattern)
+    base.py              # TranscriptionProvider ABC
+    local_whisper.py     # faster-whisper (local, free)
+    openai_whisper.py    # OpenAI Whisper API
+    google_speech.py     # Google Cloud Speech-to-Text
+    gemini_provider.py   # Google Gemini
+    azure_speech.py      # Microsoft Azure Speech Services
+    azure_embedded.py    # Microsoft Azure Embedded Speech (offline)
+    aws_transcribe.py    # Amazon Transcribe
+    deepgram_provider.py # Deepgram Nova-2
+    assemblyai_provider.py  # AssemblyAI
+    groq_whisper.py      # Groq LPU Whisper
+    rev_ai_provider.py   # Rev.ai
+    speechmatics_provider.py # Speechmatics
+    elevenlabs_provider.py   # ElevenLabs Scribe
+    windows_speech.py    # Windows SAPI5 + WinRT (offline)
+    vosk_provider.py     # Vosk offline speech (Kaldi-based)
+    parakeet_provider.py # NVIDIA Parakeet (NeMo ASR, English)
+    auphonic_provider.py # Auphonic audio post-production + transcription
+  export/                  # Output formatters
+    base.py, plain_text.py, markdown.py
+    html_export.py, word_export.py
+    srt.py, vtt.py, json_export.py
+  storage/                 # Persistence
+    database.py          # SQLite (WAL mode) for jobs
+    key_store.py         # OS credential store via keyring
+  ui/                      # WXPython UI
+    main_frame.py        # Menu bar, splitter, status bar, tray integration
+    queue_panel.py       # File queue list
+    transcript_panel.py  # Transcript viewer/editor with speaker management
+    settings_dialog.py   # Tabbed settings (3 simple + 2 advanced)
+    progress_dialog.py   # Batch progress
+    model_manager_dialog.py  # Model management
+    add_provider_dialog.py   # Cloud provider onboarding
+    setup_wizard.py      # First-run setup wizard (7 pages)
+    tray_icon.py         # System tray (TaskBarIcon)
+  utils/
+    accessibility.py     # a11y helpers
+    constants.py         # App-wide constants &amp; model registry
+    platform_utils.py    # Cross-platform helpers (file open, disk space, CPU/GPU detection)
+</code></pre></div>
+
+<h2 id="supported-audio-formats">Supported Audio Formats</h2>
+<p>MP3, WAV, OGG, Opus, FLAC, M4A, AAC, WebM, WMA, AIFF, AMR, MP4</p>
+<h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Shortcut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Add Files</td>
+<td>Ctrl+O</td>
+</tr>
+<tr>
+<td>Add Folder</td>
+<td>Ctrl+Shift+O</td>
+</tr>
+<tr>
+<td>Start Transcription</td>
+<td>F5</td>
+</tr>
+<tr>
+<td>Pause / Resume</td>
+<td>F6</td>
+</tr>
+<tr>
+<td>Cancel Selected</td>
+<td>Delete</td>
+</tr>
+<tr>
+<td>Clear Queue</td>
+<td>Ctrl+Shift+Del</td>
+</tr>
+<tr>
+<td>Export Transcript</td>
+<td>Ctrl+E</td>
+</tr>
+<tr>
+<td>Find Next in Transcript</td>
+<td>F3</td>
+</tr>
+<tr>
+<td>Settings</td>
+<td>Ctrl+,</td>
+</tr>
+<tr>
+<td>Manage Models</td>
+<td>Ctrl+M</td>
+</tr>
+<tr>
+<td>Toggle Advanced Mode</td>
+<td>Ctrl+Shift+A</td>
+</tr>
+<tr>
+<td>Add Cloud Provider</td>
+<td>(Tools menu)</td>
+</tr>
+<tr>
+<td>Check for Updates</td>
+<td>(Help menu)</td>
+</tr>
+<tr>
+<td>Setup Wizard</td>
+<td>(Help menu)</td>
+</tr>
+<tr>
+<td>Learn More about BITS</td>
+<td>(Help menu)</td>
+</tr>
+<tr>
+<td>View Log</td>
+<td>(Tools menu)</td>
+</tr>
+<tr>
+<td>About</td>
+<td>F1</td>
+</tr>
+<tr>
+<td>Exit / Minimize to Tray</td>
+<td>Alt+F4</td>
+</tr>
+</tbody>
+</table>
+<h2 id="development">Development</h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># Install dev dependencies</span>
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[dev]&quot;</span>
+
+<span class="c1"># Run tests</span>
+pytest<span class="w"> </span>tests/<span class="w"> </span>-v
+
+<span class="c1"># Format code</span>
+black<span class="w"> </span>src/<span class="w"> </span>tests/
+
+<span class="c1"># Lint</span>
+ruff<span class="w"> </span>check<span class="w"> </span>src/<span class="w"> </span>tests/
+
+<span class="c1"># Type check</span>
+mypy<span class="w"> </span>src/
+</code></pre></div>
+
+<h2 id="building-packaging">Building &amp; Packaging</h2>
+<h3 id="pyinstaller-portable">PyInstaller (Portable)</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Standard build from current venv</span>
+python<span class="w"> </span>build_installer.py
+
+<span class="c1"># Lean build — clean venv, minimal output (~40 MB)</span>
+python<span class="w"> </span>build_installer.py<span class="w"> </span>--lean
+
+<span class="c1"># Single-file .exe (slower startup)</span>
+python<span class="w"> </span>build_installer.py<span class="w"> </span>--onefile
+</code></pre></div>
+
+<p>Output: <code>dist/BITS Whisperer/</code></p>
+<h3 id="windows-installer-inno-setup">Windows Installer (Inno Setup)</h3>
+<p>After building with PyInstaller, compile the Inno Setup script to create a professional Windows installer:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Build the app first</span>
+python<span class="w"> </span>build_installer.py<span class="w"> </span>--lean
+
+<span class="c1"># Then compile the installer (requires Inno Setup 6+)</span>
+iscc<span class="w"> </span>installer.iss
+</code></pre></div>
+
+<p>Output: <code>dist/BITS_Whisperer_Setup.exe</code></p>
+<p>The installer includes Start Menu shortcuts, optional desktop shortcut, license agreement, uninstaller, and auto-launches the app after installation.</p>
+<h2 id="transcription-providers">Transcription Providers</h2>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Type</th>
+<th>Rate/min</th>
+<th>API Key</th>
+<th>Highlights</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Local Whisper</td>
+<td>Local</td>
+<td>Free</td>
+<td>No</td>
+<td>Offline, private, GPU-accelerated</td>
+</tr>
+<tr>
+<td>Windows Speech</td>
+<td>Local</td>
+<td>Free</td>
+<td>No</td>
+<td>SAPI5 + WinRT, offline (Windows only)</td>
+</tr>
+<tr>
+<td>Vosk</td>
+<td>Local</td>
+<td>Free</td>
+<td>No</td>
+<td>Lightweight offline, 20+ languages, very low-end hardware</td>
+</tr>
+<tr>
+<td>Parakeet</td>
+<td>Local</td>
+<td>Free</td>
+<td>No</td>
+<td>NVIDIA NeMo high-accuracy English ASR</td>
+</tr>
+<tr>
+<td>Azure Embedded Speech</td>
+<td>Local</td>
+<td>Free</td>
+<td>No</td>
+<td>Microsoft neural models, offline</td>
+</tr>
+<tr>
+<td>OpenAI Whisper</td>
+<td>Cloud</td>
+<td>$0.006</td>
+<td>Yes</td>
+<td>Fast, reliable, verbose timestamps</td>
+</tr>
+<tr>
+<td>ElevenLabs Scribe</td>
+<td>Cloud</td>
+<td>$0.005</td>
+<td>Yes</td>
+<td>99+ languages, best-in-class accuracy</td>
+</tr>
+<tr>
+<td>Groq Whisper</td>
+<td>Cloud</td>
+<td>$0.003</td>
+<td>Yes</td>
+<td>188x real-time on LPU hardware</td>
+</tr>
+<tr>
+<td>AssemblyAI</td>
+<td>Cloud</td>
+<td>$0.011</td>
+<td>Yes</td>
+<td>Speaker labels, auto-chapters</td>
+</tr>
+<tr>
+<td>Deepgram Nova-2</td>
+<td>Cloud</td>
+<td>$0.013</td>
+<td>Yes</td>
+<td>Smart formatting, fast streaming</td>
+</tr>
+<tr>
+<td>Azure Speech</td>
+<td>Cloud</td>
+<td>$0.017</td>
+<td>Yes</td>
+<td>100+ languages, continuous recog.</td>
+</tr>
+<tr>
+<td>Google Speech</td>
+<td>Cloud</td>
+<td>$0.024</td>
+<td>Yes</td>
+<td>Diarization, enhanced models</td>
+</tr>
+<tr>
+<td>Google Gemini</td>
+<td>Cloud</td>
+<td>$0.0002</td>
+<td>Yes</td>
+<td>Cheapest cloud, multimodal AI</td>
+</tr>
+<tr>
+<td>Amazon Transcribe</td>
+<td>Cloud</td>
+<td>$0.024</td>
+<td>Yes</td>
+<td>S3 integration, medical vocabularies</td>
+</tr>
+<tr>
+<td>Rev.ai</td>
+<td>Cloud</td>
+<td>$0.020</td>
+<td>Yes</td>
+<td>Human-hybrid option, high accuracy</td>
+</tr>
+<tr>
+<td>Speechmatics</td>
+<td>Cloud</td>
+<td>$0.017</td>
+<td>Yes</td>
+<td>50+ languages, real-time streaming</td>
+</tr>
+<tr>
+<td>Auphonic</td>
+<td>Cloud</td>
+<td>~$0.01</td>
+<td>Yes</td>
+<td>Audio post-production + configurable speech recognition</td>
+</tr>
+</tbody>
+</table>
+<h2 id="speaker-diarization">Speaker Diarization</h2>
+<p>BITS Whisperer supports <strong>speaker diarization</strong> (identifying who spoke when) through two approaches:</p>
+<h3 id="cloud-provider-diarization">Cloud Provider Diarization</h3>
+<p>10 cloud providers support built-in diarization — enable "Include speaker labels" in transcription settings:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Diarization</th>
+<th>Max Speakers</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Azure Speech</td>
+<td>Yes</td>
+<td>Configurable</td>
+<td>Uses ConversationTranscriber</td>
+</tr>
+<tr>
+<td>Google Speech</td>
+<td>Yes</td>
+<td>Configurable</td>
+<td>Via diarization_config</td>
+</tr>
+<tr>
+<td>Deepgram</td>
+<td>Yes</td>
+<td>Auto</td>
+<td>Nova-2 speaker detection</td>
+</tr>
+<tr>
+<td>AssemblyAI</td>
+<td>Yes</td>
+<td>Auto</td>
+<td>speaker_labels feature</td>
+</tr>
+<tr>
+<td>Amazon Transcribe</td>
+<td>Yes</td>
+<td>Configurable</td>
+<td>ShowSpeakerLabels</td>
+</tr>
+<tr>
+<td>ElevenLabs</td>
+<td>Yes</td>
+<td>Auto</td>
+<td>Built-in diarize parameter</td>
+</tr>
+<tr>
+<td>Rev.ai</td>
+<td>Yes</td>
+<td>Auto</td>
+<td>Automatic speaker detection</td>
+</tr>
+<tr>
+<td>Speechmatics</td>
+<td>Yes</td>
+<td>Auto</td>
+<td>Speaker change detection</td>
+</tr>
+<tr>
+<td>Google Gemini</td>
+<td>Yes</td>
+<td>Auto</td>
+<td>Multimodal speaker detection</td>
+</tr>
+<tr>
+<td>Auphonic</td>
+<td>No</td>
+<td>n/a</td>
+<td>Post-production only</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cloud-free-local-diarization">Cloud-Free Local Diarization</h3>
+<p>For privacy-first workflows, enable <strong>local diarization</strong> using pyannote.audio:</p>
+<ol>
+<li>Install pyannote.audio: <code>pip install pyannote.audio</code></li>
+<li>Set up a HuggingFace auth token (for gated models)</li>
+<li>Enable in Settings: Diarization &gt; Use local diarization</li>
+<li>Works as post-processing — applies to ANY provider's output</li>
+</ol>
+<h3 id="speaker-editing-post-transcription">Speaker Editing (Post-Transcription)</h3>
+<p>After transcription, the transcript panel provides "magical" speaker management:</p>
+<ul>
+<li><strong>Manage Speakers</strong> button — Opens a dialog showing all detected speakers with editable name fields. Rename "Speaker 1" to "Alice", "Speaker 2" to "Bob", etc.</li>
+<li><strong>Right-click context menu</strong> — Click any transcript line and assign it to a different speaker or create a new one</li>
+<li><strong>Speaker notation</strong> — Clear <code>[timestamp]  SpeakerName: text</code> format for easy reading and safe find/replace</li>
+<li><strong>Instant updates</strong> — All speaker renames are applied globally and the transcript refreshes immediately</li>
+</ul>
+<h2 id="provider-specific-settings">Provider-Specific Settings</h2>
+<p>When adding a cloud provider via <strong>Tools &gt; Add Provider</strong>, each provider shows its unique configurable options:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Configurable Settings</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Auphonic</td>
+<td>Leveler, loudness, noise/hum reduction, silence/filler cutting, speech engine, output format</td>
+</tr>
+<tr>
+<td>Deepgram</td>
+<td>Model (nova-2/nova/enhanced/base), smart format, punctuation, paragraphs</td>
+</tr>
+<tr>
+<td>AssemblyAI</td>
+<td>Punctuation, formatting, auto chapters, content safety, sentiment</td>
+</tr>
+<tr>
+<td>Google Speech</td>
+<td>Recognition model, max speaker count</td>
+</tr>
+<tr>
+<td>Azure</td>
+<td>Custom endpoint ID</td>
+</tr>
+<tr>
+<td>AWS</td>
+<td>Max speaker labels</td>
+</tr>
+<tr>
+<td>Speechmatics</td>
+<td>Operating point (enhanced/standard)</td>
+</tr>
+<tr>
+<td>ElevenLabs</td>
+<td>Timestamp granularity (segment/word)</td>
+</tr>
+<tr>
+<td>OpenAI</td>
+<td>Model, temperature</td>
+</tr>
+<tr>
+<td>Groq</td>
+<td>Model (v3-turbo/v3/distil)</td>
+</tr>
+<tr>
+<td>Gemini</td>
+<td>Model (2.0-flash/1.5-flash/1.5-pro)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="auphonic-integration">Auphonic Integration</h2>
+<p>Auphonic provides professional cloud-based audio post-production with built-in speech recognition. BITS Whisperer integrates two Auphonic components:</p>
+<ul>
+<li><strong>AuphonicProvider</strong> — Transcription provider that uses Auphonic's production workflow:
+  audio upload, then audio algorithms (leveler, loudness, denoising, filtering), then Whisper speech recognition, then transcript download</li>
+<li><strong>AuphonicService</strong> — Standalone service for audio post-production without transcription (preprocessing step)</li>
+</ul>
+<h3 id="auphonic-capabilities">Auphonic Capabilities</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Adaptive Leveler</td>
+<td>Corrects level differences between speakers</td>
+</tr>
+<tr>
+<td>Loudness Normalization</td>
+<td>Target LUFS (-16 podcast, -23 broadcast)</td>
+</tr>
+<tr>
+<td>Noise &amp; Hum Reduction</td>
+<td>Automatic detection, configurable amount</td>
+</tr>
+<tr>
+<td>Filtering</td>
+<td>High-pass, auto-EQ, bandwidth extension</td>
+</tr>
+<tr>
+<td>Silence &amp; Filler Cutting</td>
+<td>Remove silences, filler words, coughs (configurable)</td>
+</tr>
+<tr>
+<td>Speech Recognition</td>
+<td>Built-in Whisper or Google/Amazon/Speechmatics (selectable)</td>
+</tr>
+<tr>
+<td>Hum Reduction</td>
+<td>50/60 Hz hum removal</td>
+</tr>
+<tr>
+<td>Crosstalk Detection</td>
+<td>Detect overlapping speakers</td>
+</tr>
+<tr>
+<td>Multitrack</td>
+<td>Process multi-speaker recordings per-track</td>
+</tr>
+<tr>
+<td>Output Formats</td>
+<td>MP3, AAC, FLAC, WAV, Opus, Vorbis, video</td>
+</tr>
+<tr>
+<td>Presets</td>
+<td>Save and reuse processing configurations</td>
+</tr>
+<tr>
+<td>Publishing</td>
+<td>Export to Dropbox, SoundCloud, YouTube, FTP, S3</td>
+</tr>
+<tr>
+<td>Webhooks</td>
+<td>HTTP POST callbacks on completion</td>
+</tr>
+</tbody>
+</table>
+<h3 id="auphonic-authentication">Auphonic Authentication</h3>
+<p>Generate an API token at https://auphonic.com/accounts/settings/#api-key and enter it in <strong>Settings, then Providers and Keys, then Auphonic API Token</strong>. The token is stored securely in Windows Credential Manager.</p>
+<h3 id="auphonic-pricing">Auphonic Pricing</h3>
+<table>
+<thead>
+<tr>
+<th>Plan</th>
+<th>Free Credits</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Free</td>
+<td>2 hours/month</td>
+<td>$0</td>
+</tr>
+<tr>
+<td>Starter</td>
+<td>9 hours/month</td>
+<td>$11/month</td>
+</tr>
+<tr>
+<td>Professional</td>
+<td>45 hours/month</td>
+<td>$49/month</td>
+</tr>
+</tbody>
+</table>
+<h2 id="audio-preprocessing">Audio Preprocessing</h2>
+<p>Enable via <strong>View, then Advanced Mode, then Settings, then Audio Processing</strong> tab:</p>
+<table>
+<thead>
+<tr>
+<th>Filter</th>
+<th>Default</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>High-pass (80 Hz)</td>
+<td>On</td>
+<td>Remove low-frequency rumble</td>
+</tr>
+<tr>
+<td>Low-pass (8 kHz)</td>
+<td>On</td>
+<td>Cut high-frequency hiss</td>
+</tr>
+<tr>
+<td>Noise gate (-40 dB)</td>
+<td>On</td>
+<td>Suppress background noise</td>
+</tr>
+<tr>
+<td>De-esser (5 kHz)</td>
+<td>On</td>
+<td>Reduce sibilance</td>
+</tr>
+<tr>
+<td>Compressor</td>
+<td>On</td>
+<td>Even out volume levels</td>
+</tr>
+<tr>
+<td>Loudness norm (EBU R128)</td>
+<td>On</td>
+<td>Standardise loudness to -16 LUFS</td>
+</tr>
+<tr>
+<td>Silence trim</td>
+<td>On</td>
+<td>Remove leading/trailing silence</td>
+</tr>
+</tbody>
+</table>
+<h2 id="license">License</h2>
+<p>MIT — Copyright (c) 2025 Blind Information Technology Solutions (BITS). See <a href="LICENSE">LICENSE</a>.</p>
+<p>Developed by <strong>Blind Information Technology Solutions (BITS)</strong>.</p>
+<div class="footer">
+  Generated from <code>README.md</code> &mdash; BITS Whisperer Documentation
+</div>
+</body>
+</html>

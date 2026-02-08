@@ -1,0 +1,93 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bits-whisperer"
+version = "1.0.0"
+description = "Consumer-grade audio transcription with cloud + on-device Whisper support. Accessibility-first WXPython desktop app."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{name = "Blind Information Technology Solutions (BITS)"}]
+
+dependencies = [
+    # --- Core (UI, system, export) ---
+    "wxPython>=4.2.0",
+    "keyring>=24.0.0",
+    "python-docx>=1.0.0",
+    "markdown>=3.5",
+    "Jinja2>=3.1.0",
+    "pydub>=0.25.1",
+    "psutil>=5.9.0",
+    "platformdirs>=4.0.0",
+    "httpx>=0.25.0",
+    "packaging>=23.0",
+    "winsdk>=1.0.0b10; sys_platform == 'win32'",
+    "comtypes>=1.2.0; sys_platform == 'win32'",
+]
+
+[project.optional-dependencies]
+# Individual provider SDKs — installed on demand at runtime
+local-whisper = ["faster-whisper>=1.0.0"]
+openai = ["openai>=1.0.0"]
+google = ["google-cloud-speech>=2.20.0"]
+azure = ["azure-cognitiveservices-speech>=1.32.0"]
+deepgram = ["deepgram-sdk>=3.0.0"]
+assemblyai = ["assemblyai>=0.20.0"]
+aws = ["boto3>=1.28.0"]
+gemini = ["google-genai>=0.4.0"]
+groq = ["groq>=0.4.0"]
+rev-ai = ["rev-ai>=2.17.0"]
+speechmatics = ["speechmatics-python>=1.0.0"]
+# Provider bundles
+all-providers = [
+    "faster-whisper>=1.0.0",
+    "openai>=1.0.0",
+    "google-cloud-speech>=2.20.0",
+    "azure-cognitiveservices-speech>=1.32.0",
+    "deepgram-sdk>=3.0.0",
+    "assemblyai>=0.20.0",
+    "boto3>=1.28.0",
+    "google-genai>=0.4.0",
+    "groq>=0.4.0",
+    "rev-ai>=2.17.0",
+    "speechmatics-python>=1.0.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0",
+]
+
+[project.scripts]
+bits-whisperer = "bits_whisperer.__main__:main"
+
+[project.gui-scripts]
+bits-whisperer-gui = "bits_whisperer.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
