@@ -211,7 +211,7 @@ class CopilotService:
             True if the SDK is importable and the CLI is detected.
         """
         try:
-            import github_copilot  # noqa: F401
+            import copilot  # noqa: F401
 
             return self.detect_cli() is not None
         except ImportError:
@@ -220,7 +220,7 @@ class CopilotService:
     def is_sdk_installed(self) -> bool:
         """Check if the github-copilot-sdk package is installed."""
         try:
-            import github_copilot  # noqa: F401
+            import copilot  # noqa: F401
 
             return True
         except ImportError:
@@ -269,7 +269,7 @@ class CopilotService:
             return True
 
         try:
-            from github_copilot import CopilotClient
+            from copilot import CopilotClient
 
             client_kwargs: dict[str, Any] = {
                 "auto_start": self._settings.auto_start_cli,
@@ -286,7 +286,7 @@ class CopilotService:
             if cli_path:
                 client_kwargs["cli_path"] = cli_path
 
-            self._client = CopilotClient(**client_kwargs)
+            self._client = CopilotClient(client_kwargs)
             self._run_async(self._client.start())
             self._is_running = True
             logger.info("Copilot client started")
@@ -360,7 +360,7 @@ class CopilotService:
             if tools:
                 session_kwargs["tools"] = tools
 
-        session = await self._client.create_session(**session_kwargs)
+        session = await self._client.create_session(session_kwargs)
         return session
 
     def _build_transcript_tools(self) -> list[Any] | None:
@@ -370,7 +370,7 @@ class CopilotService:
             List of tool definitions, or None if tools are not available.
         """
         try:
-            from github_copilot import define_tool
+            from copilot import define_tool
             from pydantic import BaseModel, Field
 
             transcript_text = self._transcript_context
@@ -486,36 +486,35 @@ class CopilotService:
         on_delta: Callable[[str], None] | None = None,
     ) -> CopilotMessage:
         """Send a message and collect the response asynchronously."""
+        from copilot.generated.session_events import SessionEventType
+
         # Ensure we have a session
         if not self._session:
             self._session = await self._create_session()
 
         if self._settings.streaming and on_delta:
-            # Streaming mode — collect deltas
+            # Streaming mode — collect deltas via event handler
             full_text = ""
-            response = await self._session.send(message)
+            done_event = asyncio.Event()
 
-            # Handle different response types from the SDK
-            if hasattr(response, "__aiter__"):
-                async for event in response:
-                    if hasattr(event, "type"):
-                        if event.type == "assistant.message_delta":
-                            delta = getattr(event, "delta", "") or getattr(event, "text", "")
-                            if delta:
-                                full_text += delta
-                                on_delta(delta)
-                        elif event.type == "assistant.message":
-                            text = getattr(event, "text", "") or getattr(event, "content", "")
-                            if text and not full_text:
-                                full_text = text
-                    elif isinstance(event, str):
-                        full_text += event
-                        on_delta(event)
-            else:
-                # Non-iterable response — extract text
-                full_text = self._extract_text(response)
-                if on_delta:
-                    on_delta(full_text)
+            def _handle_event(event: Any) -> None:
+                nonlocal full_text
+                if event.type == SessionEventType.ASSISTANT_MESSAGE_DELTA:
+                    delta = getattr(event.data, "content", "") or ""
+                    if delta:
+                        full_text += delta
+                        on_delta(delta)
+                elif event.type == SessionEventType.SESSION_IDLE:
+                    done_event.set()
+                elif event.type == SessionEventType.SESSION_ERROR:
+                    done_event.set()
+
+            unsubscribe = self._session.on(_handle_event)
+            try:
+                await self._session.send({"prompt": message})
+                await asyncio.wait_for(done_event.wait(), timeout=120)
+            finally:
+                unsubscribe()
 
             return CopilotMessage(
                 role="assistant",
@@ -524,9 +523,11 @@ class CopilotService:
                 is_complete=True,
             )
         else:
-            # Non-streaming mode
-            response = await self._session.send(message)
-            text = self._extract_text(response)
+            # Non-streaming mode — use send_and_wait
+            response = await self._session.send_and_wait({"prompt": message})
+            text = ""
+            if response and hasattr(response, "data"):
+                text = getattr(response.data, "content", "") or ""
             return CopilotMessage(
                 role="assistant",
                 content=text,

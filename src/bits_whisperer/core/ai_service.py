@@ -464,7 +464,7 @@ class CopilotAIProvider(AIProvider):
         try:
             import asyncio
 
-            from github_copilot import CopilotClient
+            from copilot import CopilotClient
 
             async def _run() -> AIResponse:
                 client_kwargs: dict[str, Any] = {"auto_start": True}
@@ -475,21 +475,19 @@ class CopilotAIProvider(AIProvider):
                 if self._cli_path:
                     client_kwargs["cli_path"] = self._cli_path
 
-                client = CopilotClient(**client_kwargs)
+                client = CopilotClient(client_kwargs)
                 await client.start()
                 try:
                     session = await client.create_session(
-                        model=self._model,
-                        system_message=("You are a helpful assistant that processes transcripts."),
+                        {
+                            "model": self._model,
+                            "system_message": "You are a helpful assistant that processes transcripts.",
+                        }
                     )
+                    response = await session.send_and_wait({"prompt": prompt})
                     result_text = ""
-                    response = await session.send(prompt)
-                    if hasattr(response, "text"):
-                        result_text = response.text or ""
-                    elif hasattr(response, "content"):
-                        result_text = response.content or ""
-                    else:
-                        result_text = str(response)
+                    if response and hasattr(response, "data"):
+                        result_text = getattr(response.data, "content", "") or ""
                     await session.destroy()
                     return AIResponse(
                         text=result_text,
@@ -539,7 +537,7 @@ class CopilotAIProvider(AIProvider):
         try:
             import asyncio
 
-            from github_copilot import CopilotClient
+            from copilot import CopilotClient
 
             async def _test() -> bool:
                 client_kwargs: dict[str, Any] = {"auto_start": True}
@@ -547,10 +545,10 @@ class CopilotAIProvider(AIProvider):
                     client_kwargs["github_token"] = api_key
                 else:
                     client_kwargs["use_logged_in_user"] = True
-                client = CopilotClient(**client_kwargs)
+                client = CopilotClient(client_kwargs)
                 await client.start()
                 try:
-                    session = await client.create_session(model="gpt-4o")
+                    session = await client.create_session({"model": "gpt-4o"})
                     await session.destroy()
                     return True
                 finally:

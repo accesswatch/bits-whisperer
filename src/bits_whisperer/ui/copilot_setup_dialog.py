@@ -340,7 +340,7 @@ class CopilotSetupDialog(wx.Dialog):
             cli_version = CopilotService.get_cli_version(cli_path) if cli_path else None
             sdk_available = False
             try:
-                import github_copilot  # noqa: F401
+                import copilot  # noqa: F401
 
                 sdk_available = True
             except ImportError:
