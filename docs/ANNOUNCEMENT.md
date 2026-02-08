@@ -186,7 +186,7 @@ Output: `dist/BITS_Whisperer_Setup.exe`
 
 ---
 
-## New in v1.1: AI-Powered Features
+## New in v1.0: AI-Powered Features
 
 ### Live Microphone Transcription
 
@@ -219,7 +219,7 @@ Extend BITS Whisperer with custom transcription providers:
 
 ---
 
-## New in v1.2: Gemini AI & GitHub Copilot SDK
+## New in v1.0: Gemini AI & GitHub Copilot SDK
 
 ### Google Gemini AI Provider
 
@@ -245,7 +245,7 @@ Chat with your transcripts using GitHub Copilot, right inside BITS Whisperer:
 - **Session management** — Conversation history is maintained per session, with the ability to start fresh at any time
 - **5 AI providers** — OpenAI, Anthropic Claude, Azure OpenAI, Google Gemini, and GitHub Copilot are all available for translation and summarization
 
-### Additional v1.2 Improvements
+### Additional Improvements
 
 - **8-page Setup Wizard** — A new AI & Copilot configuration page guides you through provider setup during first launch
 - **Windows installer** — Optionally install the GitHub Copilot CLI via WinGet during application setup
@@ -253,12 +253,94 @@ Chat with your transcripts using GitHub Copilot, right inside BITS Whisperer:
 
 ---
 
+## New in v1.0: Phase 4 — AI Intelligence & Streaming
+
+### AI Model Catalog with Real-Time Pricing
+
+BITS Whisperer now includes a comprehensive AI model catalog with real-time pricing information for all providers:
+
+| Provider | Models | Price Range (per 1M input tokens) |
+|----------|--------|-----------------------------------|
+| **OpenAI** | GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo | $0.15 – $10.00 |
+| **Anthropic** | Claude Sonnet 4, Claude Haiku 4, Claude 3.5 Sonnet | $0.80 – $3.00 |
+| **Google Gemini** | Gemini 2.0 Flash, 2.5 Pro, 2.5 Flash + 5 Gemma variants | $0.02 – $1.25 |
+| **GitHub Copilot** | 7 models (GPT-4o Mini, GPT-4o, GPT-4 Turbo, Claude Sonnet 4, Claude Haiku 4, o3-mini, Gemini 2.0 Flash) | Included in subscription |
+
+All 22 models include context window size, max output tokens, and per-token pricing so you can make informed choices.
+
+### Copilot Subscription Tier-Based Model Selection
+
+Copilot models are now filtered by your subscription tier:
+
+| Tier | Price | Available Models |
+|------|-------|------------------|
+| **Free** | $0 | GPT-4o Mini |
+| **Pro** | $10/month | All 7 models including premium (Claude, o3-mini, Gemini) |
+| **Business** | $19/user/month | All Pro models + admin controls |
+| **Enterprise** | $39/user/month | All models + knowledge bases, fine-tuning, compliance |
+
+Set your subscription tier in **Tools, then Settings** — the model picker automatically shows only the models available for your plan.
+
+### Google Gemma Models
+
+All 5 Gemma open-weight models are now available via the Gemini API:
+
+| Model | Parameters | Input Price | Best For |
+|-------|-----------|-------------|----------|
+| **Gemma 3 27B** | 27B | $0.10/1M | High quality, open-weight analysis |
+| **Gemma 3 12B** | 12B | $0.08/1M | Good balance of quality and speed |
+| **Gemma 3 4B** | 4B | $0.05/1M | Fast, efficient for simple tasks |
+| **Gemma 3 1B** | 1B | $0.02/1M | Very fast, basic translation |
+| **Gemma 3n E4B** | Edge-optimized | $0.02/1M | Ultra-efficient, lightweight tasks |
+
+### Custom Vocabulary
+
+Improve AI accuracy with domain-specific terminology:
+
+- Go to **Tools, then AI Provider Settings** and add custom terms, acronyms, and proper nouns
+- The vocabulary is injected into translation and summarization prompts
+- Ensures consistent handling of technical jargon, company names, and specialized terms
+- Ideal for medical, legal, technical, and industry-specific transcripts
+
+### 10 Built-In Prompt Templates
+
+Pre-configured prompt templates for common AI tasks:
+
+- **Translation** (4 templates): Standard, Informal, Technical, Legal
+- **Summarization** (4 templates): Concise Summary, Detailed Summary, Bullet Points, Meeting Minutes
+- **Analysis** (2 templates): Sentiment Analysis, Extract Questions
+
+Select a template before translating or summarizing, or create your own custom templates. Templates use `{text}` and `{language}` placeholders for automatic transcript and language injection.
+
+### Multi-Language Simultaneous Translation
+
+Translate a transcript into multiple languages at once:
+
+- Configure target languages in **Tools, then AI Provider Settings**
+- Press **Ctrl+T** and select **Multi-Language** to translate into all configured languages in a single operation
+- Each language translation is performed independently for best quality
+- Results are returned as separate translations per language
+
+### Real-Time Streaming from Cloud Providers
+
+Deepgram and AssemblyAI now support real-time streaming transcription:
+
+- **Deepgram** — Live WebSocket streaming with smart formatting and punctuation
+- **AssemblyAI** — Real-time streaming with automatic speaker detection
+- Streaming is indicated in each provider's capabilities so the app can use the optimal transport
+- Additional cloud providers may add streaming support in future releases
+
+### Phase 4 Test Coverage
+
+- **255 tests** — Full coverage for AI model catalog, Copilot tiers, prompt templates, multi-language translation, custom vocabulary, and streaming capabilities
+
+---
+
 ## What's Next
 
-- Real-time streaming from cloud providers
-- Custom vocabulary and prompt templates
-- Multi-language simultaneous translation
 - Plugin marketplace
+- Additional streaming providers
+- Custom model fine-tuning integration
 
 ---
 
@@ -266,4 +348,4 @@ Chat with your transcripts using GitHub Copilot, right inside BITS Whisperer:
 
 *Free. Open source. Accessible. Private.*
 
-*BITS Whisperer v1.2.0 — Developed by **Blind Information Technology Solutions (BITS)**.*
+*BITS Whisperer v1.0.0 — Developed by **Blind Information Technology Solutions (BITS)**.*

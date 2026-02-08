@@ -29,7 +29,7 @@ class TestAppConstants:
         assert all(p.isdigit() for p in parts)
 
     def test_version_is_1_2_0(self) -> None:
-        assert APP_VERSION == "1.2.0"
+        assert APP_VERSION == "1.0.0"
 
 
 class TestAudioFormats:

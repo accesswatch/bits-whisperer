@@ -1,7 +1,9 @@
 """AI provider settings dialog for configuring translation/summarization.
 
-Allows users to add API keys for OpenAI, Anthropic (Claude), and
-Azure OpenAI, and configure default preferences for AI features.
+Allows users to add API keys for OpenAI, Anthropic (Claude), Azure OpenAI,
+Google Gemini (including Gemma), and GitHub Copilot.  Shows real-time pricing
+and supports custom vocabulary, prompt templates, and multi-language
+simultaneous translation.
 """
 
 from __future__ import annotations
@@ -20,11 +22,29 @@ from bits_whisperer.utils.accessibility import (
     set_accessible_help,
     set_accessible_name,
 )
+from bits_whisperer.utils.constants import (
+    ANTHROPIC_AI_MODELS,
+    BUILTIN_PROMPT_TEMPLATES,
+    COPILOT_AI_MODELS,
+    COPILOT_TIERS,
+    GEMINI_AI_MODELS,
+    OPENAI_AI_MODELS,
+    format_price_per_1k,
+    get_ai_model_by_id,
+    get_copilot_models_for_tier,
+    get_templates_by_category,
+)
 
 if TYPE_CHECKING:
     from bits_whisperer.ui.main_frame import MainFrame
 
 logger = logging.getLogger(__name__)
+
+
+def _build_model_list(models_list):
+    """Build a list of model ID strings from an AIModelInfo list."""
+    return [m.id for m in models_list]
+
 
 # AI provider definitions
 _AI_PROVIDERS = [
@@ -36,7 +56,8 @@ _AI_PROVIDERS = [
         "fields": [
             {"id": "api_key", "label": "API Key", "key_name": "openai", "password": True},
         ],
-        "models": ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
+        "models": _build_model_list(OPENAI_AI_MODELS),
+        "models_list": OPENAI_AI_MODELS,
     },
     {
         "id": "anthropic",
@@ -46,11 +67,8 @@ _AI_PROVIDERS = [
         "fields": [
             {"id": "api_key", "label": "API Key", "key_name": "anthropic", "password": True},
         ],
-        "models": [
-            "claude-sonnet-4-20250514",
-            "claude-haiku-4-20250414",
-            "claude-3-5-sonnet-20241022",
-        ],
+        "models": _build_model_list(ANTHROPIC_AI_MODELS),
+        "models_list": ANTHROPIC_AI_MODELS,
     },
     {
         "id": "azure_openai",
@@ -76,19 +94,21 @@ _AI_PROVIDERS = [
             },
         ],
         "models": [],
+        "models_list": [],
     },
     {
         "id": "gemini",
         "name": "Google Gemini",
         "description": (
-            "Google's Gemini AI models for high-quality translation and "
-            "summarization. Requires a Google AI Studio API key."
+            "Google's Gemini AI models and Gemma open-weight models for "
+            "translation and summarization. Requires a Google AI Studio API key."
         ),
         "key_id": "gemini",
         "fields": [
             {"id": "api_key", "label": "API Key", "key_name": "gemini", "password": True},
         ],
-        "models": ["gemini-2.0-flash", "gemini-2.5-pro", "gemini-2.5-flash"],
+        "models": _build_model_list(GEMINI_AI_MODELS),
+        "models_list": GEMINI_AI_MODELS,
     },
     {
         "id": "copilot",
@@ -106,8 +126,16 @@ _AI_PROVIDERS = [
                 "password": True,
             },
         ],
-        "models": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "claude-sonnet-4", "claude-haiku-4"],
+        "models": _build_model_list(COPILOT_AI_MODELS),
+        "models_list": COPILOT_AI_MODELS,
     },
+]
+
+# Available languages for translation
+_LANGUAGES = [
+    "English", "Spanish", "French", "German", "Italian", "Portuguese",
+    "Chinese", "Japanese", "Korean", "Russian", "Arabic", "Hindi",
+    "Dutch", "Swedish", "Polish",
 ]
 
 
@@ -115,10 +143,11 @@ class AISettingsDialog(wx.Dialog):
     """Dialog for configuring AI provider API keys and preferences.
 
     Allows users to:
-    - Add/remove API keys for AI providers
-    - Select the default AI provider
-    - Configure translation target language
-    - Configure summarization style
+    - Add/remove API keys for AI providers with real-time pricing
+    - Select the default AI provider and model
+    - Configure translation target language and multi-language translation
+    - Configure summarization style and prompt templates
+    - Manage custom vocabulary for domain-specific accuracy
     """
 
     def __init__(self, parent: wx.Window, main_frame: MainFrame) -> None:
@@ -131,17 +160,18 @@ class AISettingsDialog(wx.Dialog):
         super().__init__(
             parent,
             title="AI Provider Settings",
-            size=(600, 550),
+            size=(650, 600),
             style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
         )
         set_accessible_name(self, "AI Provider Settings")
-        self.SetMinSize((480, 420))
+        self.SetMinSize((520, 460))
         self.Centre()
 
         self._main_frame = main_frame
         self._settings = AppSettings.load()
         self._key_store = main_frame.key_store
         self._fields: dict[str, wx.TextCtrl] = {}
+        self._pricing_labels: dict[str, wx.StaticText] = {}
 
         self._build_ui()
         self._load_values()
@@ -169,6 +199,24 @@ class AISettingsDialog(wx.Dialog):
         make_panel_accessible(prefs_panel)
         self._build_preferences_tab(prefs_panel)
         notebook.AddPage(prefs_panel, "Preferences")
+
+        # -- Custom Vocabulary tab --
+        vocab_panel = wx.Panel(notebook, style=wx.TAB_TRAVERSAL)
+        make_panel_accessible(vocab_panel)
+        self._build_vocabulary_tab(vocab_panel)
+        notebook.AddPage(vocab_panel, "Vocabulary")
+
+        # -- Prompt Templates tab --
+        templates_panel = wx.Panel(notebook, style=wx.TAB_TRAVERSAL)
+        make_panel_accessible(templates_panel)
+        self._build_templates_tab(templates_panel)
+        notebook.AddPage(templates_panel, "Templates")
+
+        # -- Multi-Language tab --
+        multi_panel = wx.Panel(notebook, style=wx.TAB_TRAVERSAL)
+        make_panel_accessible(multi_panel)
+        self._build_multi_language_tab(multi_panel)
+        notebook.AddPage(multi_panel, "Multi-Language")
 
         root.Add(notebook, 1, wx.EXPAND | wx.ALL, 5)
 
@@ -273,6 +321,52 @@ class AISettingsDialog(wx.Dialog):
                 self._fields[model_field_id] = model_choice  # type: ignore[assignment]
                 box_sizer.Add(model_row, 0, wx.ALL | wx.EXPAND, 5)
 
+                # Pricing info label (updated when model changes)
+                pricing_label = wx.StaticText(parent, label="")
+                set_accessible_name(pricing_label, f"{provider['name']} pricing")
+                self._pricing_labels[provider["id"]] = pricing_label
+                box_sizer.Add(pricing_label, 0, wx.LEFT | wx.BOTTOM, 10)
+
+                # Bind model change to update pricing
+                model_choice.Bind(
+                    wx.EVT_CHOICE,
+                    lambda evt, pid=provider["id"]: self._on_model_changed(pid),
+                )
+
+                # Copilot tier info
+                if provider["id"] == "copilot":
+                    tier_row = wx.BoxSizer(wx.HORIZONTAL)
+                    tier_lbl = wx.StaticText(parent, label="Subscription:")
+                    set_accessible_name(tier_lbl, "Copilot subscription tier")
+                    tier_row.Add(tier_lbl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+
+                    tier_choices = [
+                        f"{v['name']} — {v['price']}"
+                        for v in COPILOT_TIERS.values()
+                    ]
+                    self._copilot_tier_choice = wx.Choice(
+                        parent, choices=tier_choices
+                    )
+                    set_accessible_name(
+                        self._copilot_tier_choice,
+                        "Select your Copilot subscription tier",
+                    )
+                    set_accessible_help(
+                        self._copilot_tier_choice,
+                        "Choose your GitHub Copilot plan to see available models",
+                    )
+                    tier_row.Add(self._copilot_tier_choice, 1, wx.ALIGN_CENTER_VERTICAL)
+                    box_sizer.Add(tier_row, 0, wx.ALL | wx.EXPAND, 5)
+
+                    tier_desc = wx.StaticText(parent, label="")
+                    set_accessible_name(tier_desc, "Copilot tier description")
+                    self._copilot_tier_desc = tier_desc
+                    box_sizer.Add(tier_desc, 0, wx.LEFT | wx.BOTTOM, 10)
+
+                    self._copilot_tier_choice.Bind(
+                        wx.EVT_CHOICE, self._on_copilot_tier_changed
+                    )
+
             sizer.Add(box_sizer, 0, wx.ALL | wx.EXPAND, 5)
 
         parent.SetSizer(sizer)
@@ -295,24 +389,7 @@ class AISettingsDialog(wx.Dialog):
         set_accessible_name(lang_label, "Translation target language")
         lang_row.Add(lang_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
 
-        languages = [
-            "English",
-            "Spanish",
-            "French",
-            "German",
-            "Italian",
-            "Portuguese",
-            "Chinese",
-            "Japanese",
-            "Korean",
-            "Russian",
-            "Arabic",
-            "Hindi",
-            "Dutch",
-            "Swedish",
-            "Polish",
-        ]
-        self._lang_choice = wx.Choice(parent, choices=languages)
+        self._lang_choice = wx.Choice(parent, choices=_LANGUAGES)
         set_accessible_name(self._lang_choice, "Select translation target language")
         set_accessible_help(
             self._lang_choice,
@@ -321,6 +398,21 @@ class AISettingsDialog(wx.Dialog):
         self._lang_choice.SetSelection(0)
         lang_row.Add(self._lang_choice, 1, wx.ALIGN_CENTER_VERTICAL)
         trans_sizer.Add(lang_row, 0, wx.ALL | wx.EXPAND, 8)
+
+        # Active translation template
+        tpl_row = wx.BoxSizer(wx.HORIZONTAL)
+        tpl_label = wx.StaticText(parent, label="Translation &Style:")
+        set_accessible_name(tpl_label, "Translation template style")
+        tpl_row.Add(tpl_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+
+        trans_templates = get_templates_by_category("translation")
+        self._trans_tpl_names = [t.name for t in trans_templates]
+        self._trans_tpl_ids = [t.id for t in trans_templates]
+        self._trans_tpl_choice = wx.Choice(parent, choices=self._trans_tpl_names)
+        set_accessible_name(self._trans_tpl_choice, "Select translation template")
+        self._trans_tpl_choice.SetSelection(0)
+        tpl_row.Add(self._trans_tpl_choice, 1, wx.ALIGN_CENTER_VERTICAL)
+        trans_sizer.Add(tpl_row, 0, wx.ALL | wx.EXPAND, 8)
 
         sizer.Add(trans_sizer, 0, wx.ALL | wx.EXPAND, 10)
 
@@ -334,7 +426,7 @@ class AISettingsDialog(wx.Dialog):
         set_accessible_name(style_label, "Summary style")
         style_row.Add(style_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
 
-        styles = ["Concise (3-5 sentences)", "Detailed", "Bullet Points"]
+        styles = ["Concise (3-5 sentences)", "Detailed", "Bullet Points", "Meeting Minutes"]
         self._style_choice = wx.Choice(parent, choices=styles)
         set_accessible_name(self._style_choice, "Select summarization style")
         self._style_choice.SetSelection(0)
@@ -378,6 +470,265 @@ class AISettingsDialog(wx.Dialog):
 
         parent.SetSizer(sizer)
 
+    def _build_vocabulary_tab(self, parent: wx.Panel) -> None:
+        """Build the custom vocabulary tab.
+
+        Args:
+            parent: Parent panel.
+        """
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        intro = wx.StaticText(
+            parent,
+            label=(
+                "Add custom words, names, and technical terms to improve "
+                "AI translation and summarization accuracy. One term per line."
+            ),
+        )
+        intro.Wrap(560)
+        set_accessible_name(intro, "Custom vocabulary instructions")
+        sizer.Add(intro, 0, wx.ALL, 10)
+
+        self._vocab_text = wx.TextCtrl(
+            parent,
+            style=wx.TE_MULTILINE | wx.TE_WORDWRAP,
+        )
+        set_accessible_name(self._vocab_text, "Custom vocabulary terms, one per line")
+        set_accessible_help(
+            self._vocab_text,
+            "Enter domain-specific terms, names, and jargon that the AI "
+            "should preserve or use. These are sent as hints with each request.",
+        )
+        sizer.Add(self._vocab_text, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+
+        hint = wx.StaticText(
+            parent,
+            label="Examples: BITS Whisperer, wxPython, WCAG 2.1, pyannote",
+        )
+        hint.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT))
+        sizer.Add(hint, 0, wx.ALL, 10)
+
+        parent.SetSizer(sizer)
+
+    def _build_templates_tab(self, parent: wx.Panel) -> None:
+        """Build the prompt templates tab.
+
+        Args:
+            parent: Parent panel.
+        """
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        intro = wx.StaticText(
+            parent,
+            label=(
+                "View built-in prompt templates and set active templates "
+                "for translation and summarization operations."
+            ),
+        )
+        intro.Wrap(560)
+        set_accessible_name(intro, "Prompt templates instructions")
+        sizer.Add(intro, 0, wx.ALL, 10)
+
+        # Built-in templates list
+        tmpl_box = wx.StaticBox(parent, label="Built-in Templates")
+        set_accessible_name(tmpl_box, "Built-in prompt templates")
+        tmpl_sizer = wx.StaticBoxSizer(tmpl_box, wx.VERTICAL)
+
+        items = [f"[{t.category}] {t.name} — {t.description}" for t in BUILTIN_PROMPT_TEMPLATES]
+        self._template_list = wx.ListBox(parent, choices=items, size=(-1, 140))
+        set_accessible_name(self._template_list, "Available prompt templates")
+        tmpl_sizer.Add(self._template_list, 1, wx.EXPAND | wx.ALL, 4)
+
+        # Preview
+        self._template_preview = wx.TextCtrl(
+            parent,
+            style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_WORDWRAP,
+            size=(-1, 80),
+        )
+        set_accessible_name(self._template_preview, "Template preview")
+        tmpl_sizer.Add(self._template_preview, 0, wx.EXPAND | wx.ALL, 4)
+
+        self._template_list.Bind(wx.EVT_LISTBOX, self._on_template_selected)
+
+        sizer.Add(tmpl_sizer, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+
+        # Active templates selection
+        active_box = wx.StaticBox(parent, label="Active Templates")
+        set_accessible_name(active_box, "Active template selection")
+        active_sizer = wx.StaticBoxSizer(active_box, wx.VERTICAL)
+
+        trans_row = wx.BoxSizer(wx.HORIZONTAL)
+        trans_lbl = wx.StaticText(parent, label="Translation:")
+        set_accessible_name(trans_lbl, "Active translation template")
+        trans_row.Add(trans_lbl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+
+        trans_templates = get_templates_by_category("translation")
+        self._active_trans_names = [t.name for t in trans_templates]
+        self._active_trans_ids = [t.id for t in trans_templates]
+        self._active_trans_choice = wx.Choice(parent, choices=self._active_trans_names)
+        set_accessible_name(self._active_trans_choice, "Select active translation template")
+        self._active_trans_choice.SetSelection(0)
+        trans_row.Add(self._active_trans_choice, 1, wx.ALIGN_CENTER_VERTICAL)
+        active_sizer.Add(trans_row, 0, wx.EXPAND | wx.ALL, 4)
+
+        summ_row = wx.BoxSizer(wx.HORIZONTAL)
+        summ_lbl = wx.StaticText(parent, label="Summarization:")
+        set_accessible_name(summ_lbl, "Active summarization template")
+        summ_row.Add(summ_lbl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+
+        summ_templates = get_templates_by_category("summarization")
+        self._active_summ_names = [t.name for t in summ_templates]
+        self._active_summ_ids = [t.id for t in summ_templates]
+        self._active_summ_choice = wx.Choice(parent, choices=self._active_summ_names)
+        set_accessible_name(self._active_summ_choice, "Select active summarization template")
+        self._active_summ_choice.SetSelection(0)
+        summ_row.Add(self._active_summ_choice, 1, wx.ALIGN_CENTER_VERTICAL)
+        active_sizer.Add(summ_row, 0, wx.EXPAND | wx.ALL, 4)
+
+        sizer.Add(active_sizer, 0, wx.EXPAND | wx.ALL, 10)
+
+        parent.SetSizer(sizer)
+
+    def _build_multi_language_tab(self, parent: wx.Panel) -> None:
+        """Build the multi-language simultaneous translation tab.
+
+        Args:
+            parent: Parent panel.
+        """
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        intro = wx.StaticText(
+            parent,
+            label=(
+                "Select multiple target languages for simultaneous translation. "
+                "When you translate a transcript, it will be translated to all "
+                "selected languages at once."
+            ),
+        )
+        intro.Wrap(560)
+        set_accessible_name(intro, "Multi-language translation instructions")
+        sizer.Add(intro, 0, wx.ALL, 10)
+
+        lang_box = wx.StaticBox(parent, label="Target Languages")
+        set_accessible_name(lang_box, "Multi-language target selection")
+        lang_sizer = wx.StaticBoxSizer(lang_box, wx.VERTICAL)
+
+        self._multi_lang_list = wx.CheckListBox(
+            parent, choices=_LANGUAGES
+        )
+        set_accessible_name(
+            self._multi_lang_list,
+            "Select target languages for simultaneous translation",
+        )
+        set_accessible_help(
+            self._multi_lang_list,
+            "Check all languages you want to translate to at once. "
+            "Use AI menu, then Translate Multi-Language to run.",
+        )
+        lang_sizer.Add(self._multi_lang_list, 1, wx.EXPAND | wx.ALL, 4)
+
+        btn_row = wx.BoxSizer(wx.HORIZONTAL)
+        select_all_btn = wx.Button(parent, label="Select &All")
+        set_accessible_name(select_all_btn, "Select all languages")
+        select_all_btn.Bind(
+            wx.EVT_BUTTON,
+            lambda e: [
+                self._multi_lang_list.Check(i, True)
+                for i in range(self._multi_lang_list.GetCount())
+            ],
+        )
+        btn_row.Add(select_all_btn, 0, wx.RIGHT, 8)
+
+        clear_btn = wx.Button(parent, label="&Clear All")
+        set_accessible_name(clear_btn, "Clear all language selections")
+        clear_btn.Bind(
+            wx.EVT_BUTTON,
+            lambda e: [
+                self._multi_lang_list.Check(i, False)
+                for i in range(self._multi_lang_list.GetCount())
+            ],
+        )
+        btn_row.Add(clear_btn, 0)
+        lang_sizer.Add(btn_row, 0, wx.ALL, 4)
+
+        sizer.Add(lang_sizer, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+
+        parent.SetSizer(sizer)
+
+    # ------------------------------------------------------------------ #
+    # Event handlers for pricing & templates                               #
+    # ------------------------------------------------------------------ #
+
+    def _on_model_changed(self, provider_id: str) -> None:
+        """Update pricing display when a model is selected.
+
+        Args:
+            provider_id: Provider identifier.
+        """
+        model_field_id = f"{provider_id}_model"
+        model_ctrl = self._fields.get(model_field_id)
+        pricing_label = self._pricing_labels.get(provider_id)
+        if not model_ctrl or not pricing_label or not isinstance(model_ctrl, wx.Choice):
+            return
+
+        sel = model_ctrl.GetSelection()
+        if sel < 0:
+            return
+
+        model_id = model_ctrl.GetString(sel)
+        model_info = get_ai_model_by_id(model_id, provider_id)
+        if model_info:
+            in_price = format_price_per_1k(model_info.input_price_per_1m)
+            out_price = format_price_per_1k(model_info.output_price_per_1m)
+            ctx = f"{model_info.context_window:,} tokens"
+            tier_note = ""
+            if model_info.copilot_tier:
+                tier_note = f"  |  Tier: {model_info.copilot_tier.title()}"
+                if model_info.is_premium:
+                    tier_note += " (Premium)"
+            pricing_label.SetLabel(
+                f"Input: {in_price}  |  Output: {out_price}  |  "
+                f"Context: {ctx}{tier_note}"
+            )
+        else:
+            pricing_label.SetLabel("")
+
+        pricing_label.GetParent().Layout()
+
+    def _on_copilot_tier_changed(self, _event: wx.CommandEvent) -> None:
+        """Update Copilot model list based on selected tier."""
+        sel = self._copilot_tier_choice.GetSelection()
+        if sel < 0:
+            return
+
+        tier_keys = list(COPILOT_TIERS.keys())
+        tier = tier_keys[sel]
+        tier_info = COPILOT_TIERS[tier]
+        self._copilot_tier_desc.SetLabel(tier_info["description"])
+
+        # Update model choices for copilot to match tier
+        available = get_copilot_models_for_tier(tier)
+        model_ctrl = self._fields.get("copilot_model")
+        if model_ctrl and isinstance(model_ctrl, wx.Choice):
+            model_ctrl.Clear()
+            for m in available:
+                model_ctrl.Append(m.id)
+            if available:
+                model_ctrl.SetSelection(0)
+                self._on_model_changed("copilot")
+
+        # Save tier to settings
+        self._settings.copilot.subscription_tier = tier
+        self._copilot_tier_desc.GetParent().Layout()
+
+    def _on_template_selected(self, _event: wx.CommandEvent) -> None:
+        """Show preview of selected template."""
+        sel = self._template_list.GetSelection()
+        if sel < 0 or sel >= len(BUILTIN_PROMPT_TEMPLATES):
+            return
+        tmpl = BUILTIN_PROMPT_TEMPLATES[sel]
+        self._template_preview.SetValue(tmpl.template)
+
     # ------------------------------------------------------------------ #
     # Load / Save                                                          #
     # ------------------------------------------------------------------ #
@@ -419,19 +770,54 @@ class AISettingsDialog(wx.Dialog):
                 idx = model_ctrl.FindString(model_name)
                 if idx != wx.NOT_FOUND:
                     model_ctrl.SetSelection(idx)
+                # Show initial pricing
+                self._on_model_changed(provider["id"])
+
+        # Copilot subscription tier
+        tier = self._settings.copilot.subscription_tier
+        tier_keys = list(COPILOT_TIERS.keys())
+        if tier in tier_keys:
+            tier_idx = tier_keys.index(tier)
+            self._copilot_tier_choice.SetSelection(tier_idx)
+            self._copilot_tier_desc.SetLabel(COPILOT_TIERS[tier]["description"])
 
         # Translation target language
         idx = self._lang_choice.FindString(ai.translation_target_language)
         if idx != wx.NOT_FOUND:
             self._lang_choice.SetSelection(idx)
 
+        # Translation template in preferences tab
+        if ai.active_translation_template in self._trans_tpl_ids:
+            tpl_idx = self._trans_tpl_ids.index(ai.active_translation_template)
+            self._trans_tpl_choice.SetSelection(tpl_idx)
+
         # Summary style
-        style_map = {"concise": 0, "detailed": 1, "bullet_points": 2}
+        style_map = {"concise": 0, "detailed": 1, "bullet_points": 2, "meeting": 3}
         self._style_choice.SetSelection(style_map.get(ai.summarization_style, 0))
 
         # Advanced
         self._temp_spin.SetValue(ai.temperature)
         self._tokens_spin.SetValue(ai.max_tokens)
+
+        # Custom vocabulary
+        if ai.custom_vocabulary:
+            self._vocab_text.SetValue("\n".join(ai.custom_vocabulary))
+
+        # Active templates (in Templates tab)
+        if ai.active_translation_template in self._active_trans_ids:
+            self._active_trans_choice.SetSelection(
+                self._active_trans_ids.index(ai.active_translation_template)
+            )
+        if ai.active_summarization_template in self._active_summ_ids:
+            self._active_summ_choice.SetSelection(
+                self._active_summ_ids.index(ai.active_summarization_template)
+            )
+
+        # Multi-language targets
+        for lang in ai.multi_target_languages:
+            idx = self._multi_lang_list.FindString(lang)
+            if idx != wx.NOT_FOUND:
+                self._multi_lang_list.Check(idx, True)
 
     def _on_ok(self, _event: wx.CommandEvent) -> None:
         """Save settings and close."""
@@ -475,14 +861,49 @@ class AISettingsDialog(wx.Dialog):
         if lang_idx >= 0:
             ai.translation_target_language = self._lang_choice.GetString(lang_idx)
 
+        # Translation template from preferences tab
+        trans_tpl_idx = self._trans_tpl_choice.GetSelection()
+        if trans_tpl_idx >= 0 and trans_tpl_idx < len(self._trans_tpl_ids):
+            ai.active_translation_template = self._trans_tpl_ids[trans_tpl_idx]
+
         # Summary style
         style_idx = self._style_choice.GetSelection()
-        style_map = {0: "concise", 1: "detailed", 2: "bullet_points"}
+        style_map = {0: "concise", 1: "detailed", 2: "bullet_points", 3: "meeting"}
         ai.summarization_style = style_map.get(style_idx, "concise")
 
         # Advanced
         ai.temperature = self._temp_spin.GetValue()
         ai.max_tokens = self._tokens_spin.GetValue()
+
+        # Copilot subscription tier
+        tier_idx = self._copilot_tier_choice.GetSelection()
+        if tier_idx >= 0:
+            tier_keys = list(COPILOT_TIERS.keys())
+            self._settings.copilot.subscription_tier = tier_keys[tier_idx]
+
+        # Custom vocabulary
+        vocab_raw = self._vocab_text.GetValue().strip()
+        if vocab_raw:
+            ai.custom_vocabulary = [
+                w.strip() for w in vocab_raw.split("\n") if w.strip()
+            ]
+        else:
+            ai.custom_vocabulary = []
+
+        # Active templates (from Templates tab)
+        active_trans_idx = self._active_trans_choice.GetSelection()
+        if active_trans_idx >= 0 and active_trans_idx < len(self._active_trans_ids):
+            ai.active_translation_template = self._active_trans_ids[active_trans_idx]
+        active_summ_idx = self._active_summ_choice.GetSelection()
+        if active_summ_idx >= 0 and active_summ_idx < len(self._active_summ_ids):
+            ai.active_summarization_template = self._active_summ_ids[active_summ_idx]
+
+        # Multi-language targets
+        selected_langs = []
+        for i in range(self._multi_lang_list.GetCount()):
+            if self._multi_lang_list.IsChecked(i):
+                selected_langs.append(self._multi_lang_list.GetString(i))
+        ai.multi_target_languages = selected_langs
 
         # Persist
         self._settings.save()

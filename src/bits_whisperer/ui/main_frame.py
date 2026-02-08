@@ -57,6 +57,7 @@ ID_PLUGINS = wx.NewIdRef()
 ID_COPILOT_SETUP = wx.NewIdRef()
 ID_COPILOT_CHAT = wx.NewIdRef()
 ID_AGENT_BUILDER = wx.NewIdRef()
+ID_TRANSLATE_MULTI = wx.NewIdRef()
 
 # Maximum recent-file entries
 _MAX_RECENT = 10
@@ -235,6 +236,12 @@ class MainFrame(wx.Frame):
             "Translate the current transcript using AI",
         )
         ai_menu.Append(
+            ID_TRANSLATE_MULTI,
+            "Translate to &Multiple Languages…",
+            "Translate the transcript to all configured target languages",
+        )
+        ai_menu.AppendSeparator()
+        ai_menu.Append(
             ID_SUMMARIZE,
             "&Summarize Transcript…\tCtrl+Shift+S",
             "Summarize the current transcript using AI",
@@ -340,6 +347,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_copilot_setup, id=ID_COPILOT_SETUP)
         self.Bind(wx.EVT_MENU, self._on_copilot_chat, id=ID_COPILOT_CHAT)
         self.Bind(wx.EVT_MENU, self._on_agent_builder, id=ID_AGENT_BUILDER)
+        self.Bind(wx.EVT_MENU, self._on_translate_multi, id=ID_TRANSLATE_MULTI)
 
     def _build_accelerators(self) -> None:
         accel = wx.AcceleratorTable(
@@ -682,6 +690,140 @@ class MainFrame(wx.Frame):
     def _on_translate(self, _event: wx.CommandEvent) -> None:
         """Translate the current transcript using AI."""
         self._run_ai_action("translate")
+
+    def _on_translate_multi(self, _event: wx.CommandEvent) -> None:
+        """Translate the transcript to all configured target languages."""
+        import threading
+
+        from bits_whisperer.core.ai_service import AIService
+
+        job = self.transcript_panel._current_job
+        if not job or not job.result:
+            wx.MessageBox(
+                "No transcript loaded. Transcribe a file first.",
+                "No Transcript",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            return
+
+        text = job.result.full_text
+        if not text:
+            text = "\n".join(s.text for s in job.result.segments)
+        if not text.strip():
+            wx.MessageBox(
+                "The transcript is empty.",
+                "Empty Transcript",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            return
+
+        ai_service = AIService(self.key_store, self.app_settings.ai)
+        if not ai_service.is_configured():
+            result = wx.MessageBox(
+                "No AI provider is configured.\n\n"
+                "Would you like to open AI Settings to add an API key?",
+                "AI Not Configured",
+                wx.YES_NO | wx.ICON_QUESTION,
+                self,
+            )
+            if result == wx.YES:
+                self._on_ai_settings(None)
+            return
+
+        targets = self.app_settings.ai.multi_target_languages
+        if not targets:
+            wx.MessageBox(
+                "No target languages configured.\n\n"
+                "Go to AI > AI Provider Settings > Multi-Language tab "
+                "and select target languages.",
+                "No Languages Selected",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            return
+
+        announce_status(
+            self,
+            f"Translating transcript to {len(targets)} language(s)\u2026",
+        )
+
+        def _do_multi_translate() -> None:
+            results = ai_service.translate_multi(text, targets)
+
+            def _show_results() -> None:
+                # Build combined output
+                parts = []
+                errors = []
+                for lang, resp in results.items():
+                    if resp.error:
+                        errors.append(f"{lang}: {resp.error}")
+                    else:
+                        parts.append(f"=== {lang} ===\n{resp.text}\n")
+
+                if errors:
+                    wx.MessageBox(
+                        "Some translations failed:\n\n" + "\n".join(errors),
+                        "Translation Errors",
+                        wx.OK | wx.ICON_WARNING,
+                        self,
+                    )
+
+                if parts:
+                    combined = "\n".join(parts)
+                    dlg = wx.Dialog(
+                        self,
+                        title="Multi-Language Translation",
+                        size=(700, 500),
+                        style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+                    )
+                    dlg.SetMinSize((400, 300))
+                    sizer = wx.BoxSizer(wx.VERTICAL)
+
+                    info = wx.StaticText(
+                        dlg,
+                        label=f"Translated to {len(parts)} language(s)",
+                    )
+                    sizer.Add(info, 0, wx.ALL, 10)
+
+                    txt = wx.TextCtrl(
+                        dlg,
+                        value=combined,
+                        style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_WORDWRAP,
+                    )
+                    sizer.Add(txt, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+
+                    btn_row = wx.BoxSizer(wx.HORIZONTAL)
+                    copy_btn = wx.Button(dlg, label="&Copy")
+                    copy_btn.Bind(
+                        wx.EVT_BUTTON,
+                        lambda e: self._copy_text(combined),
+                    )
+                    btn_row.Add(copy_btn, 0, wx.RIGHT, 8)
+
+                    close_btn = wx.Button(dlg, wx.ID_CLOSE, label="&Close")
+                    btn_row.Add(close_btn, 0)
+
+                    sizer.Add(btn_row, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
+
+                    dlg.SetSizer(sizer)
+                    dlg.Bind(
+                        wx.EVT_BUTTON,
+                        lambda e: dlg.EndModal(wx.ID_CLOSE),
+                        id=wx.ID_CLOSE,
+                    )
+                    dlg.ShowModal()
+                    dlg.Destroy()
+
+                announce_status(
+                    self,
+                    f"Multi-language translation complete ({len(parts)} languages)",
+                )
+
+            safe_call_after(_show_results)
+
+        threading.Thread(target=_do_multi_translate, daemon=True).start()
 
     def _on_summarize(self, _event: wx.CommandEvent) -> None:
         """Summarize the current transcript using AI."""

@@ -37,7 +37,14 @@ BITS Whisperer is a desktop application that converts speech to text using **17 
 - **Cross-platform** — Runs on Windows 10+ and macOS 12+; auto-detect GPU (CUDA / Apple Silicon Metal)
 - **User guide** — Comprehensive built-in user guide covering every feature, provider, setting, and keyboard shortcut
 - **Live microphone transcription** — Real-time speech-to-text from your microphone using faster-whisper with energy-based VAD, configurable model/language/device via Tools, then Live Transcription (Ctrl+L)
-- **AI translation & summarization** — Translate transcripts to 15+ languages or generate summaries (concise/detailed/bullet points) using OpenAI GPT-4o, Anthropic Claude, Azure OpenAI, or Google Gemini via AI menu (Ctrl+T / Ctrl+Shift+S)
+- **AI translation & summarization** — Translate transcripts to 15+ languages or generate summaries (concise/detailed/bullet points/meeting minutes) using OpenAI GPT-4o, Anthropic Claude, Azure OpenAI, or Google Gemini via AI menu (Ctrl+T / Ctrl+Shift+S)
+- **Multi-language simultaneous translation** — Translate a transcript to multiple target languages in one operation via AI, then Translate to Multiple Languages; results displayed with language-headed sections and Copy button
+- **AI model catalog with real-time pricing** — 22 AI models across 4 providers with live per-1K-token pricing displayed in the AI settings dialog; compare costs before choosing a model
+- **Copilot subscription tier gating** — Select your GitHub Copilot subscription tier (Free/Pro/Business/Enterprise) to see only the models available to you, with tier pricing and model descriptions
+- **Gemma models** — All 5 Google Gemma variants supported (Gemma 3 27B/12B/4B/1B and Gemma 3n E4B) alongside Gemini models for AI tasks
+- **Custom vocabulary** — Define domain-specific terms (medical, legal, technical) that are injected into AI prompts for more accurate translations and summaries
+- **Prompt templates** — 10 built-in templates (4 translation styles, 4 summarization styles, 2 analysis) plus support for custom user templates; select active templates in AI settings
+- **Real-time streaming** — Deepgram and AssemblyAI support streaming transcription for near-instant results on long audio
 - **GitHub Copilot SDK integration** — Interactive AI transcript chat panel (Ctrl+Shift+C) with streaming responses, quick actions, custom agent builder, and session management via the Copilot SDK
 - **5 AI providers** — OpenAI, Anthropic Claude, Azure OpenAI, Google Gemini, and GitHub Copilot for translation, summarization, and interactive chat
 - **Plugin system** — Extend with custom transcription providers via `.py` plugins in a configurable directory; discover, load, enable/disable from Tools, then Plugins
@@ -122,7 +129,7 @@ src/bits_whisperer/
     main_frame.py        # Menu bar, splitter, status bar, tray integration
     queue_panel.py       # File queue list
     transcript_panel.py  # Transcript viewer/editor with speaker management
-    settings_dialog.py   # Tabbed settings (3 simple + 2 advanced)
+    settings_dialog.py   # Tabbed settings (6 simple + 2 advanced)
     progress_dialog.py   # Batch progress
     model_manager_dialog.py  # Model management
     add_provider_dialog.py   # Cloud provider onboarding
@@ -160,6 +167,7 @@ MP3, WAV, OGG, Opus, FLAC, M4A, AAC, WebM, WMA, AIFF, AMR, MP4
 | Toggle Advanced Mode   | Ctrl+Shift+A      |
 | Live Transcription     | Ctrl+L             |
 | Translate Transcript   | Ctrl+T             |
+| Translate to Multiple  | (AI menu)          |
 | Summarize Transcript   | Ctrl+Shift+S       |
 | Copilot Chat Panel     | Ctrl+Shift+C       |
 | Add Cloud Provider     | (Tools menu)      |

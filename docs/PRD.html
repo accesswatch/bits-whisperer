@@ -136,6 +136,12 @@
 <li><a href="#auphonic-integration">Auphonic Integration</a></li>
 <li><a href="#provider-specific-settings">Provider-Specific Settings</a></li>
 <li><a href="#ai-services-translation-summarization-chat">AI Services (Translation, Summarization &amp; Chat)</a></li>
+<li><a href="#ai-model-catalog">AI Model Catalog</a></li>
+<li><a href="#copilot-subscription-tiers">Copilot Subscription Tiers</a></li>
+<li><a href="#prompt-templates">Prompt Templates</a></li>
+<li><a href="#custom-vocabulary">Custom Vocabulary</a></li>
+<li><a href="#multi-language-simultaneous-translation">Multi-Language Simultaneous Translation</a></li>
+<li><a href="#real-time-streaming-transcription">Real-Time Streaming Transcription</a></li>
 <li><a href="#github-copilot-sdk-integration">GitHub Copilot SDK Integration</a></li>
 <li><a href="#speaker-diarization">Speaker Diarization</a></li>
 </ul>
@@ -189,7 +195,7 @@
 </nav>
 <h1 id="bits-whisperer-product-requirements-document">BITS Whisperer — Product Requirements Document</h1>
 <blockquote>
-<p><strong>Version:</strong> 1.2 - <strong>Updated:</strong> 2026-02-08 - <strong>Status:</strong> Implementation Complete</p>
+<p><strong>Version:</strong> 1.0.0 - <strong>Updated:</strong> 2026-02-08 - <strong>Status:</strong> Implementation Complete</p>
 <p>Developed by <strong>Blind Information Technology Solutions (BITS)</strong></p>
 </blockquote>
 <hr>
@@ -1048,7 +1054,7 @@ summarization of transcripts via <strong>5 pluggable AI providers</strong>:</p>
 </table>
 <p>AI features are accessed via the <strong>AI</strong> menu:</p>
 <ul>
-<li><strong>Translate</strong> (Ctrl+T): Translates the transcript to the configured target language</li>
+<li><strong>Translate</strong> (Ctrl+T): Translates the transcript to the configured target language (or multiple languages simultaneously)</li>
 <li><strong>Summarize</strong> (Ctrl+Shift+S): Generates concise, detailed, or bullet-point summaries</li>
 <li><strong>Copilot Chat</strong> (Ctrl+Shift+C): Opens the interactive chat panel for Q&amp;A</li>
 <li><strong>Agent Builder</strong>: Configures a custom AI agent persona</li>
@@ -1057,7 +1063,265 @@ summarization of transcripts via <strong>5 pluggable AI providers</strong>:</p>
 - <code>provider</code> (openai/anthropic/azure_openai/gemini/copilot)
 - <code>openai_model</code>, <code>anthropic_model</code>, <code>gemini_model</code>, <code>copilot_model</code>
 - <code>temperature</code>, <code>max_tokens</code>
-- <code>translation_language</code>, <code>summarization_style</code></p>
+- <code>translation_language</code>, <code>summarization_style</code>
+- <code>multi_target_languages</code> — list of languages for simultaneous translation
+- <code>custom_vocabulary</code> — domain-specific terms for improved AI accuracy
+- <code>active_translation_template</code>, <code>active_summarization_template</code> — selected prompt template IDs
+- <code>custom_prompt_templates</code> — user-defined prompt templates</p>
+<h3 id="ai-model-catalog">AI Model Catalog</h3>
+<p>The <code>constants.py</code> module defines a comprehensive AI model catalog with
+real-time pricing information via the <code>AIModelInfo</code> frozen dataclass:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>str</td>
+<td>Model identifier</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>str</td>
+<td>Display name</td>
+</tr>
+<tr>
+<td><code>provider</code></td>
+<td>str</td>
+<td>Provider key (openai/anthropic/gemini/copilot)</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>str</td>
+<td>Human-readable description</td>
+</tr>
+<tr>
+<td><code>input_price_per_1m</code></td>
+<td>float</td>
+<td>USD per 1M input tokens (0 = included)</td>
+</tr>
+<tr>
+<td><code>output_price_per_1m</code></td>
+<td>float</td>
+<td>USD per 1M output tokens (0 = included)</td>
+</tr>
+<tr>
+<td><code>context_window</code></td>
+<td>int</td>
+<td>Maximum context tokens</td>
+</tr>
+<tr>
+<td><code>max_output_tokens</code></td>
+<td>int</td>
+<td>Maximum output tokens</td>
+</tr>
+<tr>
+<td><code>copilot_tier</code></td>
+<td>str</td>
+<td>Required Copilot tier (empty if not Copilot)</td>
+</tr>
+<tr>
+<td><code>is_premium</code></td>
+<td>bool</td>
+<td>Requires premium Copilot subscription</td>
+</tr>
+<tr>
+<td><code>supports_streaming</code></td>
+<td>bool</td>
+<td>Whether the model supports streaming</td>
+</tr>
+</tbody>
+</table>
+<h4 id="model-counts-by-provider">Model Counts by Provider</h4>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Count</th>
+<th>Models</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenAI</td>
+<td>4</td>
+<td>GPT-4o Mini, GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo</td>
+</tr>
+<tr>
+<td>Anthropic</td>
+<td>3</td>
+<td>Claude Sonnet 4, Claude Haiku 4, Claude 3.5 Sonnet</td>
+</tr>
+<tr>
+<td>Gemini</td>
+<td>8</td>
+<td>Gemini 2.0 Flash, 2.5 Pro, 2.5 Flash + Gemma 27B/12B/4B/1B/3n-E4B</td>
+</tr>
+<tr>
+<td>Copilot</td>
+<td>7</td>
+<td>GPT-4o Mini, GPT-4o, GPT-4 Turbo, Claude Sonnet 4, Claude Haiku 4, o3-mini, Gemini 2.0 Flash</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>22</strong></td>
+<td>All models across all providers</td>
+</tr>
+</tbody>
+</table>
+<p>Helper functions: <code>get_ai_model_by_id()</code>, <code>get_models_for_provider()</code>,
+<code>get_copilot_models_for_tier()</code>, <code>format_price_per_1k()</code>.</p>
+<h3 id="copilot-subscription-tiers">Copilot Subscription Tiers</h3>
+<p>Copilot models are gated by subscription tier via <code>COPILOT_TIERS</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Price</th>
+<th>Available Models</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Free</td>
+<td>$0</td>
+<td>GPT-4o Mini</td>
+</tr>
+<tr>
+<td>Pro</td>
+<td>$10/month</td>
+<td>All 7 models including premium (Claude, o3-mini, Gemini)</td>
+</tr>
+<tr>
+<td>Business</td>
+<td>$19/user/month</td>
+<td>All Pro models + organization admin controls</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>$39/user/month</td>
+<td>All models + knowledge bases, fine-tuning, compliance</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>CopilotSettings.subscription_tier</code> field (default: "pro") controls
+which models appear in the model selector. <code>get_copilot_models_for_tier()</code>
+returns only models at or below the user's tier level.</p>
+<h3 id="prompt-templates">Prompt Templates</h3>
+<p>10 built-in prompt templates (<code>BUILTIN_PROMPT_TEMPLATES</code>) via the
+<code>PromptTemplate</code> frozen dataclass:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>str</td>
+<td>Template identifier</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>str</td>
+<td>Display name</td>
+</tr>
+<tr>
+<td><code>category</code></td>
+<td>str</td>
+<td>translation / summarization / analysis</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>str</td>
+<td>Human-readable description</td>
+</tr>
+<tr>
+<td><code>template</code></td>
+<td>str</td>
+<td>Prompt text with <code>{text}</code> and <code>{language}</code> placeholders</td>
+</tr>
+<tr>
+<td><code>is_builtin</code></td>
+<td>bool</td>
+<td>True for built-in, False for user-created</td>
+</tr>
+</tbody>
+</table>
+<h4 id="template-breakdown">Template Breakdown</h4>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Count</th>
+<th>Templates</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Translation</td>
+<td>4</td>
+<td>Standard, Informal, Technical, Legal</td>
+</tr>
+<tr>
+<td>Summarization</td>
+<td>4</td>
+<td>Concise Summary, Detailed Summary, Bullet Points, Meeting Minutes</td>
+</tr>
+<tr>
+<td>Analysis</td>
+<td>2</td>
+<td>Sentiment Analysis, Extract Questions</td>
+</tr>
+</tbody>
+</table>
+<p>Active templates are tracked in <code>AISettings.active_translation_template</code>
+and <code>AISettings.active_summarization_template</code>. Users can also create
+custom templates stored in <code>AISettings.custom_prompt_templates</code>.</p>
+<p>Helper functions: <code>get_prompt_template_by_id()</code>, <code>get_templates_by_category()</code>.</p>
+<h3 id="custom-vocabulary">Custom Vocabulary</h3>
+<p><code>AISettings.custom_vocabulary</code> stores a list of domain-specific terms
+(acronyms, proper nouns, technical jargon) that are injected into AI
+prompts to improve translation and summarization accuracy. The vocabulary
+is appended to the prompt context before sending to the AI provider.</p>
+<h3 id="multi-language-simultaneous-translation">Multi-Language Simultaneous Translation</h3>
+<p><code>AISettings.multi_target_languages</code> stores a list of target language codes.
+<code>AIService.translate_multi()</code> iterates over each language and calls
+<code>translate()</code> independently, returning a dict mapping each language to
+its <code>AIResponse</code>. This enables one-click translation to multiple languages.</p>
+<h3 id="real-time-streaming-transcription">Real-Time Streaming Transcription</h3>
+<p>The <code>ProviderCapabilities.supports_streaming</code> field indicates whether a
+transcription provider supports real-time streaming:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th style="text-align: center;">Streaming</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Deepgram</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+<tr>
+<td>AssemblyAI</td>
+<td style="text-align: center;">Yes</td>
+</tr>
+<tr>
+<td>All others</td>
+<td style="text-align: center;">No</td>
+</tr>
+</tbody>
+</table>
 <h3 id="github-copilot-sdk-integration">GitHub Copilot SDK Integration</h3>
 <p>The <code>CopilotService</code> class (in <code>core/copilot_service.py</code>) integrates the
 GitHub Copilot SDK for interactive AI-powered transcript analysis:</p>
@@ -2151,6 +2415,14 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <li>[x] CopilotSettings dataclass (11 fields) in AppSettings</li>
 <li>[x] Installer Copilot CLI install task (WinGet optional)</li>
 <li>[x] 191 tests with full coverage for Gemini and Copilot features</li>
+<li>[x] AI model catalog with real-time pricing (22 models across 4 providers)</li>
+<li>[x] Copilot subscription tier-based model selection (Free/Pro/Business/Enterprise)</li>
+<li>[x] Google Gemma models (5 variants: 27B, 12B, 4B, 1B, 3n-E4B via Gemini API)</li>
+<li>[x] Custom vocabulary for AI translation/summarization accuracy</li>
+<li>[x] 10 built-in prompt templates (4 translation, 4 summarization, 2 analysis)</li>
+<li>[x] Multi-language simultaneous translation</li>
+<li>[x] Real-time streaming from cloud providers (Deepgram, AssemblyAI)</li>
+<li>[x] 255 tests with full coverage for all Phase 4 features</li>
 </ul>
 <hr>
 <h2 id="20-success-metrics">20. Success Metrics</h2>

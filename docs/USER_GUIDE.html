@@ -183,6 +183,12 @@
 <li><a href="#translating-a-transcript">Translating a Transcript</a></li>
 <li><a href="#summarizing-a-transcript">Summarizing a Transcript</a></li>
 <li><a href="#supported-ai-providers">Supported AI Providers</a></li>
+<li><a href="#ai-model-catalog">AI Model Catalog</a></li>
+<li><a href="#copilot-subscription-tiers">Copilot Subscription Tiers</a></li>
+<li><a href="#custom-vocabulary">Custom Vocabulary</a></li>
+<li><a href="#prompt-templates">Prompt Templates</a></li>
+<li><a href="#multi-language-simultaneous-translation">Multi-Language Simultaneous Translation</a></li>
+<li><a href="#real-time-streaming-transcription">Real-Time Streaming Transcription</a></li>
 </ul>
 </li>
 <li><a href="#github-copilot-integration">GitHub Copilot Integration</a><ul>
@@ -656,12 +662,12 @@
 <tbody>
 <tr>
 <td>OpenAI</td>
-<td>gpt-4o, gpt-4o-mini</td>
+<td>GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo</td>
 <td>Fastest, most reliable</td>
 </tr>
 <tr>
 <td>Anthropic</td>
-<td>Claude Sonnet 4, Claude Haiku</td>
+<td>Claude Sonnet 4, Claude Haiku 4, Claude 3.5 Sonnet</td>
 <td>Strong for long transcripts</td>
 </tr>
 <tr>
@@ -671,13 +677,358 @@
 </tr>
 <tr>
 <td>Google Gemini</td>
-<td>Gemini 2.0 Flash, 1.5 Flash, 1.5 Pro</td>
+<td>Gemini 2.0 Flash, 2.5 Pro, 2.5 Flash + 5 Gemma models</td>
 <td>Fast, very affordable</td>
 </tr>
 <tr>
 <td>GitHub Copilot</td>
-<td>gpt-4o (via Copilot SDK)</td>
-<td>Interactive chat &amp; tool-augmented</td>
+<td>7 models (GPT-4o Mini, GPT-4o, GPT-4 Turbo, Claude Sonnet 4, Claude Haiku 4, o3-mini, Gemini 2.0 Flash)</td>
+<td>Subscription-based, interactive chat</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ai-model-catalog">AI Model Catalog</h3>
+<p>BITS Whisperer includes a comprehensive AI model catalog with real-time pricing for informed model selection. Access it via <strong>Tools, then AI Provider Settings</strong>.</p>
+<h4 id="openai-models-4">OpenAI Models (4)</h4>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Input Price/1M tokens</th>
+<th>Output Price/1M tokens</th>
+<th>Context Window</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPT-4o Mini</td>
+<td>$0.15</td>
+<td>$0.60</td>
+<td>128K</td>
+</tr>
+<tr>
+<td>GPT-4o</td>
+<td>$2.50</td>
+<td>$10.00</td>
+<td>128K</td>
+</tr>
+<tr>
+<td>GPT-4 Turbo</td>
+<td>$10.00</td>
+<td>$30.00</td>
+<td>128K</td>
+</tr>
+<tr>
+<td>GPT-3.5 Turbo</td>
+<td>$0.50</td>
+<td>$1.50</td>
+<td>16K</td>
+</tr>
+</tbody>
+</table>
+<h4 id="anthropic-models-3">Anthropic Models (3)</h4>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Input Price/1M tokens</th>
+<th>Output Price/1M tokens</th>
+<th>Context Window</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Claude Sonnet 4</td>
+<td>$3.00</td>
+<td>$15.00</td>
+<td>200K</td>
+</tr>
+<tr>
+<td>Claude Haiku 4</td>
+<td>$0.80</td>
+<td>$4.00</td>
+<td>200K</td>
+</tr>
+<tr>
+<td>Claude 3.5 Sonnet</td>
+<td>$3.00</td>
+<td>$15.00</td>
+<td>200K</td>
+</tr>
+</tbody>
+</table>
+<h4 id="google-gemini-models-8-including-5-gemma">Google Gemini Models (8, including 5 Gemma)</h4>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Input Price/1M tokens</th>
+<th>Output Price/1M tokens</th>
+<th>Context Window</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gemini 2.0 Flash</td>
+<td>$0.10</td>
+<td>$0.40</td>
+<td>1M</td>
+</tr>
+<tr>
+<td>Gemini 2.5 Pro</td>
+<td>$1.25</td>
+<td>$10.00</td>
+<td>1M</td>
+</tr>
+<tr>
+<td>Gemini 2.5 Flash</td>
+<td>$0.15</td>
+<td>$0.60</td>
+<td>1M</td>
+</tr>
+<tr>
+<td>Gemma 3 27B</td>
+<td>$0.10</td>
+<td>$0.30</td>
+<td>128K</td>
+</tr>
+<tr>
+<td>Gemma 3 12B</td>
+<td>$0.08</td>
+<td>$0.20</td>
+<td>128K</td>
+</tr>
+<tr>
+<td>Gemma 3 4B</td>
+<td>$0.05</td>
+<td>$0.10</td>
+<td>128K</td>
+</tr>
+<tr>
+<td>Gemma 3 1B</td>
+<td>$0.02</td>
+<td>$0.05</td>
+<td>32K</td>
+</tr>
+<tr>
+<td>Gemma 3n E4B</td>
+<td>$0.02</td>
+<td>$0.05</td>
+<td>32K</td>
+</tr>
+</tbody>
+</table>
+<h4 id="github-copilot-models-7">GitHub Copilot Models (7)</h4>
+<p>Copilot models are included in your subscription — no per-token charges:</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Min Tier</th>
+<th>Premium</th>
+<th>Context Window</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPT-4o Mini</td>
+<td>Free</td>
+<td>No</td>
+<td>128K</td>
+</tr>
+<tr>
+<td>GPT-4o</td>
+<td>Pro</td>
+<td>No</td>
+<td>128K</td>
+</tr>
+<tr>
+<td>GPT-4 Turbo</td>
+<td>Pro</td>
+<td>No</td>
+<td>128K</td>
+</tr>
+<tr>
+<td>Claude Sonnet 4</td>
+<td>Pro</td>
+<td>Yes</td>
+<td>200K</td>
+</tr>
+<tr>
+<td>Claude Haiku 4</td>
+<td>Pro</td>
+<td>Yes</td>
+<td>200K</td>
+</tr>
+<tr>
+<td>o3-mini</td>
+<td>Pro</td>
+<td>Yes</td>
+<td>128K</td>
+</tr>
+<tr>
+<td>Gemini 2.0 Flash</td>
+<td>Pro</td>
+<td>Yes</td>
+<td>1M</td>
+</tr>
+</tbody>
+</table>
+<h3 id="copilot-subscription-tiers">Copilot Subscription Tiers</h3>
+<p>Copilot model availability depends on your GitHub Copilot subscription tier. Set your tier in <strong>Tools, then Settings</strong> to see only the models available for your plan.</p>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Price</th>
+<th>Models Available</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Free</strong></td>
+<td>$0</td>
+<td>GPT-4o Mini</td>
+</tr>
+<tr>
+<td><strong>Pro</strong></td>
+<td>$10/month</td>
+<td>All 7 models (including premium: Claude, o3-mini, Gemini)</td>
+</tr>
+<tr>
+<td><strong>Business</strong></td>
+<td>$19/user/month</td>
+<td>All Pro models + organization admin controls</td>
+</tr>
+<tr>
+<td><strong>Enterprise</strong></td>
+<td>$39/user/month</td>
+<td>All models + knowledge bases, fine-tuning, compliance</td>
+</tr>
+</tbody>
+</table>
+<h3 id="custom-vocabulary">Custom Vocabulary</h3>
+<p>Improve AI accuracy for domain-specific content by adding custom terms:</p>
+<ol>
+<li>Go to <strong>Tools, then AI Provider Settings</strong></li>
+<li>In the <strong>Preferences</strong> tab, find the <strong>Custom Vocabulary</strong> section</li>
+<li>Add technical terms, acronyms, proper nouns, and specialized jargon — one per line</li>
+<li>The vocabulary is automatically injected into AI prompts when translating or summarizing</li>
+</ol>
+<p><strong>Examples:</strong>
+- Medical: "HIPAA", "myocardial infarction", "CBC panel"
+- Legal: "habeas corpus", "voir dire", "amicus curiae"
+- Technical: "Kubernetes", "WebSocket", "OAuth 2.0"</p>
+<h3 id="prompt-templates">Prompt Templates</h3>
+<p>BITS Whisperer includes 10 built-in prompt templates for common AI tasks:</p>
+<h4 id="translation-templates-4">Translation Templates (4)</h4>
+<table>
+<thead>
+<tr>
+<th>Template</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Standard Translation</strong></td>
+<td>Preserves speaker labels, timestamps, and formatting</td>
+</tr>
+<tr>
+<td><strong>Informal Translation</strong></td>
+<td>Natural, conversational tone; adapts idioms</td>
+</tr>
+<tr>
+<td><strong>Technical Translation</strong></td>
+<td>Precise terminology for technical/medical content</td>
+</tr>
+<tr>
+<td><strong>Legal Translation</strong></td>
+<td>Verbatim formal translation for legal proceedings</td>
+</tr>
+</tbody>
+</table>
+<h4 id="summarization-templates-4">Summarization Templates (4)</h4>
+<table>
+<thead>
+<tr>
+<th>Template</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Concise Summary</strong></td>
+<td>Brief 3-5 sentence overview with key takeaways</td>
+</tr>
+<tr>
+<td><strong>Detailed Summary</strong></td>
+<td>Comprehensive summary with speaker contributions</td>
+</tr>
+<tr>
+<td><strong>Bullet Points</strong></td>
+<td>Organized bullet list of key points and decisions</td>
+</tr>
+<tr>
+<td><strong>Meeting Minutes</strong></td>
+<td>Formal minutes with attendees, agenda, and action items</td>
+</tr>
+</tbody>
+</table>
+<h4 id="analysis-templates-2">Analysis Templates (2)</h4>
+<table>
+<thead>
+<tr>
+<th>Template</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Sentiment Analysis</strong></td>
+<td>Emotional tone per speaker with shift detection</td>
+</tr>
+<tr>
+<td><strong>Extract Questions</strong></td>
+<td>Lists all questions with answers and attribution</td>
+</tr>
+</tbody>
+</table>
+<p>Select a template before translating or summarizing in <strong>Tools, then AI Provider Settings</strong>. You can also create custom templates.</p>
+<h3 id="multi-language-simultaneous-translation">Multi-Language Simultaneous Translation</h3>
+<p>Translate a transcript into multiple languages at once:</p>
+<ol>
+<li>Go to <strong>Tools, then AI Provider Settings</strong></li>
+<li>In the <strong>Preferences</strong> tab, configure multiple target languages</li>
+<li>Press <strong>Ctrl+T</strong> to translate — each target language is translated independently</li>
+<li>Results are returned as separate translations per language</li>
+</ol>
+<p>This is ideal for creating multilingual documentation, subtitles, or distributing transcripts to international teams.</p>
+<h3 id="real-time-streaming-transcription">Real-Time Streaming Transcription</h3>
+<p>Some cloud providers support real-time streaming for faster results:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Streaming</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Deepgram</strong></td>
+<td>Yes</td>
+<td>Live WebSocket streaming with smart formatting</td>
+</tr>
+<tr>
+<td><strong>AssemblyAI</strong></td>
+<td>Yes</td>
+<td>Real-time streaming with speaker detection</td>
+</tr>
+<tr>
+<td>Other cloud providers</td>
+<td>No</td>
+<td>Standard batch processing</td>
 </tr>
 </tbody>
 </table>
@@ -1599,7 +1950,7 @@ A: Yes! BITS Whisperer runs on Windows 10+ and macOS 12+. Linux support is plann
 <p><strong>Q: How do I update?</strong>
 A: The app checks for updates on startup (configurable). When an update is available, you'll be prompted to download it. You can also check manually via <strong>Help, then Check for Updates</strong>.</p>
 <hr>
-<p><em>BITS Whisperer v1.2.0 — Developed by Blind Information Technology Solutions (BITS). Made with care for accessibility and privacy.</em></p>
+<p><em>BITS Whisperer v1.0.0 — Developed by Blind Information Technology Solutions (BITS). Made with care for accessibility and privacy.</em></p>
 <div class="footer">
   Generated from <code>USER_GUIDE.md</code> &mdash; BITS Whisperer Documentation
 </div>

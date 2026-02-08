@@ -13,7 +13,7 @@ from platformdirs import user_data_dir
 # ---------------------------------------------------------------------------
 APP_NAME: Final[str] = "BITS Whisperer"
 APP_AUTHOR: Final[str] = "BITSWhisperer"
-APP_VERSION: Final[str] = "1.2.0"
+APP_VERSION: Final[str] = "1.0.0"
 
 # ---------------------------------------------------------------------------
 # GitHub updater
@@ -592,3 +592,546 @@ def get_parakeet_model_by_id(model_id: str) -> ParakeetModelInfo | None:
         if m.id == model_id:
             return m
     return None
+
+
+# ---------------------------------------------------------------------------
+# AI model catalog — pricing, subscription tiers, and capabilities
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class AIModelInfo:
+    """Metadata for an AI language model used for translation/summarization."""
+
+    id: str
+    name: str
+    provider: str  # "openai", "anthropic", "gemini", "copilot"
+    description: str
+    input_price_per_1m: float  # USD per 1M input tokens (0 = free/included)
+    output_price_per_1m: float  # USD per 1M output tokens (0 = free/included)
+    context_window: int  # max tokens in context
+    max_output_tokens: int
+    copilot_tier: str = ""  # "free", "pro", "business", "enterprise", "" if not copilot
+    is_premium: bool = False  # requires premium Copilot subscription
+    supports_streaming: bool = True
+
+
+# --- OpenAI models ---
+OPENAI_AI_MODELS: Final[list[AIModelInfo]] = [
+    AIModelInfo(
+        id="gpt-4o-mini",
+        name="GPT-4o Mini",
+        provider="openai",
+        description="Fast and affordable. Best for routine translation and summarization tasks.",
+        input_price_per_1m=0.15,
+        output_price_per_1m=0.60,
+        context_window=128_000,
+        max_output_tokens=16_384,
+    ),
+    AIModelInfo(
+        id="gpt-4o",
+        name="GPT-4o",
+        provider="openai",
+        description="Best overall quality. Excellent for complex transcripts and nuanced analysis.",
+        input_price_per_1m=2.50,
+        output_price_per_1m=10.00,
+        context_window=128_000,
+        max_output_tokens=16_384,
+    ),
+    AIModelInfo(
+        id="gpt-4-turbo",
+        name="GPT-4 Turbo",
+        provider="openai",
+        description="Previous generation high-quality model. Strong reasoning capabilities.",
+        input_price_per_1m=10.00,
+        output_price_per_1m=30.00,
+        context_window=128_000,
+        max_output_tokens=4_096,
+    ),
+    AIModelInfo(
+        id="gpt-3.5-turbo",
+        name="GPT-3.5 Turbo",
+        provider="openai",
+        description="Legacy model. Very fast and cheap, but lower quality than GPT-4o.",
+        input_price_per_1m=0.50,
+        output_price_per_1m=1.50,
+        context_window=16_385,
+        max_output_tokens=4_096,
+    ),
+]
+
+# --- Anthropic models ---
+ANTHROPIC_AI_MODELS: Final[list[AIModelInfo]] = [
+    AIModelInfo(
+        id="claude-sonnet-4-20250514",
+        name="Claude Sonnet 4",
+        provider="anthropic",
+        description="Best balance of intelligence and speed. Excellent for detailed analysis.",
+        input_price_per_1m=3.00,
+        output_price_per_1m=15.00,
+        context_window=200_000,
+        max_output_tokens=8_192,
+    ),
+    AIModelInfo(
+        id="claude-haiku-4-20250414",
+        name="Claude Haiku 4",
+        provider="anthropic",
+        description="Fastest Claude model. Great for quick summaries and translations.",
+        input_price_per_1m=0.80,
+        output_price_per_1m=4.00,
+        context_window=200_000,
+        max_output_tokens=8_192,
+    ),
+    AIModelInfo(
+        id="claude-3-5-sonnet-20241022",
+        name="Claude 3.5 Sonnet",
+        provider="anthropic",
+        description="Previous generation. Strong reasoning and analysis capabilities.",
+        input_price_per_1m=3.00,
+        output_price_per_1m=15.00,
+        context_window=200_000,
+        max_output_tokens=8_192,
+    ),
+]
+
+# --- Google Gemini models (including Gemma) ---
+GEMINI_AI_MODELS: Final[list[AIModelInfo]] = [
+    AIModelInfo(
+        id="gemini-2.0-flash",
+        name="Gemini 2.0 Flash",
+        provider="gemini",
+        description="Fast and capable. Good for most translation and summarization tasks.",
+        input_price_per_1m=0.10,
+        output_price_per_1m=0.40,
+        context_window=1_048_576,
+        max_output_tokens=8_192,
+    ),
+    AIModelInfo(
+        id="gemini-2.5-pro",
+        name="Gemini 2.5 Pro",
+        provider="gemini",
+        description="Most capable Gemini model. Best for complex analysis and long transcripts.",
+        input_price_per_1m=1.25,
+        output_price_per_1m=10.00,
+        context_window=1_048_576,
+        max_output_tokens=65_536,
+    ),
+    AIModelInfo(
+        id="gemini-2.5-flash",
+        name="Gemini 2.5 Flash",
+        provider="gemini",
+        description="Latest flash model. Great balance of speed and quality.",
+        input_price_per_1m=0.15,
+        output_price_per_1m=0.60,
+        context_window=1_048_576,
+        max_output_tokens=65_536,
+    ),
+    # Gemma models (open-weight, run via Gemini API)
+    AIModelInfo(
+        id="gemma-3-27b-it",
+        name="Gemma 3 27B",
+        provider="gemini",
+        description="Google's largest open-weight Gemma model. High quality, runs via Gemini API.",
+        input_price_per_1m=0.10,
+        output_price_per_1m=0.30,
+        context_window=131_072,
+        max_output_tokens=8_192,
+    ),
+    AIModelInfo(
+        id="gemma-3-12b-it",
+        name="Gemma 3 12B",
+        provider="gemini",
+        description="Mid-size Gemma model. Good balance of quality and speed.",
+        input_price_per_1m=0.08,
+        output_price_per_1m=0.20,
+        context_window=131_072,
+        max_output_tokens=8_192,
+    ),
+    AIModelInfo(
+        id="gemma-3-4b-it",
+        name="Gemma 3 4B",
+        provider="gemini",
+        description="Compact Gemma model. Fast and efficient for simple tasks.",
+        input_price_per_1m=0.05,
+        output_price_per_1m=0.10,
+        context_window=131_072,
+        max_output_tokens=8_192,
+    ),
+    AIModelInfo(
+        id="gemma-3-1b-it",
+        name="Gemma 3 1B",
+        provider="gemini",
+        description="Smallest Gemma model. Very fast, best for basic translation.",
+        input_price_per_1m=0.02,
+        output_price_per_1m=0.05,
+        context_window=32_768,
+        max_output_tokens=8_192,
+    ),
+    AIModelInfo(
+        id="gemma-3n-e4b-it",
+        name="Gemma 3n E4B",
+        provider="gemini",
+        description="Gemma Nano edge-optimized. Ultra-efficient for lightweight tasks.",
+        input_price_per_1m=0.02,
+        output_price_per_1m=0.05,
+        context_window=32_768,
+        max_output_tokens=8_192,
+    ),
+]
+
+# --- GitHub Copilot models (subscription-based) ---
+COPILOT_AI_MODELS: Final[list[AIModelInfo]] = [
+    # Free tier models
+    AIModelInfo(
+        id="gpt-4o-mini",
+        name="GPT-4o Mini (Copilot)",
+        provider="copilot",
+        description="Included with all Copilot plans. Fast, good for routine tasks.",
+        input_price_per_1m=0.0,
+        output_price_per_1m=0.0,
+        context_window=128_000,
+        max_output_tokens=16_384,
+        copilot_tier="free",
+    ),
+    AIModelInfo(
+        id="gpt-4o",
+        name="GPT-4o (Copilot)",
+        provider="copilot",
+        description="Included with Copilot Pro/Business. High-quality analysis.",
+        input_price_per_1m=0.0,
+        output_price_per_1m=0.0,
+        context_window=128_000,
+        max_output_tokens=16_384,
+        copilot_tier="pro",
+    ),
+    AIModelInfo(
+        id="gpt-4-turbo",
+        name="GPT-4 Turbo (Copilot)",
+        provider="copilot",
+        description="Available with Copilot Pro/Business. Strong reasoning.",
+        input_price_per_1m=0.0,
+        output_price_per_1m=0.0,
+        context_window=128_000,
+        max_output_tokens=4_096,
+        copilot_tier="pro",
+    ),
+    AIModelInfo(
+        id="claude-sonnet-4",
+        name="Claude Sonnet 4 (Copilot)",
+        provider="copilot",
+        description="Anthropic model via Copilot Pro. Excellent for detailed analysis.",
+        input_price_per_1m=0.0,
+        output_price_per_1m=0.0,
+        context_window=200_000,
+        max_output_tokens=8_192,
+        copilot_tier="pro",
+        is_premium=True,
+    ),
+    AIModelInfo(
+        id="claude-haiku-4",
+        name="Claude Haiku 4 (Copilot)",
+        provider="copilot",
+        description="Fast Anthropic model via Copilot. Quick summaries and translations.",
+        input_price_per_1m=0.0,
+        output_price_per_1m=0.0,
+        context_window=200_000,
+        max_output_tokens=8_192,
+        copilot_tier="pro",
+        is_premium=True,
+    ),
+    AIModelInfo(
+        id="o3-mini",
+        name="o3-mini (Copilot)",
+        provider="copilot",
+        description="OpenAI reasoning model via Copilot Pro. Advanced analytical tasks.",
+        input_price_per_1m=0.0,
+        output_price_per_1m=0.0,
+        context_window=128_000,
+        max_output_tokens=16_384,
+        copilot_tier="pro",
+        is_premium=True,
+    ),
+    AIModelInfo(
+        id="gemini-2.0-flash",
+        name="Gemini 2.0 Flash (Copilot)",
+        provider="copilot",
+        description="Google model via Copilot Pro. Fast and efficient.",
+        input_price_per_1m=0.0,
+        output_price_per_1m=0.0,
+        context_window=1_048_576,
+        max_output_tokens=8_192,
+        copilot_tier="pro",
+        is_premium=True,
+    ),
+]
+
+# Copilot subscription tiers
+COPILOT_TIERS: Final[dict[str, dict[str, str]]] = {
+    "free": {
+        "name": "Copilot Free",
+        "price": "Free",
+        "description": "Limited monthly completions. GPT-4o Mini included.",
+    },
+    "pro": {
+        "name": "Copilot Pro",
+        "price": "$10/month",
+        "description": "Unlimited completions. All models including premium.",
+    },
+    "business": {
+        "name": "Copilot Business",
+        "price": "$19/user/month",
+        "description": "Organization management. All Pro features plus admin controls.",
+    },
+    "enterprise": {
+        "name": "Copilot Enterprise",
+        "price": "$39/user/month",
+        "description": "Enterprise features. Knowledge bases, fine-tuning, compliance.",
+    },
+}
+
+# All AI models combined for lookups
+ALL_AI_MODELS: Final[list[AIModelInfo]] = (
+    OPENAI_AI_MODELS + ANTHROPIC_AI_MODELS + GEMINI_AI_MODELS + COPILOT_AI_MODELS
+)
+
+
+def get_ai_model_by_id(model_id: str, provider: str = "") -> AIModelInfo | None:
+    """Look up an AI model by its ID and optional provider.
+
+    Args:
+        model_id: Model identifier string.
+        provider: Optional provider filter.
+
+    Returns:
+        AIModelInfo, or None if not found.
+    """
+    for m in ALL_AI_MODELS:
+        if m.id == model_id and (not provider or m.provider == provider):
+            return m
+    return None
+
+
+def get_models_for_provider(provider: str) -> list[AIModelInfo]:
+    """Get all models available for a given provider.
+
+    Args:
+        provider: Provider identifier (openai, anthropic, gemini, copilot).
+
+    Returns:
+        List of AIModelInfo for that provider.
+    """
+    if provider == "openai":
+        return list(OPENAI_AI_MODELS)
+    elif provider == "anthropic":
+        return list(ANTHROPIC_AI_MODELS)
+    elif provider == "gemini":
+        return list(GEMINI_AI_MODELS)
+    elif provider == "copilot":
+        return list(COPILOT_AI_MODELS)
+    return []
+
+
+def get_copilot_models_for_tier(tier: str) -> list[AIModelInfo]:
+    """Get Copilot models available at or below a given subscription tier.
+
+    Args:
+        tier: Subscription tier (free, pro, business, enterprise).
+
+    Returns:
+        List of AIModelInfo available for that tier.
+    """
+    tier_order = {"free": 0, "pro": 1, "business": 2, "enterprise": 3}
+    tier_level = tier_order.get(tier, 0)
+    return [
+        m
+        for m in COPILOT_AI_MODELS
+        if tier_order.get(m.copilot_tier, 0) <= tier_level
+    ]
+
+
+def format_price_per_1k(price_per_1m: float) -> str:
+    """Format a price-per-1M-tokens value as a human-friendly per-1K string.
+
+    Args:
+        price_per_1m: Price in USD per 1 million tokens.
+
+    Returns:
+        Formatted price string (e.g. '$0.0025/1K tokens' or 'Free').
+    """
+    if price_per_1m == 0.0:
+        return "Free (included)"
+    price_per_1k = price_per_1m / 1000.0
+    if price_per_1k < 0.01:
+        return f"${price_per_1k:.4f}/1K tokens"
+    return f"${price_per_1k:.3f}/1K tokens"
+
+
+# ---------------------------------------------------------------------------
+# Prompt templates for AI operations
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class PromptTemplate:
+    """A reusable prompt template for AI operations."""
+
+    id: str
+    name: str
+    category: str  # "translation", "summarization", "analysis", "custom"
+    description: str
+    template: str  # Use {text} for transcript, {language} for target language
+    is_builtin: bool = True
+
+
+BUILTIN_PROMPT_TEMPLATES: Final[list[PromptTemplate]] = [
+    # Translation templates
+    PromptTemplate(
+        id="translate_standard",
+        name="Standard Translation",
+        category="translation",
+        description="Translate with speaker labels and timestamps preserved.",
+        template=(
+            "Translate the following transcript to {language}. "
+            "Preserve speaker labels, timestamps, and formatting exactly as they appear. "
+            "Only translate the spoken content.\n\nTranscript:\n{text}"
+        ),
+    ),
+    PromptTemplate(
+        id="translate_informal",
+        name="Informal Translation",
+        category="translation",
+        description="Natural, conversational translation style.",
+        template=(
+            "Translate the following transcript to {language} using a natural, "
+            "conversational tone. Preserve speaker labels but adapt idioms and "
+            "expressions to sound natural in the target language.\n\nTranscript:\n{text}"
+        ),
+    ),
+    PromptTemplate(
+        id="translate_technical",
+        name="Technical Translation",
+        category="translation",
+        description="Precise translation for technical or medical content.",
+        template=(
+            "Translate the following transcript to {language}. This is technical content, "
+            "so use precise terminology. Preserve speaker labels and timestamps. "
+            "When domain-specific terms have standard translations, use them; "
+            "otherwise keep the original term in parentheses.\n\nTranscript:\n{text}"
+        ),
+    ),
+    PromptTemplate(
+        id="translate_legal",
+        name="Legal Translation",
+        category="translation",
+        description="Formal translation for legal proceedings or depositions.",
+        template=(
+            "Translate the following transcript to {language} for legal purposes. "
+            "Use formal, precise language. Preserve all speaker labels and timestamps "
+            "exactly. Do not paraphrase or summarize — translate verbatim.\n\n"
+            "Transcript:\n{text}"
+        ),
+    ),
+    # Summarization templates
+    PromptTemplate(
+        id="summary_concise",
+        name="Concise Summary",
+        category="summarization",
+        description="Brief 3-5 sentence summary with key takeaways.",
+        template=(
+            "Summarize the following transcript in a concise paragraph (3-5 sentences). "
+            "Capture the main topics, key decisions, and action items.\n\n"
+            "Transcript:\n{text}"
+        ),
+    ),
+    PromptTemplate(
+        id="summary_detailed",
+        name="Detailed Summary",
+        category="summarization",
+        description="Comprehensive summary with topics and speaker contributions.",
+        template=(
+            "Provide a detailed summary of the following transcript. "
+            "Include main topics discussed, key points from each speaker, "
+            "decisions made, and any action items or follow-ups mentioned.\n\n"
+            "Transcript:\n{text}"
+        ),
+    ),
+    PromptTemplate(
+        id="summary_bullets",
+        name="Bullet Points",
+        category="summarization",
+        description="Organized bullet list of key points and decisions.",
+        template=(
+            "Summarize the following transcript as a bulleted list. "
+            "Each bullet should capture one key point, decision, or action item. "
+            "Group related points together with sub-bullets if appropriate.\n\n"
+            "Transcript:\n{text}"
+        ),
+    ),
+    PromptTemplate(
+        id="summary_meeting",
+        name="Meeting Minutes",
+        category="summarization",
+        description="Formal meeting minutes with attendees, agenda, and actions.",
+        template=(
+            "Generate formal meeting minutes from this transcript. Include:\n"
+            "- Attendees (from speaker labels)\n"
+            "- Agenda topics discussed\n"
+            "- Key decisions made\n"
+            "- Action items with assigned owners (if mentioned)\n"
+            "- Follow-up dates (if mentioned)\n\n"
+            "Transcript:\n{text}"
+        ),
+    ),
+    # Analysis templates
+    PromptTemplate(
+        id="analysis_sentiment",
+        name="Sentiment Analysis",
+        category="analysis",
+        description="Analyze the emotional tone and sentiment of the conversation.",
+        template=(
+            "Analyze the sentiment and emotional tone of this transcript. "
+            "For each speaker, describe their overall tone (positive, negative, "
+            "neutral, frustrated, enthusiastic, etc.) and identify any shifts "
+            "in sentiment during the conversation.\n\nTranscript:\n{text}"
+        ),
+    ),
+    PromptTemplate(
+        id="analysis_questions",
+        name="Extract Questions",
+        category="analysis",
+        description="Extract all questions asked during the conversation.",
+        template=(
+            "Extract all questions asked in this transcript. For each question, "
+            "include:\n- Who asked it (speaker label)\n- The question text\n"
+            "- Whether it was answered (yes/no/partially)\n"
+            "- Brief answer if provided\n\nTranscript:\n{text}"
+        ),
+    ),
+]
+
+
+def get_prompt_template_by_id(template_id: str) -> PromptTemplate | None:
+    """Look up a prompt template by ID.
+
+    Args:
+        template_id: Template identifier.
+
+    Returns:
+        PromptTemplate, or None if not found.
+    """
+    for t in BUILTIN_PROMPT_TEMPLATES:
+        if t.id == template_id:
+            return t
+    return None
+
+
+def get_templates_by_category(category: str) -> list[PromptTemplate]:
+    """Get all prompt templates in a given category.
+
+    Args:
+        category: Category name (translation, summarization, analysis).
+
+    Returns:
+        List of matching PromptTemplate instances.
+    """
+    return [t for t in BUILTIN_PROMPT_TEMPLATES if t.category == category]

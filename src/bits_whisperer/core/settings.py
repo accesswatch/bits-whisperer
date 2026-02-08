@@ -189,9 +189,14 @@ class AISettings:
     gemini_model: str = "gemini-2.0-flash"
     copilot_model: str = "gpt-4o"
     translation_target_language: str = "en"
+    multi_target_languages: list[str] = field(default_factory=list)
     summarization_style: str = "concise"  # "concise", "detailed", "bullet_points"
     max_tokens: int = 4096
     temperature: float = 0.3
+    custom_vocabulary: list[str] = field(default_factory=list)
+    active_translation_template: str = "translate_standard"
+    active_summarization_template: str = "summary_concise"
+    custom_prompt_templates: list[dict[str, str]] = field(default_factory=list)
 
 
 @dataclass
@@ -226,6 +231,7 @@ class CopilotSettings:
     cli_path: str = ""  # empty = auto-detect from PATH
     use_logged_in_user: bool = True
     default_model: str = "gpt-4o"
+    subscription_tier: str = "pro"  # "free", "pro", "business", "enterprise"
     streaming: bool = True
     system_message: str = (
         "You are a helpful transcript assistant for BITS Whisperer. "

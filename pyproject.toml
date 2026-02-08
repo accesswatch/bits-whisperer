@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bits-whisperer"
-version = "1.2.0"
+version = "1.0.0"
 description = "Consumer-grade audio transcription with cloud + on-device Whisper support. Accessibility-first WXPython desktop app."
 readme = "README.md"
 license = "MIT"

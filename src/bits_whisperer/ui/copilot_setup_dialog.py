@@ -27,6 +27,11 @@ from bits_whisperer.utils.accessibility import (
     set_accessible_help,
     set_accessible_name,
 )
+from bits_whisperer.utils.constants import (
+    COPILOT_TIERS,
+    format_price_per_1k,
+    get_copilot_models_for_tier,
+)
 
 if TYPE_CHECKING:
     from bits_whisperer.ui.main_frame import MainFrame
@@ -260,21 +265,43 @@ class CopilotSetupDialog(wx.Dialog):
 
         scroll_sizer.Add(test_sizer, 0, wx.EXPAND | wx.ALL, 6)
 
-        # Model selection
-        model_box = wx.StaticBox(scroll, label="Default Model")
-        set_accessible_name(model_box, "Default AI model selection")
+        # Model selection (tier-based)
+        model_box = wx.StaticBox(scroll, label="Subscription & Model")
+        set_accessible_name(model_box, "Subscription tier and model selection")
         model_sizer = wx.StaticBoxSizer(model_box, wx.VERTICAL)
 
+        # Tier selector
+        tier_row = wx.BoxSizer(wx.HORIZONTAL)
+        tier_label = wx.StaticText(scroll, label="&Tier:")
+        tier_choices = [
+            f"{v['name']} — {v['price']}" for v in COPILOT_TIERS.values()
+        ]
+        self._tier_choice = wx.Choice(scroll, choices=tier_choices)
+        set_accessible_name(self._tier_choice, "Select your Copilot subscription tier")
+        set_accessible_help(
+            self._tier_choice,
+            "Choose your GitHub Copilot plan. Higher tiers unlock more models.",
+        )
+        label_control(tier_label, self._tier_choice)
+
+        # Pre-select current tier
+        current_tier = self._settings.copilot.subscription_tier
+        tier_keys = list(COPILOT_TIERS.keys())
+        tier_idx = tier_keys.index(current_tier) if current_tier in tier_keys else 1
+        self._tier_choice.SetSelection(tier_idx)
+
+        tier_row.Add(tier_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+        tier_row.Add(self._tier_choice, 1, wx.ALIGN_CENTER_VERTICAL)
+        model_sizer.Add(tier_row, 0, wx.EXPAND | wx.ALL, 4)
+
+        self._tier_desc = wx.StaticText(scroll, label="")
+        set_accessible_name(self._tier_desc, "Tier description")
+        model_sizer.Add(self._tier_desc, 0, wx.LEFT | wx.BOTTOM, 8)
+
+        # Model selector (populated by tier)
         model_row = wx.BoxSizer(wx.HORIZONTAL)
         model_label = wx.StaticText(scroll, label="&Model:")
-        models = [
-            "gpt-4o",
-            "gpt-4o-mini",
-            "gpt-4-turbo",
-            "claude-sonnet-4-20250514",
-            "claude-haiku-4-20250414",
-        ]
-        self._model_choice = wx.Choice(scroll, choices=models)
+        self._model_choice = wx.Choice(scroll)
         set_accessible_name(self._model_choice, "Select default Copilot model")
         set_accessible_help(
             self._model_choice,
@@ -282,14 +309,21 @@ class CopilotSetupDialog(wx.Dialog):
         )
         label_control(model_label, self._model_choice)
 
-        # Set current selection
-        current_model = self._settings.copilot.default_model
-        idx = self._model_choice.FindString(current_model)
-        self._model_choice.SetSelection(idx if idx != wx.NOT_FOUND else 0)
-
         model_row.Add(model_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
         model_row.Add(self._model_choice, 1, wx.ALIGN_CENTER_VERTICAL)
         model_sizer.Add(model_row, 0, wx.EXPAND | wx.ALL, 4)
+
+        # Pricing info
+        self._copilot_pricing_label = wx.StaticText(scroll, label="")
+        set_accessible_name(self._copilot_pricing_label, "Model pricing")
+        model_sizer.Add(self._copilot_pricing_label, 0, wx.LEFT | wx.BOTTOM, 8)
+
+        # Populate initial models based on tier
+        self._update_tier_models()
+
+        # Bind changes
+        self._tier_choice.Bind(wx.EVT_CHOICE, self._on_tier_changed)
+        self._model_choice.Bind(wx.EVT_CHOICE, self._on_model_changed)
 
         scroll_sizer.Add(model_sizer, 0, wx.EXPAND | wx.ALL, 6)
 
@@ -562,6 +596,12 @@ class CopilotSetupDialog(wx.Dialog):
             self._settings.copilot.default_model = model
             self._settings.ai.copilot_model = model
 
+        # Save subscription tier
+        tier_idx = self._tier_choice.GetSelection()
+        if tier_idx >= 0:
+            tier_keys = list(COPILOT_TIERS.keys())
+            self._settings.copilot.subscription_tier = tier_keys[tier_idx]
+
         # Enable Copilot
         self._settings.copilot.enabled = True
         self._settings.copilot.use_logged_in_user = self._auth_login.GetValue()
@@ -569,3 +609,58 @@ class CopilotSetupDialog(wx.Dialog):
 
         announce_status(self._main_frame, "Copilot setup saved")
         self.EndModal(wx.ID_OK)
+
+    # ------------------------------------------------------------------ #
+    # Tier / model helpers                                                 #
+    # ------------------------------------------------------------------ #
+
+    def _update_tier_models(self) -> None:
+        """Populate model list based on current tier selection."""
+        sel = self._tier_choice.GetSelection()
+        if sel < 0:
+            return
+
+        tier_keys = list(COPILOT_TIERS.keys())
+        tier = tier_keys[sel]
+        tier_info = COPILOT_TIERS[tier]
+        self._tier_desc.SetLabel(tier_info["description"])
+
+        available = get_copilot_models_for_tier(tier)
+        self._model_choice.Clear()
+        for m in available:
+            self._model_choice.Append(m.id)
+
+        # Select current model if available, otherwise first
+        current_model = self._settings.copilot.default_model
+        idx = self._model_choice.FindString(current_model)
+        self._model_choice.SetSelection(idx if idx != wx.NOT_FOUND else 0)
+        self._update_pricing()
+
+    def _update_pricing(self) -> None:
+        """Update pricing label for the currently selected model."""
+        sel = self._model_choice.GetSelection()
+        if sel < 0:
+            return
+
+        model_id = self._model_choice.GetString(sel)
+        from bits_whisperer.utils.constants import get_ai_model_by_id
+
+        model_info = get_ai_model_by_id(model_id, "copilot")
+        if model_info:
+            in_price = format_price_per_1k(model_info.input_price_per_1m)
+            out_price = format_price_per_1k(model_info.output_price_per_1m)
+            ctx = f"{model_info.context_window:,} tokens"
+            premium = "  (Premium)" if model_info.is_premium else ""
+            self._copilot_pricing_label.SetLabel(
+                f"Input: {in_price}  |  Output: {out_price}  |  Context: {ctx}{premium}"
+            )
+        else:
+            self._copilot_pricing_label.SetLabel("")
+
+    def _on_tier_changed(self, _event: wx.CommandEvent) -> None:
+        """Handle tier selection change."""
+        self._update_tier_models()
+
+    def _on_model_changed(self, _event: wx.CommandEvent) -> None:
+        """Handle model selection change."""
+        self._update_pricing()

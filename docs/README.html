@@ -196,7 +196,14 @@
 <li><strong>Cross-platform</strong> — Runs on Windows 10+ and macOS 12+; auto-detect GPU (CUDA / Apple Silicon Metal)</li>
 <li><strong>User guide</strong> — Comprehensive built-in user guide covering every feature, provider, setting, and keyboard shortcut</li>
 <li><strong>Live microphone transcription</strong> — Real-time speech-to-text from your microphone using faster-whisper with energy-based VAD, configurable model/language/device via Tools, then Live Transcription (Ctrl+L)</li>
-<li><strong>AI translation &amp; summarization</strong> — Translate transcripts to 15+ languages or generate summaries (concise/detailed/bullet points) using OpenAI GPT-4o, Anthropic Claude, Azure OpenAI, or Google Gemini via AI menu (Ctrl+T / Ctrl+Shift+S)</li>
+<li><strong>AI translation &amp; summarization</strong> — Translate transcripts to 15+ languages or generate summaries (concise/detailed/bullet points/meeting minutes) using OpenAI GPT-4o, Anthropic Claude, Azure OpenAI, or Google Gemini via AI menu (Ctrl+T / Ctrl+Shift+S)</li>
+<li><strong>Multi-language simultaneous translation</strong> — Translate a transcript to multiple target languages in one operation via AI, then Translate to Multiple Languages; results displayed with language-headed sections and Copy button</li>
+<li><strong>AI model catalog with real-time pricing</strong> — 22 AI models across 4 providers with live per-1K-token pricing displayed in the AI settings dialog; compare costs before choosing a model</li>
+<li><strong>Copilot subscription tier gating</strong> — Select your GitHub Copilot subscription tier (Free/Pro/Business/Enterprise) to see only the models available to you, with tier pricing and model descriptions</li>
+<li><strong>Gemma models</strong> — All 5 Google Gemma variants supported (Gemma 3 27B/12B/4B/1B and Gemma 3n E4B) alongside Gemini models for AI tasks</li>
+<li><strong>Custom vocabulary</strong> — Define domain-specific terms (medical, legal, technical) that are injected into AI prompts for more accurate translations and summaries</li>
+<li><strong>Prompt templates</strong> — 10 built-in templates (4 translation styles, 4 summarization styles, 2 analysis) plus support for custom user templates; select active templates in AI settings</li>
+<li><strong>Real-time streaming</strong> — Deepgram and AssemblyAI support streaming transcription for near-instant results on long audio</li>
 <li><strong>GitHub Copilot SDK integration</strong> — Interactive AI transcript chat panel (Ctrl+Shift+C) with streaming responses, quick actions, custom agent builder, and session management via the Copilot SDK</li>
 <li><strong>5 AI providers</strong> — OpenAI, Anthropic Claude, Azure OpenAI, Google Gemini, and GitHub Copilot for translation, summarization, and interactive chat</li>
 <li><strong>Plugin system</strong> — Extend with custom transcription providers via <code>.py</code> plugins in a configurable directory; discover, load, enable/disable from Tools, then Plugins</li>
@@ -274,7 +281,7 @@ python<span class="w"> </span>-m<span class="w"> </span>bits_whisperer
     main_frame.py        # Menu bar, splitter, status bar, tray integration
     queue_panel.py       # File queue list
     transcript_panel.py  # Transcript viewer/editor with speaker management
-    settings_dialog.py   # Tabbed settings (3 simple + 2 advanced)
+    settings_dialog.py   # Tabbed settings (6 simple + 2 advanced)
     progress_dialog.py   # Batch progress
     model_manager_dialog.py  # Model management
     add_provider_dialog.py   # Cloud provider onboarding
@@ -353,6 +360,10 @@ python<span class="w"> </span>-m<span class="w"> </span>bits_whisperer
 <tr>
 <td>Translate Transcript</td>
 <td>Ctrl+T</td>
+</tr>
+<tr>
+<td>Translate to Multiple</td>
+<td>(AI menu)</td>
 </tr>
 <tr>
 <td>Summarize Transcript</td>

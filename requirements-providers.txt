@@ -13,3 +13,6 @@ google-genai>=0.4.0
 groq>=0.4.0
 rev-ai>=2.17.0
 speechmatics-python>=1.0.0
+anthropic>=0.30.0
+github-copilot-sdk
+sounddevice>=0.4.6

@@ -146,16 +146,27 @@
 </ul>
 </li>
 <li><a href="#who-is-this-for">Who Is This For?</a></li>
-<li><a href="#new-in-v11-ai-powered-features">New in v1.1: AI-Powered Features</a><ul>
+<li><a href="#new-in-v10-ai-powered-features">New in v1.0: AI-Powered Features</a><ul>
 <li><a href="#live-microphone-transcription">Live Microphone Transcription</a></li>
 <li><a href="#ai-translation-summarization">AI Translation &amp; Summarization</a></li>
 <li><a href="#plugin-system">Plugin System</a></li>
 </ul>
 </li>
-<li><a href="#new-in-v12-gemini-ai-github-copilot-sdk">New in v1.2: Gemini AI &amp; GitHub Copilot SDK</a><ul>
+<li><a href="#new-in-v10-gemini-ai-github-copilot-sdk">New in v1.0: Gemini AI &amp; GitHub Copilot SDK</a><ul>
 <li><a href="#google-gemini-ai-provider">Google Gemini AI Provider</a></li>
 <li><a href="#github-copilot-sdk-integration">GitHub Copilot SDK Integration</a></li>
-<li><a href="#additional-v12-improvements">Additional v1.2 Improvements</a></li>
+<li><a href="#additional-improvements">Additional Improvements</a></li>
+</ul>
+</li>
+<li><a href="#new-in-v10-phase-4-ai-intelligence-streaming">New in v1.0: Phase 4 — AI Intelligence &amp; Streaming</a><ul>
+<li><a href="#ai-model-catalog-with-real-time-pricing">AI Model Catalog with Real-Time Pricing</a></li>
+<li><a href="#copilot-subscription-tier-based-model-selection">Copilot Subscription Tier-Based Model Selection</a></li>
+<li><a href="#google-gemma-models">Google Gemma Models</a></li>
+<li><a href="#custom-vocabulary">Custom Vocabulary</a></li>
+<li><a href="#10-built-in-prompt-templates">10 Built-In Prompt Templates</a></li>
+<li><a href="#multi-language-simultaneous-translation">Multi-Language Simultaneous Translation</a></li>
+<li><a href="#real-time-streaming-from-cloud-providers">Real-Time Streaming from Cloud Providers</a></li>
+<li><a href="#phase-4-test-coverage">Phase 4 Test Coverage</a></li>
 </ul>
 </li>
 <li><a href="#whats-next">What's Next</a></li>
@@ -353,7 +364,7 @@ iscc<span class="w"> </span>installer.iss
 <li><strong>Power users</strong> — Maximum control over every aspect of transcription</li>
 </ul>
 <hr>
-<h2 id="new-in-v11-ai-powered-features">New in v1.1: AI-Powered Features</h2>
+<h2 id="new-in-v10-ai-powered-features">New in v1.0: AI-Powered Features</h2>
 <h3 id="live-microphone-transcription">Live Microphone Transcription</h3>
 <p>Transcribe speech from your microphone in real time:</p>
 <ul>
@@ -381,7 +392,7 @@ iscc<span class="w"> </span>installer.iss
 <li>Plugin metadata (name, version, author, description) is displayed in the management dialog</li>
 </ul>
 <hr>
-<h2 id="new-in-v12-gemini-ai-github-copilot-sdk">New in v1.2: Gemini AI &amp; GitHub Copilot SDK</h2>
+<h2 id="new-in-v10-gemini-ai-github-copilot-sdk">New in v1.0: Gemini AI &amp; GitHub Copilot SDK</h2>
 <h3 id="google-gemini-ai-provider">Google Gemini AI Provider</h3>
 <p>Google Gemini is now available as an AI provider for translation and summarization:</p>
 <ul>
@@ -404,24 +415,173 @@ iscc<span class="w"> </span>installer.iss
 <li><strong>Session management</strong> — Conversation history is maintained per session, with the ability to start fresh at any time</li>
 <li><strong>5 AI providers</strong> — OpenAI, Anthropic Claude, Azure OpenAI, Google Gemini, and GitHub Copilot are all available for translation and summarization</li>
 </ul>
-<h3 id="additional-v12-improvements">Additional v1.2 Improvements</h3>
+<h3 id="additional-improvements">Additional Improvements</h3>
 <ul>
 <li><strong>8-page Setup Wizard</strong> — A new AI &amp; Copilot configuration page guides you through provider setup during first launch</li>
 <li><strong>Windows installer</strong> — Optionally install the GitHub Copilot CLI via WinGet during application setup</li>
 <li><strong>191 tests</strong> — Comprehensive test coverage for all new features</li>
 </ul>
 <hr>
+<h2 id="new-in-v10-phase-4-ai-intelligence-streaming">New in v1.0: Phase 4 — AI Intelligence &amp; Streaming</h2>
+<h3 id="ai-model-catalog-with-real-time-pricing">AI Model Catalog with Real-Time Pricing</h3>
+<p>BITS Whisperer now includes a comprehensive AI model catalog with real-time pricing information for all providers:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Models</th>
+<th>Price Range (per 1M input tokens)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>OpenAI</strong></td>
+<td>GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo</td>
+<td>$0.15 – $10.00</td>
+</tr>
+<tr>
+<td><strong>Anthropic</strong></td>
+<td>Claude Sonnet 4, Claude Haiku 4, Claude 3.5 Sonnet</td>
+<td>$0.80 – $3.00</td>
+</tr>
+<tr>
+<td><strong>Google Gemini</strong></td>
+<td>Gemini 2.0 Flash, 2.5 Pro, 2.5 Flash + 5 Gemma variants</td>
+<td>$0.02 – $1.25</td>
+</tr>
+<tr>
+<td><strong>GitHub Copilot</strong></td>
+<td>7 models (GPT-4o Mini, GPT-4o, GPT-4 Turbo, Claude Sonnet 4, Claude Haiku 4, o3-mini, Gemini 2.0 Flash)</td>
+<td>Included in subscription</td>
+</tr>
+</tbody>
+</table>
+<p>All 22 models include context window size, max output tokens, and per-token pricing so you can make informed choices.</p>
+<h3 id="copilot-subscription-tier-based-model-selection">Copilot Subscription Tier-Based Model Selection</h3>
+<p>Copilot models are now filtered by your subscription tier:</p>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Price</th>
+<th>Available Models</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Free</strong></td>
+<td>$0</td>
+<td>GPT-4o Mini</td>
+</tr>
+<tr>
+<td><strong>Pro</strong></td>
+<td>$10/month</td>
+<td>All 7 models including premium (Claude, o3-mini, Gemini)</td>
+</tr>
+<tr>
+<td><strong>Business</strong></td>
+<td>$19/user/month</td>
+<td>All Pro models + admin controls</td>
+</tr>
+<tr>
+<td><strong>Enterprise</strong></td>
+<td>$39/user/month</td>
+<td>All models + knowledge bases, fine-tuning, compliance</td>
+</tr>
+</tbody>
+</table>
+<p>Set your subscription tier in <strong>Tools, then Settings</strong> — the model picker automatically shows only the models available for your plan.</p>
+<h3 id="google-gemma-models">Google Gemma Models</h3>
+<p>All 5 Gemma open-weight models are now available via the Gemini API:</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Parameters</th>
+<th>Input Price</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Gemma 3 27B</strong></td>
+<td>27B</td>
+<td>$0.10/1M</td>
+<td>High quality, open-weight analysis</td>
+</tr>
+<tr>
+<td><strong>Gemma 3 12B</strong></td>
+<td>12B</td>
+<td>$0.08/1M</td>
+<td>Good balance of quality and speed</td>
+</tr>
+<tr>
+<td><strong>Gemma 3 4B</strong></td>
+<td>4B</td>
+<td>$0.05/1M</td>
+<td>Fast, efficient for simple tasks</td>
+</tr>
+<tr>
+<td><strong>Gemma 3 1B</strong></td>
+<td>1B</td>
+<td>$0.02/1M</td>
+<td>Very fast, basic translation</td>
+</tr>
+<tr>
+<td><strong>Gemma 3n E4B</strong></td>
+<td>Edge-optimized</td>
+<td>$0.02/1M</td>
+<td>Ultra-efficient, lightweight tasks</td>
+</tr>
+</tbody>
+</table>
+<h3 id="custom-vocabulary">Custom Vocabulary</h3>
+<p>Improve AI accuracy with domain-specific terminology:</p>
+<ul>
+<li>Go to <strong>Tools, then AI Provider Settings</strong> and add custom terms, acronyms, and proper nouns</li>
+<li>The vocabulary is injected into translation and summarization prompts</li>
+<li>Ensures consistent handling of technical jargon, company names, and specialized terms</li>
+<li>Ideal for medical, legal, technical, and industry-specific transcripts</li>
+</ul>
+<h3 id="10-built-in-prompt-templates">10 Built-In Prompt Templates</h3>
+<p>Pre-configured prompt templates for common AI tasks:</p>
+<ul>
+<li><strong>Translation</strong> (4 templates): Standard, Informal, Technical, Legal</li>
+<li><strong>Summarization</strong> (4 templates): Concise Summary, Detailed Summary, Bullet Points, Meeting Minutes</li>
+<li><strong>Analysis</strong> (2 templates): Sentiment Analysis, Extract Questions</li>
+</ul>
+<p>Select a template before translating or summarizing, or create your own custom templates. Templates use <code>{text}</code> and <code>{language}</code> placeholders for automatic transcript and language injection.</p>
+<h3 id="multi-language-simultaneous-translation">Multi-Language Simultaneous Translation</h3>
+<p>Translate a transcript into multiple languages at once:</p>
+<ul>
+<li>Configure target languages in <strong>Tools, then AI Provider Settings</strong></li>
+<li>Press <strong>Ctrl+T</strong> and select <strong>Multi-Language</strong> to translate into all configured languages in a single operation</li>
+<li>Each language translation is performed independently for best quality</li>
+<li>Results are returned as separate translations per language</li>
+</ul>
+<h3 id="real-time-streaming-from-cloud-providers">Real-Time Streaming from Cloud Providers</h3>
+<p>Deepgram and AssemblyAI now support real-time streaming transcription:</p>
+<ul>
+<li><strong>Deepgram</strong> — Live WebSocket streaming with smart formatting and punctuation</li>
+<li><strong>AssemblyAI</strong> — Real-time streaming with automatic speaker detection</li>
+<li>Streaming is indicated in each provider's capabilities so the app can use the optimal transport</li>
+<li>Additional cloud providers may add streaming support in future releases</li>
+</ul>
+<h3 id="phase-4-test-coverage">Phase 4 Test Coverage</h3>
+<ul>
+<li><strong>255 tests</strong> — Full coverage for AI model catalog, Copilot tiers, prompt templates, multi-language translation, custom vocabulary, and streaming capabilities</li>
+</ul>
+<hr>
 <h2 id="whats-next">What's Next</h2>
 <ul>
-<li>Real-time streaming from cloud providers</li>
-<li>Custom vocabulary and prompt templates</li>
-<li>Multi-language simultaneous translation</li>
 <li>Plugin marketplace</li>
+<li>Additional streaming providers</li>
+<li>Custom model fine-tuning integration</li>
 </ul>
 <hr>
 <p><strong>BITS Whisperer</strong> — because your words matter.</p>
 <p><em>Free. Open source. Accessible. Private.</em></p>
-<p><em>BITS Whisperer v1.2.0 — Developed by </em><em>Blind Information Technology Solutions (BITS)</em><em>.</em></p>
+<p><em>BITS Whisperer v1.0.0 — Developed by </em><em>Blind Information Technology Solutions (BITS)</em><em>.</em></p>
 <div class="footer">
   Generated from <code>ANNOUNCEMENT.md</code> &mdash; BITS Whisperer Documentation
 </div>

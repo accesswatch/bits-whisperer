@@ -688,6 +688,9 @@ class AIService:
         self,
         text: str,
         target_language: str = "",
+        *,
+        template_id: str = "",
+        custom_vocabulary: list[str] | None = None,
     ) -> AIResponse:
         """Translate transcript text to the target language.
 
@@ -695,6 +698,8 @@ class AIService:
             text: The transcript text to translate.
             target_language: Target language (e.g. 'Spanish', 'French').
                 Falls back to settings default.
+            template_id: Optional prompt template ID to use.
+            custom_vocabulary: Optional vocabulary hints for specialised terms.
 
         Returns:
             AIResponse with translated text.
@@ -709,18 +714,85 @@ class AIService:
             )
 
         lang = target_language or self._settings.translation_target_language
-        prompt = _TRANSLATE_PROMPT.format(target_language=lang, text=text)
+
+        # Resolve prompt template
+        prompt_text: str = ""
+        if template_id:
+            from bits_whisperer.utils.constants import get_prompt_template_by_id
+
+            tpl = get_prompt_template_by_id(template_id)
+            if tpl:
+                prompt_text = tpl.template.format(language=lang, text=text)
+        if not prompt_text:
+            # Use active template from settings, or fall back to default
+            active = self._settings.active_translation_template
+            if active and active != "translate_standard":
+                from bits_whisperer.utils.constants import get_prompt_template_by_id
+
+                tpl = get_prompt_template_by_id(active)
+                if tpl:
+                    prompt_text = tpl.template.format(language=lang, text=text)
+            if not prompt_text:
+                prompt_text = _TRANSLATE_PROMPT.format(
+                    target_language=lang, text=text
+                )
+
+        # Prepend custom vocabulary hints
+        vocab = custom_vocabulary or self._settings.custom_vocabulary
+        if vocab:
+            vocab_str = ", ".join(vocab)
+            prompt_text = (
+                f"Important vocabulary/terms to preserve or use correctly: "
+                f"{vocab_str}\n\n{prompt_text}"
+            )
 
         return provider.generate(
-            prompt,
+            prompt_text,
             max_tokens=self._settings.max_tokens,
             temperature=self._settings.temperature,
         )
+
+    def translate_multi(
+        self,
+        text: str,
+        target_languages: list[str] | None = None,
+        *,
+        template_id: str = "",
+        custom_vocabulary: list[str] | None = None,
+    ) -> dict[str, AIResponse]:
+        """Translate transcript text to multiple target languages.
+
+        Args:
+            text: The transcript text to translate.
+            target_languages: List of target languages. Falls back to
+                settings.multi_target_languages.
+            template_id: Optional prompt template ID to use.
+            custom_vocabulary: Optional vocabulary hints.
+
+        Returns:
+            Dict mapping language name to AIResponse.
+        """
+        languages = target_languages or self._settings.multi_target_languages
+        if not languages:
+            return {}
+
+        results: dict[str, AIResponse] = {}
+        for lang in languages:
+            results[lang] = self.translate(
+                text,
+                target_language=lang,
+                template_id=template_id,
+                custom_vocabulary=custom_vocabulary,
+            )
+        return results
 
     def summarize(
         self,
         text: str,
         style: str = "",
+        *,
+        template_id: str = "",
+        custom_vocabulary: list[str] | None = None,
     ) -> AIResponse:
         """Summarize transcript text.
 
@@ -728,6 +800,8 @@ class AIService:
             text: The transcript text to summarize.
             style: Summary style ('concise', 'detailed', 'bullet_points').
                 Falls back to settings default.
+            template_id: Optional prompt template ID to use.
+            custom_vocabulary: Optional vocabulary hints.
 
         Returns:
             AIResponse with summary text.
@@ -741,12 +815,38 @@ class AIService:
                 error="No AI provider configured. Add an API key in Settings.",
             )
 
-        chosen_style = style or self._settings.summarization_style
-        template = _SUMMARIZE_STYLES.get(chosen_style, _SUMMARIZE_CONCISE)
-        prompt = template.format(text=text)
+        # Resolve prompt template
+        prompt_text: str = ""
+        if template_id:
+            from bits_whisperer.utils.constants import get_prompt_template_by_id
+
+            tpl = get_prompt_template_by_id(template_id)
+            if tpl:
+                prompt_text = tpl.template.format(text=text)
+        if not prompt_text:
+            active = self._settings.active_summarization_template
+            if active and active != "summary_concise":
+                from bits_whisperer.utils.constants import get_prompt_template_by_id
+
+                tpl = get_prompt_template_by_id(active)
+                if tpl:
+                    prompt_text = tpl.template.format(text=text)
+            if not prompt_text:
+                chosen_style = style or self._settings.summarization_style
+                template = _SUMMARIZE_STYLES.get(chosen_style, _SUMMARIZE_CONCISE)
+                prompt_text = template.format(text=text)
+
+        # Prepend custom vocabulary hints
+        vocab = custom_vocabulary or self._settings.custom_vocabulary
+        if vocab:
+            vocab_str = ", ".join(vocab)
+            prompt_text = (
+                f"Important vocabulary/terms to use correctly: "
+                f"{vocab_str}\n\n{prompt_text}"
+            )
 
         return provider.generate(
-            prompt,
+            prompt_text,
             max_tokens=self._settings.max_tokens,
             temperature=self._settings.temperature,
         )

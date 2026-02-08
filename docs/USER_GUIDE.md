@@ -326,11 +326,136 @@ Use AI to translate and summarize your transcripts using OpenAI, Anthropic Claud
 
 | Provider | Models | Notes |
 |----------|--------|-------|
-| OpenAI | gpt-4o, gpt-4o-mini | Fastest, most reliable |
-| Anthropic | Claude Sonnet 4, Claude Haiku | Strong for long transcripts |
+| OpenAI | GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo | Fastest, most reliable |
+| Anthropic | Claude Sonnet 4, Claude Haiku 4, Claude 3.5 Sonnet | Strong for long transcripts |
 | Azure OpenAI | Configurable deployment | Enterprise-grade, GDPR compliant |
-| Google Gemini | Gemini 2.0 Flash, 1.5 Flash, 1.5 Pro | Fast, very affordable |
-| GitHub Copilot | gpt-4o (via Copilot SDK) | Interactive chat & tool-augmented |
+| Google Gemini | Gemini 2.0 Flash, 2.5 Pro, 2.5 Flash + 5 Gemma models | Fast, very affordable |
+| GitHub Copilot | 7 models (GPT-4o Mini, GPT-4o, GPT-4 Turbo, Claude Sonnet 4, Claude Haiku 4, o3-mini, Gemini 2.0 Flash) | Subscription-based, interactive chat |
+
+### AI Model Catalog
+
+BITS Whisperer includes a comprehensive AI model catalog with real-time pricing for informed model selection. Access it via **Tools, then AI Provider Settings**.
+
+#### OpenAI Models (4)
+
+| Model | Input Price/1M tokens | Output Price/1M tokens | Context Window |
+|-------|-----------------------|------------------------|----------------|
+| GPT-4o Mini | $0.15 | $0.60 | 128K |
+| GPT-4o | $2.50 | $10.00 | 128K |
+| GPT-4 Turbo | $10.00 | $30.00 | 128K |
+| GPT-3.5 Turbo | $0.50 | $1.50 | 16K |
+
+#### Anthropic Models (3)
+
+| Model | Input Price/1M tokens | Output Price/1M tokens | Context Window |
+|-------|-----------------------|------------------------|----------------|
+| Claude Sonnet 4 | $3.00 | $15.00 | 200K |
+| Claude Haiku 4 | $0.80 | $4.00 | 200K |
+| Claude 3.5 Sonnet | $3.00 | $15.00 | 200K |
+
+#### Google Gemini Models (8, including 5 Gemma)
+
+| Model | Input Price/1M tokens | Output Price/1M tokens | Context Window |
+|-------|-----------------------|------------------------|----------------|
+| Gemini 2.0 Flash | $0.10 | $0.40 | 1M |
+| Gemini 2.5 Pro | $1.25 | $10.00 | 1M |
+| Gemini 2.5 Flash | $0.15 | $0.60 | 1M |
+| Gemma 3 27B | $0.10 | $0.30 | 128K |
+| Gemma 3 12B | $0.08 | $0.20 | 128K |
+| Gemma 3 4B | $0.05 | $0.10 | 128K |
+| Gemma 3 1B | $0.02 | $0.05 | 32K |
+| Gemma 3n E4B | $0.02 | $0.05 | 32K |
+
+#### GitHub Copilot Models (7)
+
+Copilot models are included in your subscription — no per-token charges:
+
+| Model | Min Tier | Premium | Context Window |
+|-------|----------|---------|----------------|
+| GPT-4o Mini | Free | No | 128K |
+| GPT-4o | Pro | No | 128K |
+| GPT-4 Turbo | Pro | No | 128K |
+| Claude Sonnet 4 | Pro | Yes | 200K |
+| Claude Haiku 4 | Pro | Yes | 200K |
+| o3-mini | Pro | Yes | 128K |
+| Gemini 2.0 Flash | Pro | Yes | 1M |
+
+### Copilot Subscription Tiers
+
+Copilot model availability depends on your GitHub Copilot subscription tier. Set your tier in **Tools, then Settings** to see only the models available for your plan.
+
+| Tier | Price | Models Available |
+|------|-------|------------------|
+| **Free** | $0 | GPT-4o Mini |
+| **Pro** | $10/month | All 7 models (including premium: Claude, o3-mini, Gemini) |
+| **Business** | $19/user/month | All Pro models + organization admin controls |
+| **Enterprise** | $39/user/month | All models + knowledge bases, fine-tuning, compliance |
+
+### Custom Vocabulary
+
+Improve AI accuracy for domain-specific content by adding custom terms:
+
+1. Go to **Tools, then AI Provider Settings**
+2. In the **Preferences** tab, find the **Custom Vocabulary** section
+3. Add technical terms, acronyms, proper nouns, and specialized jargon — one per line
+4. The vocabulary is automatically injected into AI prompts when translating or summarizing
+
+**Examples:**
+- Medical: "HIPAA", "myocardial infarction", "CBC panel"
+- Legal: "habeas corpus", "voir dire", "amicus curiae"
+- Technical: "Kubernetes", "WebSocket", "OAuth 2.0"
+
+### Prompt Templates
+
+BITS Whisperer includes 10 built-in prompt templates for common AI tasks:
+
+#### Translation Templates (4)
+
+| Template | Description |
+|----------|-------------|
+| **Standard Translation** | Preserves speaker labels, timestamps, and formatting |
+| **Informal Translation** | Natural, conversational tone; adapts idioms |
+| **Technical Translation** | Precise terminology for technical/medical content |
+| **Legal Translation** | Verbatim formal translation for legal proceedings |
+
+#### Summarization Templates (4)
+
+| Template | Description |
+|----------|-------------|
+| **Concise Summary** | Brief 3-5 sentence overview with key takeaways |
+| **Detailed Summary** | Comprehensive summary with speaker contributions |
+| **Bullet Points** | Organized bullet list of key points and decisions |
+| **Meeting Minutes** | Formal minutes with attendees, agenda, and action items |
+
+#### Analysis Templates (2)
+
+| Template | Description |
+|----------|-------------|
+| **Sentiment Analysis** | Emotional tone per speaker with shift detection |
+| **Extract Questions** | Lists all questions with answers and attribution |
+
+Select a template before translating or summarizing in **Tools, then AI Provider Settings**. You can also create custom templates.
+
+### Multi-Language Simultaneous Translation
+
+Translate a transcript into multiple languages at once:
+
+1. Go to **Tools, then AI Provider Settings**
+2. In the **Preferences** tab, configure multiple target languages
+3. Press **Ctrl+T** to translate — each target language is translated independently
+4. Results are returned as separate translations per language
+
+This is ideal for creating multilingual documentation, subtitles, or distributing transcripts to international teams.
+
+### Real-Time Streaming Transcription
+
+Some cloud providers support real-time streaming for faster results:
+
+| Provider | Streaming | Notes |
+|----------|-----------|-------|
+| **Deepgram** | Yes | Live WebSocket streaming with smart formatting |
+| **AssemblyAI** | Yes | Real-time streaming with speaker detection |
+| Other cloud providers | No | Standard batch processing |
 
 ---
 
@@ -803,4 +928,4 @@ A: The app checks for updates on startup (configurable). When an update is avail
 
 ---
 
-*BITS Whisperer v1.2.0 — Developed by Blind Information Technology Solutions (BITS). Made with care for accessibility and privacy.*
+*BITS Whisperer v1.0.0 — Developed by Blind Information Technology Solutions (BITS). Made with care for accessibility and privacy.*

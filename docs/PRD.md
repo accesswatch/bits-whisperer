@@ -1,6 +1,6 @@
 # BITS Whisperer — Product Requirements Document
 
-> **Version:** 1.2 - **Updated:** 2026-02-08 - **Status:** Implementation Complete
+> **Version:** 1.0.0 - **Updated:** 2026-02-08 - **Status:** Implementation Complete
 >
 > Developed by **Blind Information Technology Solutions (BITS)**
 
@@ -242,7 +242,7 @@ summarization of transcripts via **5 pluggable AI providers**:
 
 AI features are accessed via the **AI** menu:
 
-- **Translate** (Ctrl+T): Translates the transcript to the configured target language
+- **Translate** (Ctrl+T): Translates the transcript to the configured target language (or multiple languages simultaneously)
 - **Summarize** (Ctrl+Shift+S): Generates concise, detailed, or bullet-point summaries
 - **Copilot Chat** (Ctrl+Shift+C): Opens the interactive chat panel for Q&A
 - **Agent Builder**: Configures a custom AI agent persona
@@ -252,6 +252,110 @@ AI provider settings (`AISettings` dataclass) include:
 - `openai_model`, `anthropic_model`, `gemini_model`, `copilot_model`
 - `temperature`, `max_tokens`
 - `translation_language`, `summarization_style`
+- `multi_target_languages` — list of languages for simultaneous translation
+- `custom_vocabulary` — domain-specific terms for improved AI accuracy
+- `active_translation_template`, `active_summarization_template` — selected prompt template IDs
+- `custom_prompt_templates` — user-defined prompt templates
+
+### AI Model Catalog
+
+The `constants.py` module defines a comprehensive AI model catalog with
+real-time pricing information via the `AIModelInfo` frozen dataclass:
+
+| Field                | Type   | Description                                  |
+|----------------------|--------|----------------------------------------------|
+| `id`                 | str    | Model identifier                             |
+| `name`               | str    | Display name                                 |
+| `provider`           | str    | Provider key (openai/anthropic/gemini/copilot) |
+| `description`        | str    | Human-readable description                   |
+| `input_price_per_1m` | float  | USD per 1M input tokens (0 = included)       |
+| `output_price_per_1m`| float  | USD per 1M output tokens (0 = included)      |
+| `context_window`     | int    | Maximum context tokens                       |
+| `max_output_tokens`  | int    | Maximum output tokens                        |
+| `copilot_tier`       | str    | Required Copilot tier (empty if not Copilot)  |
+| `is_premium`         | bool   | Requires premium Copilot subscription         |
+| `supports_streaming` | bool   | Whether the model supports streaming          |
+
+#### Model Counts by Provider
+
+| Provider    | Count | Models                                                              |
+|-------------|-------|---------------------------------------------------------------------|
+| OpenAI      | 4     | GPT-4o Mini, GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo                    |
+| Anthropic   | 3     | Claude Sonnet 4, Claude Haiku 4, Claude 3.5 Sonnet                  |
+| Gemini      | 8     | Gemini 2.0 Flash, 2.5 Pro, 2.5 Flash + Gemma 27B/12B/4B/1B/3n-E4B  |
+| Copilot     | 7     | GPT-4o Mini, GPT-4o, GPT-4 Turbo, Claude Sonnet 4, Claude Haiku 4, o3-mini, Gemini 2.0 Flash |
+| **Total**   | **22**| All models across all providers                                      |
+
+Helper functions: `get_ai_model_by_id()`, `get_models_for_provider()`,
+`get_copilot_models_for_tier()`, `format_price_per_1k()`.
+
+### Copilot Subscription Tiers
+
+Copilot models are gated by subscription tier via `COPILOT_TIERS`:
+
+| Tier         | Price            | Available Models                               |
+|--------------|------------------|------------------------------------------------|
+| Free         | $0               | GPT-4o Mini                                    |
+| Pro          | $10/month        | All 7 models including premium (Claude, o3-mini, Gemini) |
+| Business     | $19/user/month   | All Pro models + organization admin controls    |
+| Enterprise   | $39/user/month   | All models + knowledge bases, fine-tuning, compliance |
+
+The `CopilotSettings.subscription_tier` field (default: "pro") controls
+which models appear in the model selector. `get_copilot_models_for_tier()`
+returns only models at or below the user's tier level.
+
+### Prompt Templates
+
+10 built-in prompt templates (`BUILTIN_PROMPT_TEMPLATES`) via the
+`PromptTemplate` frozen dataclass:
+
+| Field         | Type   | Description                              |
+|---------------|--------|------------------------------------------|
+| `id`          | str    | Template identifier                      |
+| `name`        | str    | Display name                             |
+| `category`    | str    | translation / summarization / analysis    |
+| `description` | str    | Human-readable description               |
+| `template`    | str    | Prompt text with `{text}` and `{language}` placeholders |
+| `is_builtin`  | bool   | True for built-in, False for user-created |
+
+#### Template Breakdown
+
+| Category        | Count | Templates                                                    |
+|-----------------|-------|--------------------------------------------------------------|
+| Translation     | 4     | Standard, Informal, Technical, Legal                          |
+| Summarization   | 4     | Concise Summary, Detailed Summary, Bullet Points, Meeting Minutes |
+| Analysis        | 2     | Sentiment Analysis, Extract Questions                         |
+
+Active templates are tracked in `AISettings.active_translation_template`
+and `AISettings.active_summarization_template`. Users can also create
+custom templates stored in `AISettings.custom_prompt_templates`.
+
+Helper functions: `get_prompt_template_by_id()`, `get_templates_by_category()`.
+
+### Custom Vocabulary
+
+`AISettings.custom_vocabulary` stores a list of domain-specific terms
+(acronyms, proper nouns, technical jargon) that are injected into AI
+prompts to improve translation and summarization accuracy. The vocabulary
+is appended to the prompt context before sending to the AI provider.
+
+### Multi-Language Simultaneous Translation
+
+`AISettings.multi_target_languages` stores a list of target language codes.
+`AIService.translate_multi()` iterates over each language and calls
+`translate()` independently, returning a dict mapping each language to
+its `AIResponse`. This enables one-click translation to multiple languages.
+
+### Real-Time Streaming Transcription
+
+The `ProviderCapabilities.supports_streaming` field indicates whether a
+transcription provider supports real-time streaming:
+
+| Provider      | Streaming |
+|---------------|:---------:|
+| Deepgram      | Yes       |
+| AssemblyAI    | Yes       |
+| All others    | No        |
 
 ### GitHub Copilot SDK Integration
 
@@ -876,6 +980,14 @@ Dev dependencies: pytest, pytest-cov, black, ruff, mypy.
 - [x] CopilotSettings dataclass (11 fields) in AppSettings
 - [x] Installer Copilot CLI install task (WinGet optional)
 - [x] 191 tests with full coverage for Gemini and Copilot features
+- [x] AI model catalog with real-time pricing (22 models across 4 providers)
+- [x] Copilot subscription tier-based model selection (Free/Pro/Business/Enterprise)
+- [x] Google Gemma models (5 variants: 27B, 12B, 4B, 1B, 3n-E4B via Gemini API)
+- [x] Custom vocabulary for AI translation/summarization accuracy
+- [x] 10 built-in prompt templates (4 translation, 4 summarization, 2 analysis)
+- [x] Multi-language simultaneous translation
+- [x] Real-time streaming from cloud providers (Deepgram, AssemblyAI)
+- [x] 255 tests with full coverage for all Phase 4 features
 
 ---
 
