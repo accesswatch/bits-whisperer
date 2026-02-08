@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] — 2026-02-08
+
+### Added
+- **Google Gemini AI** — Added Gemini as an AI provider for translation and summarization using `google-genai` SDK. Supports `gemini-2.0-flash`, `gemini-2.5-pro`, and `gemini-2.5-flash` models
+- **GitHub Copilot SDK integration** — Full Copilot SDK integration for interactive transcript analysis via `github-copilot-sdk` Python package:
+  - **CopilotService** — Background async service managing Copilot CLI lifecycle, sessions, streaming responses, and custom tools (search_transcript, get_speakers, get_transcript_stats)
+  - **AI Chat Panel** — Interactive bottom panel (Ctrl+Shift+C) for real-time transcript Q&A with streaming responses, quick action buttons (Summarize, Key Points, Topics, Speakers), and multi-turn conversations
+  - **Copilot Setup Wizard** — 4-step guided dialog for CLI installation (WinGet/npm), SDK installation, authentication (CLI login or PAT), and connection testing
+  - **Agent Builder** — 4-tab dialog for designing custom AI agents without knowing markdown/metadata: Identity, Instructions (with presets), Tools (permission checkboxes), and Welcome Message. Save/load agent configs as JSON
+- **AI menu expansion** — New menu items: Chat with Transcript (Ctrl+Shift+C), Copilot Setup, Agent Builder
+- **Setup Wizard AI page** — New page 6 in the first-run wizard for configuring Gemini, Copilot, and OpenAI AI features
+- **Installer Copilot option** — Optional Copilot CLI installation via WinGet during setup (unchecked by default)
+- **CopilotSettings** — New settings dataclass with 11 configurable fields (enabled, CLI path, model, streaming, system message, agent config, transcript tools)
+- **5 AI providers** — AI Provider Settings dialog now supports OpenAI, Anthropic, Azure OpenAI, Google Gemini, and GitHub Copilot with model selection and key validation for each
+
+### Changed
+- **AI Provider Settings** — Added Gemini and Copilot provider entries with API key fields, model selectors, and validation buttons
+- **Version** bumped to 1.2.0
+
+---
+
 ## [1.1.0] — 2026-02-08
 
 ### Added

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bits-whisperer"
-version = "1.1.0"
+version = "1.2.0"
 description = "Consumer-grade audio transcription with cloud + on-device Whisper support. Accessibility-first WXPython desktop app."
 readme = "README.md"
 license = "MIT"
@@ -47,7 +47,9 @@ live = ["sounddevice>=0.4.6", "faster-whisper>=1.0.0"]
 # AI services (translation / summarization)
 ai-openai = ["openai>=1.0.0"]
 ai-anthropic = ["anthropic>=0.30.0"]
-ai-all = ["openai>=1.0.0", "anthropic>=0.30.0"]
+ai-gemini = ["google-genai>=0.4.0"]
+copilot = ["github-copilot-sdk"]
+ai-all = ["openai>=1.0.0", "anthropic>=0.30.0", "google-genai>=0.4.0"]
 # Provider bundles
 all-providers = [
     "faster-whisper>=1.0.0",
@@ -63,6 +65,7 @@ all-providers = [
     "speechmatics-python>=1.0.0",
     "sounddevice>=0.4.6",
     "anthropic>=0.30.0",
+    "github-copilot-sdk",
 ]
 dev = [
     "pytest>=7.0",

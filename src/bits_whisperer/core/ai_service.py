@@ -4,6 +4,8 @@ Supports multiple LLM providers:
 - OpenAI (GPT-4o, GPT-4o-mini)
 - Anthropic (Claude Sonnet, Claude Haiku)
 - Azure OpenAI (configurable deployment)
+- Google Gemini (Gemini 2.0 Flash, Gemini 2.5 Pro)
+- GitHub Copilot (via Copilot SDK — GPT-4o, Claude, etc.)
 
 Each provider is accessed through a unified interface that handles
 prompt construction, API calls, and response parsing.
@@ -351,6 +353,230 @@ class AzureOpenAIProvider(AIProvider):
 
 
 # ---------------------------------------------------------------------------
+# Google Gemini provider
+# ---------------------------------------------------------------------------
+
+
+class GeminiAIProvider(AIProvider):
+    """AI provider using Google Gemini models."""
+
+    def __init__(self, api_key: str, model: str = "gemini-2.0-flash") -> None:
+        self._api_key = api_key
+        self._model = model
+
+    def generate(
+        self,
+        prompt: str,
+        *,
+        max_tokens: int = 4096,
+        temperature: float = 0.3,
+    ) -> AIResponse:
+        """Generate text using Google Gemini API."""
+        try:
+            from google import genai
+
+            client = genai.Client(api_key=self._api_key)
+            response = client.models.generate_content(
+                model=self._model,
+                contents=prompt,
+                config={
+                    "max_output_tokens": max_tokens,
+                    "temperature": temperature,
+                    "system_instruction": (
+                        "You are a helpful assistant that processes transcripts."
+                    ),
+                },
+            )
+            text = response.text or ""
+            tokens = 0
+            if response.usage_metadata:
+                tokens = (
+                    (response.usage_metadata.prompt_token_count or 0)
+                    + (response.usage_metadata.candidates_token_count or 0)
+                )
+            return AIResponse(
+                text=text,
+                provider="gemini",
+                model=self._model,
+                tokens_used=tokens,
+            )
+        except ImportError:
+            return AIResponse(
+                text="",
+                provider="gemini",
+                model=self._model,
+                error="Google GenAI SDK not installed. Install with: pip install google-genai",
+            )
+        except Exception as exc:
+            logger.exception("Gemini generation failed")
+            return AIResponse(
+                text="",
+                provider="gemini",
+                model=self._model,
+                error=str(exc),
+            )
+
+    def validate_key(self, api_key: str) -> bool:
+        """Validate Gemini API key with a minimal generation call."""
+        try:
+            from google import genai
+
+            client = genai.Client(api_key=api_key)
+            client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents="hi",
+                config={"max_output_tokens": 5},
+            )
+            return True
+        except Exception:
+            return False
+
+
+# ---------------------------------------------------------------------------
+# GitHub Copilot provider (via Copilot SDK)
+# ---------------------------------------------------------------------------
+
+
+class CopilotAIProvider(AIProvider):
+    """AI provider using GitHub Copilot SDK for LLM access.
+
+    Requires the GitHub Copilot CLI to be installed and authenticated.
+    Uses the ``github-copilot-sdk`` Python package for communication.
+    """
+
+    def __init__(
+        self,
+        github_token: str = "",
+        model: str = "gpt-4o",
+        cli_path: str = "",
+    ) -> None:
+        self._github_token = github_token
+        self._model = model
+        self._cli_path = cli_path
+
+    def generate(
+        self,
+        prompt: str,
+        *,
+        max_tokens: int = 4096,
+        temperature: float = 0.3,
+    ) -> AIResponse:
+        """Generate text using GitHub Copilot SDK."""
+        try:
+            import asyncio
+
+            from github_copilot import CopilotClient
+
+            async def _run() -> AIResponse:
+                client_kwargs: dict[str, Any] = {"auto_start": True}
+                if self._github_token:
+                    client_kwargs["github_token"] = self._github_token
+                elif not self._github_token:
+                    client_kwargs["use_logged_in_user"] = True
+                if self._cli_path:
+                    client_kwargs["cli_path"] = self._cli_path
+
+                client = CopilotClient(**client_kwargs)
+                await client.start()
+                try:
+                    session = await client.create_session(
+                        model=self._model,
+                        system_message=(
+                            "You are a helpful assistant that processes transcripts."
+                        ),
+                    )
+                    result_text = ""
+                    response = await session.send(prompt)
+                    if hasattr(response, "text"):
+                        result_text = response.text or ""
+                    elif hasattr(response, "content"):
+                        result_text = response.content or ""
+                    else:
+                        result_text = str(response)
+                    await session.destroy()
+                    return AIResponse(
+                        text=result_text,
+                        provider="copilot",
+                        model=self._model,
+                    )
+                finally:
+                    await client.stop()
+
+            # Run the async function — create a new event loop if needed
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                # We're inside an existing event loop — use a thread
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    future = pool.submit(asyncio.run, _run())
+                    return future.result(timeout=120)
+            else:
+                return asyncio.run(_run())
+
+        except ImportError:
+            return AIResponse(
+                text="",
+                provider="copilot",
+                model=self._model,
+                error=(
+                    "GitHub Copilot SDK not installed. "
+                    "Install with: pip install github-copilot-sdk"
+                ),
+            )
+        except Exception as exc:
+            logger.exception("Copilot generation failed")
+            return AIResponse(
+                text="",
+                provider="copilot",
+                model=self._model,
+                error=str(exc),
+            )
+
+    def validate_key(self, api_key: str) -> bool:
+        """Validate Copilot connection by starting a test session."""
+        try:
+            import asyncio
+
+            from github_copilot import CopilotClient
+
+            async def _test() -> bool:
+                client_kwargs: dict[str, Any] = {"auto_start": True}
+                if api_key:
+                    client_kwargs["github_token"] = api_key
+                else:
+                    client_kwargs["use_logged_in_user"] = True
+                client = CopilotClient(**client_kwargs)
+                await client.start()
+                try:
+                    session = await client.create_session(model="gpt-4o")
+                    await session.destroy()
+                    return True
+                finally:
+                    await client.stop()
+
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    future = pool.submit(asyncio.run, _test())
+                    return future.result(timeout=30)
+            else:
+                return asyncio.run(_test())
+        except Exception:
+            return False
+
+
+# ---------------------------------------------------------------------------
 # AI Service — main entry point
 # ---------------------------------------------------------------------------
 
@@ -406,6 +632,19 @@ class AIService:
                 return None
             return AzureOpenAIProvider(api_key, endpoint, deployment)
 
+        elif provider_id == "gemini":
+            api_key = self._key_store.get_key("gemini")
+            if not api_key:
+                return None
+            return GeminiAIProvider(api_key, self._settings.gemini_model)
+
+        elif provider_id == "copilot":
+            token = self._key_store.get_key("copilot_github_token") or ""
+            return CopilotAIProvider(
+                github_token=token,
+                model=self._settings.copilot_model,
+            )
+
         return None
 
     def is_configured(self) -> bool:
@@ -429,6 +668,20 @@ class AIService:
             available.append({"id": "anthropic", "name": "Anthropic (Claude)"})
         if self._key_store.has_key("azure_openai"):
             available.append({"id": "azure_openai", "name": "Azure OpenAI (Copilot)"})
+        if self._key_store.has_key("gemini"):
+            available.append({"id": "gemini", "name": "Google Gemini"})
+        # Copilot is available if token is set or CLI is authenticated
+        if self._key_store.has_key("copilot_github_token"):
+            available.append({"id": "copilot", "name": "GitHub Copilot"})
+        else:
+            # Check if Copilot CLI is installed and might be logged in
+            try:
+                import shutil
+
+                if shutil.which("copilot"):
+                    available.append({"id": "copilot", "name": "GitHub Copilot"})
+            except Exception:
+                pass
         return available
 
     def translate(

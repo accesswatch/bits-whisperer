@@ -77,6 +77,37 @@ _AI_PROVIDERS = [
         ],
         "models": [],
     },
+    {
+        "id": "gemini",
+        "name": "Google Gemini",
+        "description": (
+            "Google's Gemini AI models for high-quality translation and "
+            "summarization. Requires a Google AI Studio API key."
+        ),
+        "key_id": "gemini",
+        "fields": [
+            {"id": "api_key", "label": "API Key", "key_name": "gemini", "password": True},
+        ],
+        "models": ["gemini-2.0-flash", "gemini-2.5-pro", "gemini-2.5-flash"],
+    },
+    {
+        "id": "copilot",
+        "name": "GitHub Copilot",
+        "description": (
+            "GitHub Copilot-powered AI via the Copilot CLI. Requires a GitHub "
+            "account with Copilot access. Use AI > Copilot Setup for installation."
+        ),
+        "key_id": "copilot",
+        "fields": [
+            {
+                "id": "api_key",
+                "label": "GitHub Token (PAT)",
+                "key_name": "copilot_github_token",
+                "password": True,
+            },
+        ],
+        "models": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "claude-sonnet-4", "claude-haiku-4"],
+    },
 ]
 
 
@@ -379,6 +410,10 @@ class AISettingsDialog(wx.Dialog):
                     model_name = ai.openai_model
                 elif provider["id"] == "anthropic":
                     model_name = ai.anthropic_model
+                elif provider["id"] == "gemini":
+                    model_name = ai.gemini_model
+                elif provider["id"] == "copilot":
+                    model_name = ai.copilot_model
                 else:
                     continue
                 idx = model_ctrl.FindString(model_name)
@@ -430,6 +465,10 @@ class AISettingsDialog(wx.Dialog):
                         ai.openai_model = model_name
                     elif provider["id"] == "anthropic":
                         ai.anthropic_model = model_name
+                    elif provider["id"] == "gemini":
+                        ai.gemini_model = model_name
+                    elif provider["id"] == "copilot":
+                        ai.copilot_model = model_name
 
         # Translation
         lang_idx = self._lang_choice.GetSelection()
@@ -496,6 +535,16 @@ class AISettingsDialog(wx.Dialog):
                     if endpoint and deployment:
                         provider = AzureOpenAIProvider(api_key, endpoint, deployment)
                         valid = provider.validate_key(api_key)
+                elif provider_id == "gemini":
+                    from bits_whisperer.core.ai_service import GeminiAIProvider
+
+                    provider = GeminiAIProvider(api_key)
+                    valid = provider.validate_key(api_key)
+                elif provider_id == "copilot":
+                    from bits_whisperer.core.ai_service import CopilotAIProvider
+
+                    provider = CopilotAIProvider(api_key)
+                    valid = provider.validate_key(api_key)
             except Exception as exc:
                 logger.warning("API key validation failed: %s", exc)
 

@@ -104,7 +104,7 @@ BITS Whisperer is built from the ground up to be usable by everyone:
 
 ### Modern Desktop Experience
 
-- **First-run setup wizard** — Guided 7-page wizard that scans your hardware, lets you choose Basic or Advanced experience mode, recommends models, offers downloads, and configures everything in one magical experience
+- **First-run setup wizard** — Guided 8-page wizard that scans your hardware, lets you choose Basic or Advanced experience mode, recommends models, offers downloads, configures AI and Copilot, and sets everything up in one magical experience
 - **Basic & Advanced modes** — Start with a clean, simple interface (Basic) or unlock full control with all settings tabs, audio processing, and every provider (Advanced). Choose during setup or toggle anytime from the View menu (Ctrl+Shift+A)
 - **Automatic dependency setup** — Detects missing ffmpeg at startup and offers one-click install via winget (Windows), with manual instructions fallback
 - **On-demand SDK installer** — Provider SDKs are not bundled in the installer, keeping it small (~40 MB). When you first use a provider, the required SDK is downloaded and installed automatically — no system Python or pip needed
@@ -202,9 +202,9 @@ Transcribe speech from your microphone in real time:
 
 Leverage AI to work with your transcripts:
 
-- **Translate** — Press Ctrl+T or go to AI, then Translate to convert your transcript into 15+ languages using OpenAI GPT-4o, Anthropic Claude, or Azure OpenAI
+- **Translate** — Press Ctrl+T or go to AI, then Translate to convert your transcript into 15+ languages using OpenAI GPT-4o, Anthropic Claude, Azure OpenAI, or Google Gemini
 - **Summarize** — Press Ctrl+Shift+S or go to AI, then Summarize to generate concise, detailed, or bullet-point summaries
-- Configure AI providers in **Tools, then AI Provider Settings** — add API keys for OpenAI, Anthropic, or Azure OpenAI, choose models, and adjust temperature and token limits
+- Configure AI providers in **Tools, then AI Provider Settings** — add API keys for OpenAI, Anthropic, Azure OpenAI, Google Gemini, or connect GitHub Copilot
 - Translate and Summarize buttons are also available directly in the transcript panel toolbar
 
 ### Plugin System
@@ -216,6 +216,40 @@ Extend BITS Whisperer with custom transcription providers:
 - Each plugin implements a `register(manager)` function to add new providers
 - Enable or disable individual plugins from **Tools, then Plugins**
 - Plugin metadata (name, version, author, description) is displayed in the management dialog
+
+---
+
+## New in v1.2: Gemini AI & GitHub Copilot SDK
+
+### Google Gemini AI Provider
+
+Google Gemini is now available as an AI provider for translation and summarization:
+
+- **Fast and affordable** — Gemini 2.0 Flash delivers excellent quality at a fraction of the cost of other providers
+- **Configure** in **Tools, then AI Provider Settings** — add your Gemini API key and choose from Gemini 2.0 Flash, 1.5 Flash, or 1.5 Pro models
+- Supports translation to 15+ languages and all summarization styles (concise, detailed, bullet points)
+
+### GitHub Copilot SDK Integration
+
+Chat with your transcripts using GitHub Copilot, right inside BITS Whisperer:
+
+- **Interactive AI Chat Panel** — Press **Ctrl+Shift+C** or go to **AI, then Copilot Chat** to open the chat panel alongside your transcript. Ask questions about the content, request analysis, get key points, or explore topics in a streaming conversation.
+- **Quick Actions** — One-click buttons for common tasks: summarize, extract key points, identify speakers, list action items, and more.
+- **Copilot Setup Wizard** — Go to **Tools, then Copilot Setup** to walk through a 4-step guided setup: install the GitHub Copilot CLI, install the SDK, authenticate with your GitHub account, and run a connection test.
+- **Agent Builder** — Go to **AI, then Agent Builder** to configure a custom AI assistant with 4 guided tabs:
+  - **Identity** — Name your agent and set its persona
+  - **Instructions** — Write custom system prompts or use built-in presets (Transcript Analyst, Meeting Notes, Research Assistant)
+  - **Tools** — Enable transcript-aware tools so the agent can access and analyze your transcripts
+  - **Welcome** — Set the greeting message users see when opening the chat panel
+- **Streaming responses** — Copilot replies stream in real-time for natural conversation flow
+- **Session management** — Conversation history is maintained per session, with the ability to start fresh at any time
+- **5 AI providers** — OpenAI, Anthropic Claude, Azure OpenAI, Google Gemini, and GitHub Copilot are all available for translation and summarization
+
+### Additional v1.2 Improvements
+
+- **8-page Setup Wizard** — A new AI & Copilot configuration page guides you through provider setup during first launch
+- **Windows installer** — Optionally install the GitHub Copilot CLI via WinGet during application setup
+- **191 tests** — Comprehensive test coverage for all new features
 
 ---
 
@@ -232,4 +266,4 @@ Extend BITS Whisperer with custom transcription providers:
 
 *Free. Open source. Accessible. Private.*
 
-Developed by **Blind Information Technology Solutions (BITS)**.
+*BITS Whisperer v1.2.0 — Developed by **Blind Information Technology Solutions (BITS)**.*

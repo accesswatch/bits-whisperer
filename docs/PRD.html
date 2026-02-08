@@ -135,6 +135,8 @@
 <li><a href="#cloud-provider-onboarding">Cloud Provider Onboarding</a></li>
 <li><a href="#auphonic-integration">Auphonic Integration</a></li>
 <li><a href="#provider-specific-settings">Provider-Specific Settings</a></li>
+<li><a href="#ai-services-translation-summarization-chat">AI Services (Translation, Summarization &amp; Chat)</a></li>
+<li><a href="#github-copilot-sdk-integration">GitHub Copilot SDK Integration</a></li>
 <li><a href="#speaker-diarization">Speaker Diarization</a></li>
 </ul>
 </li>
@@ -155,7 +157,7 @@
 <li><a href="#10-user-interface">10. User Interface</a><ul>
 <li><a href="#layout">Layout</a></li>
 <li><a href="#menu-structure">Menu Structure</a></li>
-<li><a href="#settings-dialog-7-tabs">Settings Dialog (7 tabs)</a></li>
+<li><a href="#settings-dialog-8-tabs">Settings Dialog (8 tabs)</a></li>
 <li><a href="#simple-vs-advanced-mode">Simple vs Advanced Mode</a></li>
 <li><a href="#recent-files">Recent Files</a></li>
 </ul>
@@ -187,7 +189,7 @@
 </nav>
 <h1 id="bits-whisperer-product-requirements-document">BITS Whisperer — Product Requirements Document</h1>
 <blockquote>
-<p><strong>Version:</strong> 1.0 - <strong>Updated:</strong> 2026-02-08 - <strong>Status:</strong> Implementation Complete</p>
+<p><strong>Version:</strong> 1.2 - <strong>Updated:</strong> 2026-02-08 - <strong>Status:</strong> Implementation Complete</p>
 <p>Developed by <strong>Blind Information Technology Solutions (BITS)</strong></p>
 </blockquote>
 <hr>
@@ -993,6 +995,194 @@ and applied automatically via the <code>configure()</code> method before each tr
 </tr>
 </tbody>
 </table>
+<h3 id="ai-services-translation-summarization-chat">AI Services (Translation, Summarization &amp; Chat)</h3>
+<p>The <code>AIService</code> class (in <code>core/ai_service.py</code>) provides translation and
+summarization of transcripts via <strong>5 pluggable AI providers</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Provider</th>
+<th>Module/Class</th>
+<th>Models</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>OpenAI</td>
+<td><code>OpenAIAIProvider</code></td>
+<td>gpt-4o, gpt-4o-mini</td>
+<td>Fastest, most reliable</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Anthropic</td>
+<td><code>AnthropicAIProvider</code></td>
+<td>Claude Sonnet 4, Claude Haiku</td>
+<td>Strong for long transcripts</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Azure OpenAI</td>
+<td><code>AzureOpenAIProvider</code></td>
+<td>Configurable deployment</td>
+<td>Enterprise-grade, GDPR compliant</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Google Gemini</td>
+<td><code>GeminiAIProvider</code></td>
+<td>Gemini 2.0 Flash, 1.5 Flash/Pro</td>
+<td>Fast, affordable</td>
+</tr>
+<tr>
+<td>5</td>
+<td>GitHub Copilot</td>
+<td><code>CopilotAIProvider</code></td>
+<td>gpt-4o (via Copilot SDK)</td>
+<td>Interactive chat &amp; tool-augmented</td>
+</tr>
+</tbody>
+</table>
+<p>AI features are accessed via the <strong>AI</strong> menu:</p>
+<ul>
+<li><strong>Translate</strong> (Ctrl+T): Translates the transcript to the configured target language</li>
+<li><strong>Summarize</strong> (Ctrl+Shift+S): Generates concise, detailed, or bullet-point summaries</li>
+<li><strong>Copilot Chat</strong> (Ctrl+Shift+C): Opens the interactive chat panel for Q&amp;A</li>
+<li><strong>Agent Builder</strong>: Configures a custom AI agent persona</li>
+</ul>
+<p>AI provider settings (<code>AISettings</code> dataclass) include:
+- <code>provider</code> (openai/anthropic/azure_openai/gemini/copilot)
+- <code>openai_model</code>, <code>anthropic_model</code>, <code>gemini_model</code>, <code>copilot_model</code>
+- <code>temperature</code>, <code>max_tokens</code>
+- <code>translation_language</code>, <code>summarization_style</code></p>
+<h3 id="github-copilot-sdk-integration">GitHub Copilot SDK Integration</h3>
+<p>The <code>CopilotService</code> class (in <code>core/copilot_service.py</code>) integrates the
+GitHub Copilot SDK for interactive AI-powered transcript analysis:</p>
+<h4 id="copilotservice">CopilotService</h4>
+<ul>
+<li><strong>Async SDK client</strong> with process management for the Copilot CLI</li>
+<li><strong>Session management</strong> — conversation history maintained per session</li>
+<li><strong>Streaming responses</strong> — real-time token-by-token response delivery</li>
+<li><strong>Custom tools</strong> — transcript-aware tools that let the agent access and
+  analyze the current transcript</li>
+<li><strong>Agent configuration</strong> — name, instructions, persona, and welcome message</li>
+<li><strong>CLI detection</strong> — auto-detects <code>github-copilot-cli</code> on PATH or manual path</li>
+</ul>
+<h4 id="interactive-ai-chat-panel-uicopilot_chat_panelpy">Interactive AI Chat Panel (<code>ui/copilot_chat_panel.py</code>)</h4>
+<ul>
+<li><strong>Toggle</strong>: Ctrl+Shift+C or AI, then Copilot Chat</li>
+<li><strong>Streaming display</strong> — responses appear token-by-token</li>
+<li><strong>Quick actions</strong> — one-click buttons for common tasks (summarize, key points,
+  speakers, action items)</li>
+<li><strong>Transcript context</strong> — automatically provides the current transcript to the agent</li>
+<li><strong>New conversation</strong> — clear history and start fresh</li>
+</ul>
+<h4 id="copilot-setup-wizard-uicopilot_setup_dialogpy">Copilot Setup Wizard (<code>ui/copilot_setup_dialog.py</code>)</h4>
+<p>Four-step guided setup dialog:</p>
+<ol>
+<li><strong>CLI Install</strong> — Checks for GitHub Copilot CLI; offers WinGet install on Windows</li>
+<li><strong>SDK Install</strong> — Installs the Copilot SDK Python package</li>
+<li><strong>Authentication</strong> — Authenticates with GitHub via CLI device flow</li>
+<li><strong>Test</strong> — Runs a connection test to verify everything works</li>
+</ol>
+<h4 id="agent-builder-uiagent_builder_dialogpy">Agent Builder (<code>ui/agent_builder_dialog.py</code>)</h4>
+<p>Four-tab guided dialog for configuring a custom AI agent:</p>
+<table>
+<thead>
+<tr>
+<th>Tab</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Identity</strong></td>
+<td>Agent name, persona description</td>
+</tr>
+<tr>
+<td><strong>Instructions</strong></td>
+<td>System prompt with built-in presets (Transcript Analyst, Meeting Notes, Research Assistant)</td>
+</tr>
+<tr>
+<td><strong>Tools</strong></td>
+<td>Enable/disable transcript-aware tools</td>
+</tr>
+<tr>
+<td><strong>Welcome</strong></td>
+<td>Set the greeting message for the chat panel</td>
+</tr>
+</tbody>
+</table>
+<h4 id="copilotsettings-dataclass-11-fields">CopilotSettings Dataclass (11 fields)</h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>bool</td>
+<td>False</td>
+</tr>
+<tr>
+<td><code>cli_path</code></td>
+<td>str</td>
+<td>"" (auto-detect)</td>
+</tr>
+<tr>
+<td><code>use_logged_in_user</code></td>
+<td>bool</td>
+<td>True</td>
+</tr>
+<tr>
+<td><code>default_model</code></td>
+<td>str</td>
+<td>"gpt-4o"</td>
+</tr>
+<tr>
+<td><code>streaming</code></td>
+<td>bool</td>
+<td>True</td>
+</tr>
+<tr>
+<td><code>system_message</code></td>
+<td>str</td>
+<td>Transcript assistant msg</td>
+</tr>
+<tr>
+<td><code>agent_name</code></td>
+<td>str</td>
+<td>"BITS Transcript Assistant"</td>
+</tr>
+<tr>
+<td><code>agent_instructions</code></td>
+<td>str</td>
+<td>""</td>
+</tr>
+<tr>
+<td><code>auto_start_cli</code></td>
+<td>bool</td>
+<td>True</td>
+</tr>
+<tr>
+<td><code>allow_transcript_tools</code></td>
+<td>bool</td>
+<td>True</td>
+</tr>
+<tr>
+<td><code>chat_panel_visible</code></td>
+<td>bool</td>
+<td>False</td>
+</tr>
+</tbody>
+</table>
 <h3 id="speaker-diarization">Speaker Diarization</h3>
 <p>Speaker diarization (identifying who spoke when) is supported through two mechanisms:</p>
 <h4 id="cloud-provider-diarization">Cloud Provider Diarization</h4>
@@ -1332,14 +1522,21 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 - Settings… (Ctrl+,)
 - Manage Models… (Ctrl+M)
 - Add Provider…
+- Copilot Setup…
 - Hardware Info…
 - View Log…</p>
+<p><strong>AI</strong>
+- Translate (Ctrl+T)
+- Summarize (Ctrl+Shift+S)
+- Copilot Chat (Ctrl+Shift+C)
+- Agent Builder…
+- AI Provider Settings…</p>
 <p><strong>Help</strong>
 - Setup Wizard…
 - Check for Updates…
 - Learn more about BITS
 - About… (F1)</p>
-<h3 id="settings-dialog-7-tabs">Settings Dialog (7 tabs)</h3>
+<h3 id="settings-dialog-8-tabs">Settings Dialog (8 tabs)</h3>
 <table>
 <thead>
 <tr>
@@ -1375,6 +1572,11 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <td>Output dir, models dir, temp dir, log file</td>
 </tr>
 <tr>
+<td><strong>AI Providers</strong></td>
+<td>Always</td>
+<td>AI provider selection (5 providers), model selection, temperature, max tokens, translation language, summarization style</td>
+</tr>
+<tr>
 <td><strong>Audio Processing</strong></td>
 <td>Advanced Mode</td>
 <td>All 7 preprocessing filter toggles &amp; parameters</td>
@@ -1388,12 +1590,12 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 </table>
 <h3 id="simple-vs-advanced-mode">Simple vs Advanced Mode</h3>
 <ul>
-<li><strong>Basic Mode</strong> (default): Shows General, Transcription, Output, Providers &amp; Keys, and Paths &amp; Storage tabs.
+<li><strong>Basic Mode</strong> (default): Shows General, Transcription, Output, Providers &amp; Keys, Paths &amp; Storage, and AI Providers tabs.
   Audio Processing and Advanced tabs are hidden. Only local providers and
   <strong>activated</strong> cloud providers appear in the provider dropdown. Cloud providers
   must be activated via the Add Provider wizard before they become available.
   Sensible defaults are applied automatically.</li>
-<li><strong>Advanced Mode</strong> (Ctrl+Shift+A): Reveals all 7 settings tabs. All cloud
+<li><strong>Advanced Mode</strong> (Ctrl+Shift+A): Reveals all 8 settings tabs. All cloud
   providers appear in the provider dropdown regardless of activation status.
   Full control over audio preprocessing, GPU settings, concurrency, and
   chunking parameters.</li>
@@ -1439,9 +1641,10 @@ file with the same name exists, a numeric suffix is appended (e.g.,
     transcoder.py             # ffmpeg WAV normalisation
     updater.py                # GitHub Releases self-update
     job.py                    # Job / TranscriptionResult data models
-    ai_service.py             # AI translation &amp; summarization (OpenAI/Anthropic/Azure)
+    ai_service.py             # AI translation &amp; summarization (OpenAI/Anthropic/Azure/Gemini/Copilot)
     live_transcription.py     # Real-time microphone transcription
     plugin_manager.py         # Plugin discovery, loading &amp; lifecycle
+    copilot_service.py        # GitHub Copilot SDK integration &amp; agent management
   providers/                    # 17 provider adapters (strategy pattern)
     base.py                   # TranscriptionProvider ABC + ProviderCapabilities
     local_whisper.py          # faster-whisper (local, free)
@@ -1476,10 +1679,13 @@ file with the same name exists, a numeric suffix is appended (e.g.,
     progress_dialog.py        # Batch progress display
     model_manager_dialog.py   # Model download &amp; management
     add_provider_dialog.py    # Cloud provider onboarding wizard
-    setup_wizard.py           # First-run setup wizard (7 pages)
+    setup_wizard.py           # First-run setup wizard (8 pages)
     tray_icon.py              # System tray (TaskBarIcon)
     live_transcription_dialog.py  # Live microphone transcription dialog
-    ai_settings_dialog.py     # AI provider configuration dialog
+    ai_settings_dialog.py     # AI provider configuration dialog (5 providers)
+    copilot_setup_dialog.py   # Copilot CLI installation &amp; auth wizard
+    copilot_chat_panel.py     # Interactive AI transcript chat panel
+    agent_builder_dialog.py   # Guided AI agent configuration builder
   utils/
     accessibility.py          # a11y helpers (announce, set_name, safe_call_after)
     constants.py              # App constants, model registry, path definitions
@@ -1545,7 +1751,7 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <tr>
 <td>API keys</td>
 <td>keyring (Credential Mgr)</td>
-<td>Provider API keys (15 entries)</td>
+<td>Provider API keys (20 entries)</td>
 </tr>
 <tr>
 <td>Recent files</td>
@@ -1584,8 +1790,8 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <li><strong>Key validation</strong>: Dry-run API call on save to verify keys are working.</li>
 <li><strong>No telemetry</strong>: The app sends no usage data. Update checks are opt-in
   REST calls to the GitHub Releases API.</li>
-<li><strong>Offline-capable</strong>: 3 local providers (Local Whisper, Windows SAPI5/WinRT,
-  Azure Embedded Speech) work without any internet connection.</li>
+<li><strong>Offline-capable</strong>: 5 local providers (Local Whisper, Windows SAPI5/WinRT,
+  Azure Embedded Speech, Vosk, Parakeet) work without any internet connection.</li>
 </ul>
 <hr>
 <h2 id="15-accessibility-requirements-non-negotiable">15. Accessibility Requirements (Non-Negotiable)</h2>
@@ -1721,6 +1927,11 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <tr>
 <td>Toggle Advanced Mode</td>
 <td>Ctrl+Shift+A</td>
+<td>Global</td>
+</tr>
+<tr>
+<td>Copilot Chat</td>
+<td>Ctrl+Shift+C</td>
 <td>Global</td>
 </tr>
 <tr>
@@ -1915,7 +2126,7 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <li>[x] Basic/Advanced mode toggle with persistent experience_mode setting</li>
 <li>[x] View Log (opens app.log)</li>
 <li>[x] Full accessibility (names, labels, keyboard, screen reader)</li>
-<li>[x] First-run setup wizard (7-page guided experience with mode selection)</li>
+<li>[x] First-run setup wizard (8-page guided experience with mode selection and AI/Copilot setup)</li>
 <li>[x] Cross-platform support (Windows 10+ and macOS 12+)</li>
 <li>[x] Disk space pre-checks before model downloads</li>
 <li>[x] Comprehensive user guide (docs/USER_GUIDE.md)</li>
@@ -1931,6 +2142,15 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <li>[x] Learn more about BITS link in Help menu</li>
 <li>[x] Add Provider menu item in Tools menu</li>
 <li>[x] Provider activation tracking (activated_providers in settings)</li>
+<li>[x] AI translation &amp; summarization (5 providers: OpenAI, Anthropic, Azure OpenAI, Gemini, Copilot)</li>
+<li>[x] Google Gemini AI provider (translation, summarization)</li>
+<li>[x] GitHub Copilot SDK integration (CopilotService, async client, streaming, custom tools)</li>
+<li>[x] Interactive AI Chat Panel (Ctrl+Shift+C, streaming, quick actions, transcript context)</li>
+<li>[x] Copilot Setup Wizard (4-step: CLI install, SDK install, auth, test)</li>
+<li>[x] Agent Builder dialog (4-tab: Identity, Instructions with presets, Tools, Welcome Message)</li>
+<li>[x] CopilotSettings dataclass (11 fields) in AppSettings</li>
+<li>[x] Installer Copilot CLI install task (WinGet optional)</li>
+<li>[x] 191 tests with full coverage for Gemini and Copilot features</li>
 </ul>
 <hr>
 <h2 id="20-success-metrics">20. Success Metrics</h2>
@@ -2049,6 +2269,22 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <tr>
 <td>speaker_map on TranscriptionResult</td>
 <td>Separates internal IDs from display names; lossless rename</td>
+</tr>
+<tr>
+<td>Google Gemini for AI</td>
+<td>Fast, affordable translation/summarization; multimodal capable</td>
+</tr>
+<tr>
+<td>GitHub Copilot SDK over raw API</td>
+<td>CLI-based auth, streaming, tool calling, session management built-in</td>
+</tr>
+<tr>
+<td>Agent Builder as separate dialog</td>
+<td>Complex config deserves dedicated UI; presets simplify setup</td>
+</tr>
+<tr>
+<td>CopilotSettings as nested dataclass</td>
+<td>Clean separation from AI settings; many Copilot-specific fields</td>
 </tr>
 </tbody>
 </table>

@@ -30,6 +30,8 @@ _KEY_NAMES: dict[str, str] = {
     "azure_openai": "Azure OpenAI API Key",
     "azure_openai_endpoint": "Azure OpenAI Endpoint URL",
     "azure_openai_deployment": "Azure OpenAI Deployment Name",
+    # GitHub Copilot
+    "copilot_github_token": "GitHub Copilot Token (PAT)",
 }
 
 

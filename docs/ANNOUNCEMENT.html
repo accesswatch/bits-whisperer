@@ -152,6 +152,12 @@
 <li><a href="#plugin-system">Plugin System</a></li>
 </ul>
 </li>
+<li><a href="#new-in-v12-gemini-ai-github-copilot-sdk">New in v1.2: Gemini AI &amp; GitHub Copilot SDK</a><ul>
+<li><a href="#google-gemini-ai-provider">Google Gemini AI Provider</a></li>
+<li><a href="#github-copilot-sdk-integration">GitHub Copilot SDK Integration</a></li>
+<li><a href="#additional-v12-improvements">Additional v1.2 Improvements</a></li>
+</ul>
+</li>
 <li><a href="#whats-next">What's Next</a></li>
 </ul>
 </li>
@@ -249,7 +255,7 @@
 </ul>
 <h3 id="modern-desktop-experience">Modern Desktop Experience</h3>
 <ul>
-<li><strong>First-run setup wizard</strong> — Guided 7-page wizard that scans your hardware, lets you choose Basic or Advanced experience mode, recommends models, offers downloads, and configures everything in one magical experience</li>
+<li><strong>First-run setup wizard</strong> — Guided 8-page wizard that scans your hardware, lets you choose Basic or Advanced experience mode, recommends models, offers downloads, configures AI and Copilot, and sets everything up in one magical experience</li>
 <li><strong>Basic &amp; Advanced modes</strong> — Start with a clean, simple interface (Basic) or unlock full control with all settings tabs, audio processing, and every provider (Advanced). Choose during setup or toggle anytime from the View menu (Ctrl+Shift+A)</li>
 <li><strong>Automatic dependency setup</strong> — Detects missing ffmpeg at startup and offers one-click install via winget (Windows), with manual instructions fallback</li>
 <li><strong>On-demand SDK installer</strong> — Provider SDKs are not bundled in the installer, keeping it small (~40 MB). When you first use a provider, the required SDK is downloaded and installed automatically — no system Python or pip needed</li>
@@ -360,9 +366,9 @@ iscc<span class="w"> </span>installer.iss
 <h3 id="ai-translation-summarization">AI Translation &amp; Summarization</h3>
 <p>Leverage AI to work with your transcripts:</p>
 <ul>
-<li><strong>Translate</strong> — Press Ctrl+T or go to AI, then Translate to convert your transcript into 15+ languages using OpenAI GPT-4o, Anthropic Claude, or Azure OpenAI</li>
+<li><strong>Translate</strong> — Press Ctrl+T or go to AI, then Translate to convert your transcript into 15+ languages using OpenAI GPT-4o, Anthropic Claude, Azure OpenAI, or Google Gemini</li>
 <li><strong>Summarize</strong> — Press Ctrl+Shift+S or go to AI, then Summarize to generate concise, detailed, or bullet-point summaries</li>
-<li>Configure AI providers in <strong>Tools, then AI Provider Settings</strong> — add API keys for OpenAI, Anthropic, or Azure OpenAI, choose models, and adjust temperature and token limits</li>
+<li>Configure AI providers in <strong>Tools, then AI Provider Settings</strong> — add API keys for OpenAI, Anthropic, Azure OpenAI, Google Gemini, or connect GitHub Copilot</li>
 <li>Translate and Summarize buttons are also available directly in the transcript panel toolbar</li>
 </ul>
 <h3 id="plugin-system">Plugin System</h3>
@@ -375,6 +381,36 @@ iscc<span class="w"> </span>installer.iss
 <li>Plugin metadata (name, version, author, description) is displayed in the management dialog</li>
 </ul>
 <hr>
+<h2 id="new-in-v12-gemini-ai-github-copilot-sdk">New in v1.2: Gemini AI &amp; GitHub Copilot SDK</h2>
+<h3 id="google-gemini-ai-provider">Google Gemini AI Provider</h3>
+<p>Google Gemini is now available as an AI provider for translation and summarization:</p>
+<ul>
+<li><strong>Fast and affordable</strong> — Gemini 2.0 Flash delivers excellent quality at a fraction of the cost of other providers</li>
+<li><strong>Configure</strong> in <strong>Tools, then AI Provider Settings</strong> — add your Gemini API key and choose from Gemini 2.0 Flash, 1.5 Flash, or 1.5 Pro models</li>
+<li>Supports translation to 15+ languages and all summarization styles (concise, detailed, bullet points)</li>
+</ul>
+<h3 id="github-copilot-sdk-integration">GitHub Copilot SDK Integration</h3>
+<p>Chat with your transcripts using GitHub Copilot, right inside BITS Whisperer:</p>
+<ul>
+<li><strong>Interactive AI Chat Panel</strong> — Press <strong>Ctrl+Shift+C</strong> or go to <strong>AI, then Copilot Chat</strong> to open the chat panel alongside your transcript. Ask questions about the content, request analysis, get key points, or explore topics in a streaming conversation.</li>
+<li><strong>Quick Actions</strong> — One-click buttons for common tasks: summarize, extract key points, identify speakers, list action items, and more.</li>
+<li><strong>Copilot Setup Wizard</strong> — Go to <strong>Tools, then Copilot Setup</strong> to walk through a 4-step guided setup: install the GitHub Copilot CLI, install the SDK, authenticate with your GitHub account, and run a connection test.</li>
+<li><strong>Agent Builder</strong> — Go to <strong>AI, then Agent Builder</strong> to configure a custom AI assistant with 4 guided tabs:</li>
+<li><strong>Identity</strong> — Name your agent and set its persona</li>
+<li><strong>Instructions</strong> — Write custom system prompts or use built-in presets (Transcript Analyst, Meeting Notes, Research Assistant)</li>
+<li><strong>Tools</strong> — Enable transcript-aware tools so the agent can access and analyze your transcripts</li>
+<li><strong>Welcome</strong> — Set the greeting message users see when opening the chat panel</li>
+<li><strong>Streaming responses</strong> — Copilot replies stream in real-time for natural conversation flow</li>
+<li><strong>Session management</strong> — Conversation history is maintained per session, with the ability to start fresh at any time</li>
+<li><strong>5 AI providers</strong> — OpenAI, Anthropic Claude, Azure OpenAI, Google Gemini, and GitHub Copilot are all available for translation and summarization</li>
+</ul>
+<h3 id="additional-v12-improvements">Additional v1.2 Improvements</h3>
+<ul>
+<li><strong>8-page Setup Wizard</strong> — A new AI &amp; Copilot configuration page guides you through provider setup during first launch</li>
+<li><strong>Windows installer</strong> — Optionally install the GitHub Copilot CLI via WinGet during application setup</li>
+<li><strong>191 tests</strong> — Comprehensive test coverage for all new features</li>
+</ul>
+<hr>
 <h2 id="whats-next">What's Next</h2>
 <ul>
 <li>Real-time streaming from cloud providers</li>
@@ -385,7 +421,7 @@ iscc<span class="w"> </span>installer.iss
 <hr>
 <p><strong>BITS Whisperer</strong> — because your words matter.</p>
 <p><em>Free. Open source. Accessible. Private.</em></p>
-<p>Developed by <strong>Blind Information Technology Solutions (BITS)</strong>.</p>
+<p><em>BITS Whisperer v1.2.0 — Developed by </em><em>Blind Information Technology Solutions (BITS)</em><em>.</em></p>
 <div class="footer">
   Generated from <code>ANNOUNCEMENT.md</code> &mdash; BITS Whisperer Documentation
 </div>

@@ -54,6 +54,9 @@ ID_AI_SETTINGS = wx.NewIdRef()
 ID_TRANSLATE = wx.NewIdRef()
 ID_SUMMARIZE = wx.NewIdRef()
 ID_PLUGINS = wx.NewIdRef()
+ID_COPILOT_SETUP = wx.NewIdRef()
+ID_COPILOT_CHAT = wx.NewIdRef()
+ID_AGENT_BUILDER = wx.NewIdRef()
 
 # Maximum recent-file entries
 _MAX_RECENT = 10
@@ -117,6 +120,9 @@ class MainFrame(wx.Frame):
             self.app_settings.plugins, self.provider_manager
         )
         self.plugin_manager.load_all()
+
+        # ---- Copilot service (lazy start) ----
+        self._copilot_service = None
 
         # ---- State flags (synced from settings) ----
         self._advanced_mode = self.app_settings.general.experience_mode == "advanced"
@@ -233,6 +239,22 @@ class MainFrame(wx.Frame):
             "&Summarize Transcript…\tCtrl+Shift+S",
             "Summarize the current transcript using AI",
         )
+        ai_menu.AppendSeparator()
+        self._copilot_chat_item = ai_menu.AppendCheckItem(
+            ID_COPILOT_CHAT,
+            "&Chat with Transcript…\tCtrl+Shift+C",
+            "Toggle the AI chat panel for interactive transcript analysis",
+        )
+        ai_menu.Append(
+            ID_COPILOT_SETUP,
+            "Copilot &Setup…",
+            "Set up GitHub Copilot CLI and authentication",
+        )
+        ai_menu.Append(
+            ID_AGENT_BUILDER,
+            "&Agent Builder…",
+            "Design a custom AI agent for transcript analysis",
+        )
 
         # -- View --
         view_menu = wx.Menu()
@@ -315,6 +337,9 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_translate, id=ID_TRANSLATE)
         self.Bind(wx.EVT_MENU, self._on_summarize, id=ID_SUMMARIZE)
         self.Bind(wx.EVT_MENU, self._on_plugins, id=ID_PLUGINS)
+        self.Bind(wx.EVT_MENU, self._on_copilot_setup, id=ID_COPILOT_SETUP)
+        self.Bind(wx.EVT_MENU, self._on_copilot_chat, id=ID_COPILOT_CHAT)
+        self.Bind(wx.EVT_MENU, self._on_agent_builder, id=ID_AGENT_BUILDER)
 
     def _build_accelerators(self) -> None:
         accel = wx.AcceleratorTable(
@@ -332,6 +357,7 @@ class MainFrame(wx.Frame):
                 wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("L"), ID_LIVE_TRANSCRIPTION),
                 wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("T"), ID_TRANSLATE),
                 wx.AcceleratorEntry(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("S"), ID_SUMMARIZE),
+                wx.AcceleratorEntry(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("C"), ID_COPILOT_CHAT),
             ]
         )
         self.SetAcceleratorTable(accel)
@@ -365,10 +391,20 @@ class MainFrame(wx.Frame):
     # =================================================================== #
 
     def _build_panels(self) -> None:
+        from bits_whisperer.ui.copilot_chat_panel import CopilotChatPanel
         from bits_whisperer.ui.queue_panel import QueuePanel
         from bits_whisperer.ui.transcript_panel import TranscriptPanel
 
-        self._splitter = wx.SplitterWindow(self, style=wx.SP_LIVE_UPDATE | wx.SP_3DSASH)
+        # Outer vertical splitter — top workspace / bottom chat panel
+        self._outer_splitter = wx.SplitterWindow(
+            self, style=wx.SP_LIVE_UPDATE | wx.SP_3DSASH
+        )
+        set_accessible_name(self._outer_splitter, "Main layout")
+
+        # Inner horizontal splitter — queue (left) / transcript (right)
+        self._splitter = wx.SplitterWindow(
+            self._outer_splitter, style=wx.SP_LIVE_UPDATE | wx.SP_3DSASH
+        )
         set_accessible_name(self._splitter, "Main workspace")
 
         self.queue_panel = QueuePanel(self._splitter, main_frame=self)
@@ -377,8 +413,16 @@ class MainFrame(wx.Frame):
         self._splitter.SplitVertically(self.queue_panel, self.transcript_panel, sashPosition=360)
         self._splitter.SetMinimumPaneSize(250)
 
+        # Chat panel (bottom, initially hidden)
+        self.chat_panel = CopilotChatPanel(self._outer_splitter, main_frame=self)
+
+        # Start unsplit (chat hidden)
+        self._outer_splitter.Initialize(self._splitter)
+        self._outer_splitter.SetMinimumPaneSize(120)
+        self._chat_visible = False
+
         sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self._splitter, 1, wx.EXPAND)
+        sizer.Add(self._outer_splitter, 1, wx.EXPAND)
         self.SetSizer(sizer)
 
     # =================================================================== #
@@ -828,6 +872,87 @@ class MainFrame(wx.Frame):
             self.app_settings.save()
         dlg.Destroy()
 
+    # =================================================================== #
+    # Copilot / AI chat handlers                                            #
+    # =================================================================== #
+
+    def _ensure_copilot_service(self) -> None:
+        """Lazily create and configure the Copilot service."""
+        if self._copilot_service is not None:
+            return
+        from bits_whisperer.core.copilot_service import CopilotService
+
+        self._copilot_service = CopilotService(self.key_store, self.app_settings.copilot)
+        self.chat_panel.connect(self._copilot_service)
+
+    def _on_copilot_setup(self, _event: wx.CommandEvent) -> None:
+        """Open the Copilot Setup wizard."""
+        from bits_whisperer.ui.copilot_setup_dialog import CopilotSetupDialog
+
+        dlg = CopilotSetupDialog(self, main_frame=self)
+        result = dlg.ShowModal()
+        if result == wx.ID_OK:
+            self.app_settings = AppSettings.load()
+            # Reinitialise the service with new settings
+            self._copilot_service = None
+            self._ensure_copilot_service()
+            announce_status(self, "Copilot setup complete")
+        dlg.Destroy()
+
+    def _on_copilot_chat(self, _event: wx.CommandEvent) -> None:
+        """Toggle the AI chat panel visibility."""
+        if self._chat_visible:
+            # Hide the chat panel
+            self._outer_splitter.Unsplit(self.chat_panel)
+            self._chat_visible = False
+            self._copilot_chat_item.Check(False)
+            announce_status(self, "AI chat panel hidden")
+        else:
+            # Show the chat panel
+            height = self.GetSize().GetHeight()
+            sash_pos = int(height * 0.6)
+            self._outer_splitter.SplitHorizontally(
+                self._splitter, self.chat_panel, sashPosition=sash_pos
+            )
+            self._chat_visible = True
+            self._copilot_chat_item.Check(True)
+
+            # Ensure service is ready
+            self._ensure_copilot_service()
+
+            # Inject current transcript context if available
+            job = self.transcript_panel._current_job
+            if job and job.result:
+                text = job.result.full_text
+                if not text:
+                    text = "\n".join(s.text for s in job.result.segments)
+                if text.strip():
+                    self.chat_panel.set_transcript_context(text)
+
+            self.chat_panel._input_text.SetFocus()
+            announce_status(self, "AI chat panel opened — ask anything about your transcript")
+
+    def _on_agent_builder(self, _event: wx.CommandEvent) -> None:
+        """Open the Agent Builder dialog."""
+        from bits_whisperer.ui.agent_builder_dialog import AgentBuilderDialog
+
+        self._ensure_copilot_service()
+
+        dlg = AgentBuilderDialog(
+            self,
+            current_config=self._copilot_service.agent_config,
+        )
+        result = dlg.ShowModal()
+        if result == wx.ID_OK:
+            new_config = dlg.result_config
+            if new_config:
+                self._copilot_service.agent_config = new_config
+                announce_status(
+                    self,
+                    f"Agent '{new_config.name}' configured",
+                )
+        dlg.Destroy()
+
     def _on_toggle_advanced(self, _event: wx.CommandEvent) -> None:
         """Toggle advanced mode on/off and persist the choice."""
         self._advanced_mode = self._advanced_mode_item.IsChecked()
@@ -1055,6 +1180,8 @@ class MainFrame(wx.Frame):
             return
 
         self.transcription_service.stop()
+        if self._copilot_service:
+            self._copilot_service.stop()
         if hasattr(self, "_tray_icon"):
             self._tray_icon.cleanup()
         self.Destroy()

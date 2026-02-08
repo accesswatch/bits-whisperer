@@ -138,7 +138,9 @@
 <li><a href="#step-3-model-selection">Step 3: Model Selection</a></li>
 <li><a href="#step-4-cloud-services-optional">Step 4: Cloud Services (Optional)</a></li>
 <li><a href="#step-5-preferences">Step 5: Preferences</a></li>
-<li><a href="#step-6-summary">Step 6: Summary</a></li>
+<li><a href="#step-6-ai-copilot-configuration">Step 6: AI &amp; Copilot Configuration</a></li>
+<li><a href="#step-7-summary">Step 7: Summary</a></li>
+<li><a href="#step-8-ready">Step 8: Ready!</a></li>
 </ul>
 </li>
 <li><a href="#main-window">Main Window</a><ul>
@@ -181,6 +183,13 @@
 <li><a href="#translating-a-transcript">Translating a Transcript</a></li>
 <li><a href="#summarizing-a-transcript">Summarizing a Transcript</a></li>
 <li><a href="#supported-ai-providers">Supported AI Providers</a></li>
+</ul>
+</li>
+<li><a href="#github-copilot-integration">GitHub Copilot Integration</a><ul>
+<li><a href="#copilot-setup-wizard">Copilot Setup Wizard</a></li>
+<li><a href="#interactive-ai-chat-panel">Interactive AI Chat Panel</a></li>
+<li><a href="#agent-builder">Agent Builder</a></li>
+<li><a href="#copilot-settings">Copilot Settings</a></li>
 </ul>
 </li>
 <li><a href="#plugins">Plugins</a><ul>
@@ -251,6 +260,7 @@
 <li><a href="#exporting">Exporting</a></li>
 <li><a href="#live-microphone-transcription">Live Microphone Transcription</a></li>
 <li><a href="#ai-translation--summarization">AI Translation &amp; Summarization</a></li>
+<li><a href="#github-copilot-integration">GitHub Copilot Integration</a></li>
 <li><a href="#plugins">Plugins</a></li>
 <li><a href="#providers">Providers</a></li>
 <li><a href="#ai-models">AI Models</a></li>
@@ -323,7 +333,7 @@
 <p>SDKs are stored in: <code>%LOCALAPPDATA%\BITS Whisperer\BITSWhisperer\site-packages\</code> (Windows) or <code>~/Library/Application Support/BITS Whisperer/site-packages/</code> (macOS).</p>
 <hr>
 <h2 id="setup-wizard">Setup Wizard</h2>
-<p>The setup wizard appears automatically on your first launch and walks you through five steps:</p>
+<p>The setup wizard appears automatically on your first launch and walks you through eight steps:</p>
 <h3 id="step-1-welcome">Step 1: Welcome</h3>
 <p>A brief overview of what BITS Whisperer does and what the wizard will configure.</p>
 <h3 id="step-2-hardware-detection">Step 2: Hardware Detection</h3>
@@ -352,8 +362,18 @@
 - <strong>Minimize to tray</strong> — keep running in the background
 - <strong>Notifications</strong> — get alerts when transcription completes
 - <strong>Update checks</strong> — automatically check for new versions</p>
-<h3 id="step-6-summary">Step 6: Summary</h3>
+<h3 id="step-6-ai-copilot-configuration">Step 6: AI &amp; Copilot Configuration</h3>
+<p>Set up AI-powered features:
+- <strong>AI Provider</strong> — Choose your preferred AI provider for translation and summarization (OpenAI, Anthropic, Azure OpenAI, Google Gemini, or GitHub Copilot)
+- <strong>API Keys</strong> — Enter API keys for your chosen AI providers
+- <strong>GitHub Copilot</strong> — Optionally install and configure GitHub Copilot CLI for interactive transcript chat
+- <strong>Models</strong> — Select default AI models (GPT-4o, Claude, Gemini Flash)</p>
+<blockquote>
+<p><strong>Tip</strong>: You can skip this step and configure AI providers later from <strong>Tools, then AI Provider Settings</strong>.</p>
+</blockquote>
+<h3 id="step-7-summary">Step 7: Summary</h3>
 <p>Review your choices and click <strong>Finish</strong> to start using the app.</p>
+<h3 id="step-8-ready">Step 8: Ready!</h3>
 <blockquote>
 <p><strong>Tip</strong>: You can always re-configure everything from <strong>Tools, then Settings</strong> (Ctrl+,) or <strong>Tools, then Manage Models</strong> (Ctrl+M).</p>
 </blockquote>
@@ -593,7 +613,7 @@
 </table>
 <hr>
 <h2 id="ai-translation-summarization">AI Translation &amp; Summarization</h2>
-<p>Use AI to translate and summarize your transcripts using OpenAI, Anthropic Claude, or Azure OpenAI.</p>
+<p>Use AI to translate and summarize your transcripts using OpenAI, Anthropic Claude, Azure OpenAI, Google Gemini, or GitHub Copilot.</p>
 <h3 id="setup">Setup</h3>
 <ol>
 <li>Go to <strong>Tools, then AI Provider Settings</strong></li>
@@ -601,6 +621,8 @@
 <li><strong>OpenAI</strong> — Get a key from https://platform.openai.com/api-keys</li>
 <li><strong>Anthropic</strong> — Get a key from https://console.anthropic.com/</li>
 <li><strong>Azure OpenAI</strong> — Enter your endpoint URL, deployment name, and API key from the Azure portal</li>
+<li><strong>Google Gemini</strong> — Get a key from https://aistudio.google.com/apikey</li>
+<li><strong>GitHub Copilot</strong> — See <a href="#github-copilot-integration">GitHub Copilot Integration</a> for setup</li>
 <li>Click <strong>Validate</strong> to test your key</li>
 <li>Choose your preferred default provider</li>
 <li>Set preferences in the <strong>Preferences</strong> tab (language, summarization style, temperature, max tokens)</li>
@@ -646,6 +668,197 @@
 <td>Azure OpenAI</td>
 <td>Configurable deployment</td>
 <td>Enterprise-grade, GDPR compliant</td>
+</tr>
+<tr>
+<td>Google Gemini</td>
+<td>Gemini 2.0 Flash, 1.5 Flash, 1.5 Pro</td>
+<td>Fast, very affordable</td>
+</tr>
+<tr>
+<td>GitHub Copilot</td>
+<td>gpt-4o (via Copilot SDK)</td>
+<td>Interactive chat &amp; tool-augmented</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="github-copilot-integration">GitHub Copilot Integration</h2>
+<p>BITS Whisperer integrates the GitHub Copilot SDK for interactive, AI-powered transcript analysis. Chat with your transcripts, ask questions, get insights, and configure custom AI agents — all without leaving the app.</p>
+<h3 id="copilot-setup-wizard">Copilot Setup Wizard</h3>
+<p>Before using Copilot features, complete the guided setup:</p>
+<ol>
+<li>Go to <strong>Tools, then Copilot Setup</strong></li>
+<li>The wizard walks you through 4 steps:</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What Happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1. CLI Install</strong></td>
+<td>Checks if the GitHub Copilot CLI is installed. If not, offers to install it via WinGet (Windows) or provides manual instructions.</td>
+</tr>
+<tr>
+<td><strong>2. SDK Install</strong></td>
+<td>Installs the Copilot SDK Python package into the BITS Whisperer environment.</td>
+</tr>
+<tr>
+<td><strong>3. Authentication</strong></td>
+<td>Authenticates with your GitHub account using the CLI device flow. Opens your browser for secure sign-in.</td>
+</tr>
+<tr>
+<td><strong>4. Test</strong></td>
+<td>Runs a connection test to verify Copilot is working. You'll see a success message if everything is configured correctly.</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Tip</strong>: The Windows installer can optionally install the GitHub Copilot CLI via WinGet during application installation.</p>
+</blockquote>
+<h3 id="interactive-ai-chat-panel">Interactive AI Chat Panel</h3>
+<p>The chat panel lets you have a conversation with AI about your transcript:</p>
+<h4 id="opening-the-chat-panel">Opening the Chat Panel</h4>
+<ul>
+<li><strong>Keyboard</strong>: Press <strong>Ctrl+Shift+C</strong></li>
+<li><strong>Menu</strong>: Go to <strong>AI, then Copilot Chat</strong></li>
+<li>The panel appears alongside your transcript viewer</li>
+</ul>
+<h4 id="using-the-chat-panel">Using the Chat Panel</h4>
+<ol>
+<li><strong>Type a question</strong> in the input field at the bottom (e.g., "What are the main topics discussed?")</li>
+<li><strong>Press Enter</strong> or click <strong>Send</strong> to submit your question</li>
+<li><strong>Watch the response stream</strong> in real time — Copilot replies token by token</li>
+<li><strong>Continue the conversation</strong> — ask follow-up questions; context is maintained</li>
+<li><strong>Start fresh</strong> — click <strong>New Conversation</strong> to clear history and begin again</li>
+</ol>
+<h4 id="quick-actions">Quick Actions</h4>
+<p>One-click buttons for common tasks appear at the top of the chat panel:</p>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>What It Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Summarize</strong></td>
+<td>Generates a summary of the current transcript</td>
+</tr>
+<tr>
+<td><strong>Key Points</strong></td>
+<td>Extracts the main takeaways</td>
+</tr>
+<tr>
+<td><strong>Speakers</strong></td>
+<td>Identifies and describes speakers in the transcript</td>
+</tr>
+<tr>
+<td><strong>Action Items</strong></td>
+<td>Lists action items or tasks mentioned</td>
+</tr>
+<tr>
+<td><strong>Questions</strong></td>
+<td>Generates discussion questions based on the content</td>
+</tr>
+</tbody>
+</table>
+<h4 id="transcript-context">Transcript Context</h4>
+<p>The chat panel automatically provides your current transcript as context to the AI agent. When you switch transcripts, the agent is updated with the new content. No need to copy and paste — the agent always knows what transcript you’re working with.</p>
+<h3 id="agent-builder">Agent Builder</h3>
+<p>Customize the AI agent’s behavior to match your workflow:</p>
+<ol>
+<li>Go to <strong>AI, then Agent Builder</strong></li>
+<li>Configure the agent across 4 tabs:</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Tab</th>
+<th>What You Configure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Identity</strong></td>
+<td>Agent name (e.g., "Meeting Analyst") and a brief persona description</td>
+</tr>
+<tr>
+<td><strong>Instructions</strong></td>
+<td>System prompt that guides the agent’s behavior. Choose from built-in presets or write your own:</td>
+</tr>
+<tr>
+<td></td>
+<td>• <strong>Transcript Analyst</strong> — General-purpose transcript analysis</td>
+</tr>
+<tr>
+<td></td>
+<td>• <strong>Meeting Notes</strong> — Specialized for meeting recordings</td>
+</tr>
+<tr>
+<td></td>
+<td>• <strong>Research Assistant</strong> — Focused on research interviews and data</td>
+</tr>
+<tr>
+<td><strong>Tools</strong></td>
+<td>Enable or disable transcript-aware tools. When enabled, the agent can directly access and analyze transcript text, segments, and speaker information.</td>
+</tr>
+<tr>
+<td><strong>Welcome</strong></td>
+<td>Set the greeting message that appears when a user first opens the chat panel.</td>
+</tr>
+</tbody>
+</table>
+<ol>
+<li>Click <strong>Save</strong> to apply your configuration. The agent will use these settings for all future conversations.</li>
+</ol>
+<blockquote>
+<p><strong>Tip</strong>: Agent configurations are saved in your app settings and persist between sessions.</p>
+</blockquote>
+<h3 id="copilot-settings">Copilot Settings</h3>
+<p>Fine-tune Copilot behavior in <strong>Tools, then Settings</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Enabled</td>
+<td>Off</td>
+<td>Master toggle for Copilot features</td>
+</tr>
+<tr>
+<td>CLI Path</td>
+<td>Auto-detect</td>
+<td>Path to GitHub Copilot CLI (leave empty for auto-detection)</td>
+</tr>
+<tr>
+<td>Default Model</td>
+<td>gpt-4o</td>
+<td>AI model for chat responses</td>
+</tr>
+<tr>
+<td>Streaming</td>
+<td>On</td>
+<td>Show responses token-by-token</td>
+</tr>
+<tr>
+<td>Auto-start CLI</td>
+<td>On</td>
+<td>Automatically start the Copilot CLI process</td>
+</tr>
+<tr>
+<td>Transcript Tools</td>
+<td>On</td>
+<td>Allow the agent to access transcript data</td>
 </tr>
 </tbody>
 </table>
@@ -1073,6 +1286,11 @@
 <td>Always</td>
 </tr>
 <tr>
+<td><strong>AI Providers</strong></td>
+<td>AI provider, model, temperature, max tokens, translation language, summarization style</td>
+<td>Always</td>
+</tr>
+<tr>
 <td><strong>Audio Processing</strong></td>
 <td>7-filter preprocessing chain</td>
 <td>Advanced only</td>
@@ -1086,12 +1304,12 @@
 </table>
 <h3 id="basic-vs-advanced-mode">Basic vs. Advanced Mode</h3>
 <p><strong>Basic Mode</strong> (default):
-- Shows 5 tabs: General, Transcription, Output, Providers &amp; Keys, Paths &amp; Storage
+- Shows 6 tabs: General, Transcription, Output, Providers &amp; Keys, Paths &amp; Storage, AI Providers
 - Only local providers and <strong>activated</strong> cloud providers appear in the provider dropdown
 - Use <strong>Tools, then Add Provider</strong> to activate cloud providers
 - Recommended for everyday use</p>
 <p><strong>Advanced Mode</strong>:
-- Shows all 7 tabs including Audio Processing and Advanced
+- Shows all 8 tabs including Audio Processing and Advanced
 - All cloud providers visible in the provider dropdown (activation not required)
 - Full control over audio preprocessing, GPU settings, concurrency, and chunking
 - Toggle via <strong>View, then Advanced Mode</strong> (Ctrl+Shift+A)</p>
@@ -1203,6 +1421,10 @@
 <tr>
 <td>Ctrl+Shift+S</td>
 <td>Summarize Transcript</td>
+</tr>
+<tr>
+<td>Ctrl+Shift+C</td>
+<td>Copilot Chat Panel</td>
 </tr>
 <tr>
 <td>F5</td>
@@ -1377,7 +1599,7 @@ A: Yes! BITS Whisperer runs on Windows 10+ and macOS 12+. Linux support is plann
 <p><strong>Q: How do I update?</strong>
 A: The app checks for updates on startup (configurable). When an update is available, you'll be prompted to download it. You can also check manually via <strong>Help, then Check for Updates</strong>.</p>
 <hr>
-<p><em>BITS Whisperer v1.1.0 — Developed by Blind Information Technology Solutions (BITS). Made with care for accessibility and privacy.</em></p>
+<p><em>BITS Whisperer v1.2.0 — Developed by Blind Information Technology Solutions (BITS). Made with care for accessibility and privacy.</em></p>
 <div class="footer">
   Generated from <code>USER_GUIDE.md</code> &mdash; BITS Whisperer Documentation
 </div>

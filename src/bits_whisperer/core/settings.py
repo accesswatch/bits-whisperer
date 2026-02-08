@@ -181,11 +181,13 @@ class ProviderDefaultSettings:
 class AISettings:
     """AI service configuration for translation and summarization."""
 
-    selected_provider: str = "openai"  # "openai", "anthropic", "azure_openai"
+    selected_provider: str = "openai"  # openai, anthropic, azure_openai, gemini, copilot
     openai_model: str = "gpt-4o-mini"
     anthropic_model: str = "claude-sonnet-4-20250514"
     azure_openai_deployment: str = ""
     azure_openai_endpoint: str = ""
+    gemini_model: str = "gemini-2.0-flash"
+    copilot_model: str = "gpt-4o"
     translation_target_language: str = "en"
     summarization_style: str = "concise"  # "concise", "detailed", "bullet_points"
     max_tokens: int = 4096
@@ -214,6 +216,27 @@ class PluginSettings:
     plugin_directory: str = ""  # empty = DATA_DIR / "plugins"
     disabled_plugins: list[str] = field(default_factory=list)
     auto_update: bool = False
+
+
+@dataclass
+class CopilotSettings:
+    """GitHub Copilot SDK integration configuration."""
+
+    enabled: bool = False
+    cli_path: str = ""  # empty = auto-detect from PATH
+    use_logged_in_user: bool = True
+    default_model: str = "gpt-4o"
+    streaming: bool = True
+    system_message: str = (
+        "You are a helpful transcript assistant for BITS Whisperer. "
+        "You help users understand, analyze, and work with audio transcripts. "
+        "Be concise, clear, and helpful."
+    )
+    agent_name: str = "BITS Transcript Assistant"
+    agent_instructions: str = ""
+    auto_start_cli: bool = True
+    allow_transcript_tools: bool = True
+    chat_panel_visible: bool = False
 
 
 @dataclass
@@ -256,6 +279,7 @@ class AppSettings:
         default_factory=LiveTranscriptionSettings,
     )
     plugins: PluginSettings = field(default_factory=PluginSettings)
+    copilot: CopilotSettings = field(default_factory=CopilotSettings)
 
     # ------------------------------------------------------------------ #
     # Persistence                                                          #
@@ -333,4 +357,5 @@ class AppSettings:
                 data.get("live_transcription"),
             ),
             plugins=_safe(PluginSettings, data.get("plugins")),
+            copilot=_safe(CopilotSettings, data.get("copilot")),
         )

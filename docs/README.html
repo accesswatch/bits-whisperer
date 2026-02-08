@@ -191,12 +191,14 @@
 <li><strong>Smart hardware detection</strong> — Automatically identifies eligible Whisper models for your CPU, RAM, and GPU</li>
 <li><strong>Automatic dependency setup</strong> — Detects missing ffmpeg at startup and offers one-click install via winget (Windows), with manual instructions fallback</li>
 <li><strong>On-demand SDK installer</strong> — Provider SDKs are not bundled in the installer. When you first use a cloud or local provider, BITS Whisperer automatically downloads and installs only the packages needed — keeping the installer small (~40 MB) and startup fast</li>
-<li><strong>First-run setup wizard</strong> — Guided 7-page wizard on first launch: experience mode selection, hardware scan, model recommendations, downloads, provider setup, preferences, and summary — all in one handholding experience</li>
+<li><strong>First-run setup wizard</strong> — Guided 8-page wizard on first launch: experience mode selection, hardware scan, model recommendations, downloads, provider setup, AI &amp; Copilot configuration, preferences, and summary — all in one handholding experience</li>
 <li><strong>Disk space checks</strong> — Pre-flight validation before every model download with 10% headroom; friendly warnings when space is low</li>
 <li><strong>Cross-platform</strong> — Runs on Windows 10+ and macOS 12+; auto-detect GPU (CUDA / Apple Silicon Metal)</li>
 <li><strong>User guide</strong> — Comprehensive built-in user guide covering every feature, provider, setting, and keyboard shortcut</li>
 <li><strong>Live microphone transcription</strong> — Real-time speech-to-text from your microphone using faster-whisper with energy-based VAD, configurable model/language/device via Tools, then Live Transcription (Ctrl+L)</li>
-<li><strong>AI translation &amp; summarization</strong> — Translate transcripts to 15+ languages or generate summaries (concise/detailed/bullet points) using OpenAI GPT-4o, Anthropic Claude, or Azure OpenAI via AI menu (Ctrl+T / Ctrl+Shift+S)</li>
+<li><strong>AI translation &amp; summarization</strong> — Translate transcripts to 15+ languages or generate summaries (concise/detailed/bullet points) using OpenAI GPT-4o, Anthropic Claude, Azure OpenAI, or Google Gemini via AI menu (Ctrl+T / Ctrl+Shift+S)</li>
+<li><strong>GitHub Copilot SDK integration</strong> — Interactive AI transcript chat panel (Ctrl+Shift+C) with streaming responses, quick actions, custom agent builder, and session management via the Copilot SDK</li>
+<li><strong>5 AI providers</strong> — OpenAI, Anthropic Claude, Azure OpenAI, Google Gemini, and GitHub Copilot for translation, summarization, and interactive chat</li>
 <li><strong>Plugin system</strong> — Extend with custom transcription providers via <code>.py</code> plugins in a configurable directory; discover, load, enable/disable from Tools, then Plugins</li>
 </ul>
 <h2 id="quick-start">Quick Start</h2>
@@ -238,9 +240,10 @@ python<span class="w"> </span>-m<span class="w"> </span>bits_whisperer
     transcoder.py             # ffmpeg audio normalisation
     updater.py                # GitHub Releases self-update
     job.py                    # Job data model
-    ai_service.py             # AI translation &amp; summarization (OpenAI/Anthropic/Azure)
+    ai_service.py             # AI translation &amp; summarization (OpenAI/Anthropic/Azure/Gemini/Copilot)
     live_transcription.py     # Real-time microphone transcription
     plugin_manager.py         # Plugin discovery, loading &amp; lifecycle
+    copilot_service.py        # GitHub Copilot SDK integration &amp; agent management
   providers/               # 17 provider adapters (strategy pattern)
     base.py              # TranscriptionProvider ABC
     local_whisper.py     # faster-whisper (local, free)
@@ -266,7 +269,7 @@ python<span class="w"> </span>-m<span class="w"> </span>bits_whisperer
     srt.py, vtt.py, json_export.py
   storage/                 # Persistence
     database.py          # SQLite (WAL mode) for jobs
-    key_store.py         # OS credential store via keyring
+    key_store.py         # OS credential store via keyring (20 entries)
   ui/                      # WXPython UI
     main_frame.py        # Menu bar, splitter, status bar, tray integration
     queue_panel.py       # File queue list
@@ -275,10 +278,13 @@ python<span class="w"> </span>-m<span class="w"> </span>bits_whisperer
     progress_dialog.py   # Batch progress
     model_manager_dialog.py  # Model management
     add_provider_dialog.py   # Cloud provider onboarding
-    setup_wizard.py      # First-run setup wizard (7 pages)
+    setup_wizard.py      # First-run setup wizard (8 pages)
     tray_icon.py         # System tray (TaskBarIcon)
     live_transcription_dialog.py  # Live microphone transcription dialog
-    ai_settings_dialog.py  # AI provider configuration dialog
+    ai_settings_dialog.py  # AI provider configuration dialog (5 providers)
+    copilot_setup_dialog.py  # Copilot CLI installation &amp; auth wizard
+    copilot_chat_panel.py    # Interactive AI transcript chat panel
+    agent_builder_dialog.py  # Guided AI agent configuration builder
   utils/
     accessibility.py     # a11y helpers
     constants.py         # App-wide constants &amp; model registry
@@ -351,6 +357,10 @@ python<span class="w"> </span>-m<span class="w"> </span>bits_whisperer
 <tr>
 <td>Summarize Transcript</td>
 <td>Ctrl+Shift+S</td>
+</tr>
+<tr>
+<td>Copilot Chat Panel</td>
+<td>Ctrl+Shift+C</td>
 </tr>
 <tr>
 <td>Add Cloud Provider</td>

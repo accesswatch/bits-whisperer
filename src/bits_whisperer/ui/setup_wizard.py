@@ -57,9 +57,10 @@ PAGE_MODE = 1
 PAGE_HARDWARE = 2
 PAGE_MODELS = 3
 PAGE_PROVIDERS = 4
-PAGE_PREFERENCES = 5
-PAGE_SUMMARY = 6
-_TOTAL_PAGES = 7
+PAGE_AI_COPILOT = 5
+PAGE_PREFERENCES = 6
+PAGE_SUMMARY = 7
+_TOTAL_PAGES = 8
 
 
 def needs_wizard() -> bool:
@@ -209,6 +210,7 @@ class SetupWizard(wx.Dialog):
             PAGE_HARDWARE: "Hardware detection page",
             PAGE_MODELS: "Model selection page",
             PAGE_PROVIDERS: "Cloud services setup page",
+            PAGE_AI_COPILOT: "AI and Copilot setup page",
             PAGE_PREFERENCES: "Preferences page",
             PAGE_SUMMARY: "Setup summary page",
         }
@@ -218,6 +220,7 @@ class SetupWizard(wx.Dialog):
             PAGE_HARDWARE: self._build_hardware_page,
             PAGE_MODELS: self._build_models_page,
             PAGE_PROVIDERS: self._build_providers_page,
+            PAGE_AI_COPILOT: self._build_ai_copilot_page,
             PAGE_PREFERENCES: self._build_preferences_page,
             PAGE_SUMMARY: self._build_summary_page,
         }
@@ -977,7 +980,159 @@ class SetupWizard(wx.Dialog):
         sizer.Add(scroll, 1, wx.EXPAND | wx.ALL, 4)
 
     # ================================================================== #
-    # Page 5: Quick Preferences                                            #
+    # Page 5: AI & Copilot Setup                                           #
+    # ================================================================== #
+
+    def _build_ai_copilot_page(self) -> None:
+        """Build the AI provider and GitHub Copilot configuration page."""
+        self._header.SetLabel("AI Features (Optional)")
+        self._subtitle.SetLabel(
+            "Enhance your transcripts with AI-powered summarization, "
+            "translation, and interactive Q&A."
+        )
+
+        panel = self._page_panel
+        sizer = self._page_sizer
+
+        intro_text = (
+            "BITS Whisperer can use AI services to summarize, translate, and "
+            "answer questions about your transcripts. Configure one or more "
+            "providers below, or skip this step and set them up later from "
+            "AI > AI Provider Settings."
+        )
+        intro = self._create_info_text(panel, intro_text, "AI features introduction")
+        sizer.Add(intro, 0, wx.EXPAND | wx.ALL, 4)
+
+        scroll = wx.ScrolledWindow(panel, style=wx.VSCROLL)
+        scroll.SetScrollRate(0, 10)
+        set_accessible_name(scroll, "AI provider configuration")
+        scroll_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        # Gemini — easiest to get started
+        gemini_box = wx.StaticBox(scroll, label="Google Gemini (Recommended)")
+        set_accessible_name(gemini_box, "Google Gemini AI setup")
+        gemini_sizer = wx.StaticBoxSizer(gemini_box, wx.VERTICAL)
+
+        gemini_desc = wx.StaticText(
+            scroll,
+            label=(
+                "Most affordable option. Free tier available. "
+                "Get an API key from Google AI Studio."
+            ),
+        )
+        gemini_sizer.Add(gemini_desc, 0, wx.ALL, 4)
+
+        g_row = wx.BoxSizer(wx.HORIZONTAL)
+        g_lbl = wx.StaticText(scroll, label="Gemini API Key:")
+        self._wizard_gemini_key = wx.TextCtrl(
+            scroll, style=wx.TE_PASSWORD, size=(300, -1)
+        )
+        set_accessible_name(self._wizard_gemini_key, "Google Gemini API key")
+        label_control(g_lbl, self._wizard_gemini_key)
+
+        existing_gemini = self._key_store.get_key("gemini")
+        if existing_gemini:
+            self._wizard_gemini_key.SetValue(existing_gemini)
+
+        g_link = wx.adv.HyperlinkCtrl(
+            scroll,
+            label="Get key",
+            url="https://makersuite.google.com/app/apikey",
+        )
+        set_accessible_name(g_link, "Open Google AI Studio to get API key")
+        g_row.Add(g_lbl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+        g_row.Add(self._wizard_gemini_key, 1, wx.RIGHT, 4)
+        g_row.Add(g_link, 0, wx.ALIGN_CENTER_VERTICAL)
+        gemini_sizer.Add(g_row, 0, wx.EXPAND | wx.ALL, 4)
+        scroll_sizer.Add(gemini_sizer, 0, wx.EXPAND | wx.BOTTOM, 8)
+
+        # GitHub Copilot
+        copilot_box = wx.StaticBox(scroll, label="GitHub Copilot")
+        set_accessible_name(copilot_box, "GitHub Copilot setup")
+        copilot_sizer = wx.StaticBoxSizer(copilot_box, wx.VERTICAL)
+
+        copilot_desc = wx.StaticText(
+            scroll,
+            label=(
+                "Interactive AI chat for transcript analysis. Requires GitHub "
+                "Copilot subscription. Full setup available via AI > Copilot Setup."
+            ),
+        )
+        copilot_desc.Wrap(560)
+        copilot_sizer.Add(copilot_desc, 0, wx.ALL, 4)
+
+        # CLI detection status
+        from bits_whisperer.core.copilot_service import CopilotService
+
+        cli_path = CopilotService.detect_cli()
+        if cli_path:
+            cli_status = f"Copilot CLI detected: {cli_path}"
+        else:
+            cli_status = (
+                "Copilot CLI not found. Install later via AI > Copilot Setup, "
+                "or run: winget install GitHub.Copilot"
+            )
+
+        cli_label = wx.StaticText(scroll, label=cli_status)
+        cli_label.Wrap(560)
+        set_accessible_name(cli_label, "Copilot CLI status")
+        copilot_sizer.Add(cli_label, 0, wx.ALL, 4)
+
+        # Enable Copilot checkbox
+        self._wizard_copilot_enable = wx.CheckBox(
+            scroll, label="&Enable GitHub Copilot features"
+        )
+        set_accessible_name(
+            self._wizard_copilot_enable,
+            "Enable GitHub Copilot for transcript AI features",
+        )
+        self._wizard_copilot_enable.SetValue(
+            self._settings.copilot.enabled if cli_path else False
+        )
+        copilot_sizer.Add(self._wizard_copilot_enable, 0, wx.ALL, 4)
+
+        scroll_sizer.Add(copilot_sizer, 0, wx.EXPAND | wx.BOTTOM, 8)
+
+        # OpenAI for AI services
+        openai_box = wx.StaticBox(scroll, label="OpenAI")
+        set_accessible_name(openai_box, "OpenAI AI setup")
+        openai_sizer = wx.StaticBoxSizer(openai_box, wx.VERTICAL)
+
+        openai_desc = wx.StaticText(
+            scroll,
+            label="GPT-4o models for summarization and translation.",
+        )
+        openai_sizer.Add(openai_desc, 0, wx.ALL, 4)
+
+        o_row = wx.BoxSizer(wx.HORIZONTAL)
+        o_lbl = wx.StaticText(scroll, label="OpenAI API Key:")
+        self._wizard_openai_key = wx.TextCtrl(
+            scroll, style=wx.TE_PASSWORD, size=(300, -1)
+        )
+        set_accessible_name(self._wizard_openai_key, "OpenAI API key for AI features")
+        label_control(o_lbl, self._wizard_openai_key)
+
+        existing_openai = self._key_store.get_key("openai")
+        if existing_openai:
+            self._wizard_openai_key.SetValue(existing_openai)
+
+        o_link = wx.adv.HyperlinkCtrl(
+            scroll,
+            label="Get key",
+            url="https://platform.openai.com/api-keys",
+        )
+        set_accessible_name(o_link, "Open OpenAI API keys page")
+        o_row.Add(o_lbl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+        o_row.Add(self._wizard_openai_key, 1, wx.RIGHT, 4)
+        o_row.Add(o_link, 0, wx.ALIGN_CENTER_VERTICAL)
+        openai_sizer.Add(o_row, 0, wx.EXPAND | wx.ALL, 4)
+        scroll_sizer.Add(openai_sizer, 0, wx.EXPAND | wx.BOTTOM, 8)
+
+        scroll.SetSizer(scroll_sizer)
+        sizer.Add(scroll, 1, wx.EXPAND | wx.ALL, 4)
+
+    # ================================================================== #
+    # Page 6: Quick Preferences                                            #
     # ================================================================== #
 
     def _build_preferences_page(self) -> None:
@@ -1248,6 +1403,23 @@ class SetupWizard(wx.Dialog):
                     if value:
                         self._key_store.store_key(key_id, value)
                         self._provider_keys[key_id] = value
+
+        elif self._current_page == PAGE_AI_COPILOT:
+            # Save Gemini key
+            if hasattr(self, "_wizard_gemini_key"):
+                gemini_key = self._wizard_gemini_key.GetValue().strip()
+                if gemini_key:
+                    self._key_store.store_key("gemini", gemini_key)
+                    self._provider_keys["gemini"] = gemini_key
+            # Save OpenAI key for AI features
+            if hasattr(self, "_wizard_openai_key"):
+                openai_key = self._wizard_openai_key.GetValue().strip()
+                if openai_key:
+                    self._key_store.store_key("openai", openai_key)
+                    self._provider_keys["openai"] = openai_key
+            # Save Copilot setting
+            if hasattr(self, "_wizard_copilot_enable"):
+                self._settings.copilot.enabled = self._wizard_copilot_enable.GetValue()
 
         elif self._current_page == PAGE_PREFERENCES:
             if hasattr(self, "_pref_language"):

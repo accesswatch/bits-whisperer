@@ -1,6 +1,6 @@
 # BITS Whisperer — Product Requirements Document
 
-> **Version:** 1.0 - **Updated:** 2026-02-08 - **Status:** Implementation Complete
+> **Version:** 1.2 - **Updated:** 2026-02-08 - **Status:** Implementation Complete
 >
 > Developed by **Blind Information Technology Solutions (BITS)**
 
@@ -227,6 +227,92 @@ and applied automatically via the `configure()` method before each transcription
 | Gemini       | Model (2.0-flash/1.5-flash/1.5-pro)                                |
 | Rev.ai       | Skip diarization                                                   |
 
+### AI Services (Translation, Summarization & Chat)
+
+The `AIService` class (in `core/ai_service.py`) provides translation and
+summarization of transcripts via **5 pluggable AI providers**:
+
+| #  | Provider        | Module/Class          | Models                        | Notes                              |
+|----|-----------------|----------------------|-------------------------------|------------------------------------|
+| 1  | OpenAI          | `OpenAIAIProvider`    | gpt-4o, gpt-4o-mini           | Fastest, most reliable            |
+| 2  | Anthropic       | `AnthropicAIProvider` | Claude Sonnet 4, Claude Haiku  | Strong for long transcripts       |
+| 3  | Azure OpenAI    | `AzureOpenAIProvider` | Configurable deployment        | Enterprise-grade, GDPR compliant  |
+| 4  | Google Gemini   | `GeminiAIProvider`    | Gemini 2.0 Flash, 1.5 Flash/Pro | Fast, affordable                |
+| 5  | GitHub Copilot  | `CopilotAIProvider`   | gpt-4o (via Copilot SDK)       | Interactive chat & tool-augmented |
+
+AI features are accessed via the **AI** menu:
+
+- **Translate** (Ctrl+T): Translates the transcript to the configured target language
+- **Summarize** (Ctrl+Shift+S): Generates concise, detailed, or bullet-point summaries
+- **Copilot Chat** (Ctrl+Shift+C): Opens the interactive chat panel for Q&A
+- **Agent Builder**: Configures a custom AI agent persona
+
+AI provider settings (`AISettings` dataclass) include:
+- `provider` (openai/anthropic/azure_openai/gemini/copilot)
+- `openai_model`, `anthropic_model`, `gemini_model`, `copilot_model`
+- `temperature`, `max_tokens`
+- `translation_language`, `summarization_style`
+
+### GitHub Copilot SDK Integration
+
+The `CopilotService` class (in `core/copilot_service.py`) integrates the
+GitHub Copilot SDK for interactive AI-powered transcript analysis:
+
+#### CopilotService
+
+- **Async SDK client** with process management for the Copilot CLI
+- **Session management** — conversation history maintained per session
+- **Streaming responses** — real-time token-by-token response delivery
+- **Custom tools** — transcript-aware tools that let the agent access and
+  analyze the current transcript
+- **Agent configuration** — name, instructions, persona, and welcome message
+- **CLI detection** — auto-detects `github-copilot-cli` on PATH or manual path
+
+#### Interactive AI Chat Panel (`ui/copilot_chat_panel.py`)
+
+- **Toggle**: Ctrl+Shift+C or AI, then Copilot Chat
+- **Streaming display** — responses appear token-by-token
+- **Quick actions** — one-click buttons for common tasks (summarize, key points,
+  speakers, action items)
+- **Transcript context** — automatically provides the current transcript to the agent
+- **New conversation** — clear history and start fresh
+
+#### Copilot Setup Wizard (`ui/copilot_setup_dialog.py`)
+
+Four-step guided setup dialog:
+
+1. **CLI Install** — Checks for GitHub Copilot CLI; offers WinGet install on Windows
+2. **SDK Install** — Installs the Copilot SDK Python package
+3. **Authentication** — Authenticates with GitHub via CLI device flow
+4. **Test** — Runs a connection test to verify everything works
+
+#### Agent Builder (`ui/agent_builder_dialog.py`)
+
+Four-tab guided dialog for configuring a custom AI agent:
+
+| Tab            | Purpose                                              |
+|----------------|------------------------------------------------------|
+| **Identity**   | Agent name, persona description                      |
+| **Instructions** | System prompt with built-in presets (Transcript Analyst, Meeting Notes, Research Assistant) |
+| **Tools**      | Enable/disable transcript-aware tools                |
+| **Welcome**    | Set the greeting message for the chat panel          |
+
+#### CopilotSettings Dataclass (11 fields)
+
+| Field                  | Type   | Default                  |
+|------------------------|--------|---------------------------|
+| `enabled`              | bool   | False                    |
+| `cli_path`             | str    | "" (auto-detect)         |
+| `use_logged_in_user`   | bool   | True                     |
+| `default_model`        | str    | "gpt-4o"                 |
+| `streaming`            | bool   | True                     |
+| `system_message`       | str    | Transcript assistant msg |
+| `agent_name`           | str    | "BITS Transcript Assistant" |
+| `agent_instructions`   | str    | ""                       |
+| `auto_start_cli`       | bool   | True                     |
+| `allow_transcript_tools` | bool | True                     |
+| `chat_panel_visible`   | bool   | False                    |
+
 ### Speaker Diarization
 
 Speaker diarization (identifying who spoke when) is supported through two mechanisms:
@@ -426,8 +512,16 @@ Layout:
 - Settings… (Ctrl+,)
 - Manage Models… (Ctrl+M)
 - Add Provider…
+- Copilot Setup…
 - Hardware Info…
 - View Log…
+
+**AI**
+- Translate (Ctrl+T)
+- Summarize (Ctrl+Shift+S)
+- Copilot Chat (Ctrl+Shift+C)
+- Agent Builder…
+- AI Provider Settings…
 
 **Help**
 - Setup Wizard…
@@ -435,7 +529,7 @@ Layout:
 - Learn more about BITS
 - About… (F1)
 
-### Settings Dialog (7 tabs)
+### Settings Dialog (8 tabs)
 
 | Tab               | Visibility          | Contents                                        |
 |-------------------|---------------------|-------------------------------------------------|
@@ -444,17 +538,18 @@ Layout:
 | **Output**        | Always              | Default export format, output directory, filename template, encoding |
 | **Providers & Keys** | Always           | API key entry per provider with Test button validation |
 | **Paths & Storage** | Always             | Output dir, models dir, temp dir, log file |
+| **AI Providers**  | Always              | AI provider selection (5 providers), model selection, temperature, max tokens, translation language, summarization style |
 | **Audio Processing** | Advanced Mode    | All 7 preprocessing filter toggles & parameters |
 | **Advanced**      | Advanced Mode       | Max file size, duration, batch limits, concurrency, chunking, GPU, log level |
 
 ### Simple vs Advanced Mode
 
-- **Basic Mode** (default): Shows General, Transcription, Output, Providers & Keys, and Paths & Storage tabs.
+- **Basic Mode** (default): Shows General, Transcription, Output, Providers & Keys, Paths & Storage, and AI Providers tabs.
   Audio Processing and Advanced tabs are hidden. Only local providers and
   **activated** cloud providers appear in the provider dropdown. Cloud providers
   must be activated via the Add Provider wizard before they become available.
   Sensible defaults are applied automatically.
-- **Advanced Mode** (Ctrl+Shift+A): Reveals all 7 settings tabs. All cloud
+- **Advanced Mode** (Ctrl+Shift+A): Reveals all 8 settings tabs. All cloud
   providers appear in the provider dropdown regardless of activation status.
   Full control over audio preprocessing, GPU settings, concurrency, and
   chunking parameters.
@@ -506,9 +601,10 @@ src/bits_whisperer/
     transcoder.py             # ffmpeg WAV normalisation
     updater.py                # GitHub Releases self-update
     job.py                    # Job / TranscriptionResult data models
-    ai_service.py             # AI translation & summarization (OpenAI/Anthropic/Azure)
+    ai_service.py             # AI translation & summarization (OpenAI/Anthropic/Azure/Gemini/Copilot)
     live_transcription.py     # Real-time microphone transcription
     plugin_manager.py         # Plugin discovery, loading & lifecycle
+    copilot_service.py        # GitHub Copilot SDK integration & agent management
   providers/                    # 17 provider adapters (strategy pattern)
     base.py                   # TranscriptionProvider ABC + ProviderCapabilities
     local_whisper.py          # faster-whisper (local, free)
@@ -543,10 +639,13 @@ src/bits_whisperer/
     progress_dialog.py        # Batch progress display
     model_manager_dialog.py   # Model download & management
     add_provider_dialog.py    # Cloud provider onboarding wizard
-    setup_wizard.py           # First-run setup wizard (7 pages)
+    setup_wizard.py           # First-run setup wizard (8 pages)
     tray_icon.py              # System tray (TaskBarIcon)
     live_transcription_dialog.py  # Live microphone transcription dialog
-    ai_settings_dialog.py     # AI provider configuration dialog
+    ai_settings_dialog.py     # AI provider configuration dialog (5 providers)
+    copilot_setup_dialog.py   # Copilot CLI installation & auth wizard
+    copilot_chat_panel.py     # Interactive AI transcript chat panel
+    agent_builder_dialog.py   # Guided AI agent configuration builder
   utils/
     accessibility.py          # a11y helpers (announce, set_name, safe_call_after)
     constants.py              # App constants, model registry, path definitions
@@ -605,7 +704,7 @@ TranscriptionResult
 | Store              | Backend                  | Contents                            |
 |--------------------|--------------------------|-------------------------------------|
 | Job metadata       | SQLite (WAL mode)        | Job history, status, paths          |
-| API keys           | keyring (Credential Mgr) | Provider API keys (15 entries)      |
+| API keys           | keyring (Credential Mgr) | Provider API keys (20 entries)     |
 | Recent files       | JSON file                | Last 10 opened file paths           |
 | Whisper models     | File system (models dir) | Downloaded faster-whisper models    |
 | Provider SDKs      | File system (site-packages) | On-demand installed Python packages |
@@ -623,8 +722,8 @@ TranscriptionResult
 - **Key validation**: Dry-run API call on save to verify keys are working.
 - **No telemetry**: The app sends no usage data. Update checks are opt-in
   REST calls to the GitHub Releases API.
-- **Offline-capable**: 3 local providers (Local Whisper, Windows SAPI5/WinRT,
-  Azure Embedded Speech) work without any internet connection.
+- **Offline-capable**: 5 local providers (Local Whisper, Windows SAPI5/WinRT,
+  Azure Embedded Speech, Vosk, Parakeet) work without any internet connection.
 
 ---
 
@@ -664,6 +763,7 @@ Adapted from WCAG 2.1/2.2 for desktop; detailed rules in
 | Settings                   | Ctrl+,            | Global      |
 | Manage Models              | Ctrl+M            | Global      |
 | Toggle Advanced Mode       | Ctrl+Shift+A      | Global      |
+| Copilot Chat               | Ctrl+Shift+C      | Global      |
 | About                      | F1                | Global      |
 | Exit (or minimize to tray) | Alt+F4            | Global      |
 
@@ -751,7 +851,7 @@ Dev dependencies: pytest, pytest-cov, black, ruff, mypy.
 - [x] Basic/Advanced mode toggle with persistent experience_mode setting
 - [x] View Log (opens app.log)
 - [x] Full accessibility (names, labels, keyboard, screen reader)
-- [x] First-run setup wizard (7-page guided experience with mode selection)
+- [x] First-run setup wizard (8-page guided experience with mode selection and AI/Copilot setup)
 - [x] Cross-platform support (Windows 10+ and macOS 12+)
 - [x] Disk space pre-checks before model downloads
 - [x] Comprehensive user guide (docs/USER_GUIDE.md)
@@ -767,6 +867,15 @@ Dev dependencies: pytest, pytest-cov, black, ruff, mypy.
 - [x] Learn more about BITS link in Help menu
 - [x] Add Provider menu item in Tools menu
 - [x] Provider activation tracking (activated_providers in settings)
+- [x] AI translation & summarization (5 providers: OpenAI, Anthropic, Azure OpenAI, Gemini, Copilot)
+- [x] Google Gemini AI provider (translation, summarization)
+- [x] GitHub Copilot SDK integration (CopilotService, async client, streaming, custom tools)
+- [x] Interactive AI Chat Panel (Ctrl+Shift+C, streaming, quick actions, transcript context)
+- [x] Copilot Setup Wizard (4-step: CLI install, SDK install, auth, test)
+- [x] Agent Builder dialog (4-tab: Identity, Instructions with presets, Tools, Welcome Message)
+- [x] CopilotSettings dataclass (11 fields) in AppSettings
+- [x] Installer Copilot CLI install task (WinGet optional)
+- [x] 191 tests with full coverage for Gemini and Copilot features
 
 ---
 
@@ -805,3 +914,7 @@ Dev dependencies: pytest, pytest-cov, black, ruff, mypy.
 | Provider configure() method      | Data-driven settings injection; no provider subclass modification needed |
 | SpeakerRenameDialog over inline  | Global rename is safer and clearer than per-line editing |
 | speaker_map on TranscriptionResult | Separates internal IDs from display names; lossless rename |
+| Google Gemini for AI               | Fast, affordable translation/summarization; multimodal capable |
+| GitHub Copilot SDK over raw API    | CLI-based auth, streaming, tool calling, session management built-in |
+| Agent Builder as separate dialog   | Complex config deserves dedicated UI; presets simplify setup |
+| CopilotSettings as nested dataclass | Clean separation from AI settings; many Copilot-specific fields |

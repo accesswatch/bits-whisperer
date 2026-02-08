@@ -15,7 +15,7 @@
 ; ================================================================
 
 #define MyAppName "BITS Whisperer"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.2.0"
 #define MyAppPublisher "Blind Information Technology Solutions (BITS)"
 #define MyAppURL "https://github.com/accesswatch/bits-whisperer"
 #define MyAppExeName "BITS Whisperer.exe"
@@ -126,6 +126,7 @@ Name: "associate_wav"; Description: "Associate .&wav files with {#MyAppName} (Op
 Name: "associate_mp3"; Description: "Associate .&mp3 files with {#MyAppName} (Open With)"; GroupDescription: "File associations (optional):"; Flags: unchecked
 Name: "associate_m4a"; Description: "Associate .m&4a files with {#MyAppName} (Open With)"; GroupDescription: "File associations (optional):"; Flags: unchecked
 Name: "associate_flac"; Description: "Associate .&flac files with {#MyAppName} (Open With)"; GroupDescription: "File associations (optional):"; Flags: unchecked
+Name: "install_copilot"; Description: "Install GitHub &Copilot CLI after setup (requires WinGet)"; GroupDescription: "Additional software:"; Flags: unchecked
 
 ; ----------------------------------------------------------------
 ; Files — application binaries, documentation, and license
@@ -194,6 +195,8 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName} now (the Setup Wizard will guide you through first-time configuration)"; Flags: nowait postinstall skipifsilent
 ; Option to open the User Guide after installation
 Filename: "{app}\docs\USER_GUIDE.html"; Description: "Open the User Guide in your browser"; Flags: nowait postinstall skipifsilent shellexec unchecked
+; Install GitHub Copilot CLI via WinGet (if task was selected)
+Filename: "winget"; Parameters: "install --id GitHub.Copilot --accept-source-agreements --accept-package-agreements"; Description: "Installing GitHub Copilot CLI..."; StatusMsg: "Installing GitHub Copilot CLI via WinGet..."; Flags: runhidden waituntilterminated skipifsilent; Tasks: install_copilot
 
 ; ----------------------------------------------------------------
 ; UninstallRun — clean up file associations on uninstall

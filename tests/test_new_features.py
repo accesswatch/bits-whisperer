@@ -209,8 +209,9 @@ class TestAIService:
         mock_ks = MagicMock()
         mock_ks.has_key.return_value = False
 
-        service = AIService(mock_ks, AISettings())
-        assert service.get_available_providers() == []
+        with patch("shutil.which", return_value=None):
+            service = AIService(mock_ks, AISettings())
+            assert service.get_available_providers() == []
 
     def test_get_available_providers_with_openai(self) -> None:
         from bits_whisperer.core.ai_service import AIService
@@ -218,10 +219,11 @@ class TestAIService:
         mock_ks = MagicMock()
         mock_ks.has_key.side_effect = lambda k: k == "openai"
 
-        service = AIService(mock_ks, AISettings())
-        providers = service.get_available_providers()
-        assert len(providers) == 1
-        assert providers[0]["id"] == "openai"
+        with patch("shutil.which", return_value=None):
+            service = AIService(mock_ks, AISettings())
+            providers = service.get_available_providers()
+            assert len(providers) == 1
+            assert providers[0]["id"] == "openai"
 
     def test_translate_without_provider_returns_error(self) -> None:
         from bits_whisperer.core.ai_service import AIService
@@ -427,7 +429,7 @@ class TestKeyStoreAIEntries:
         assert "azure_openai_deployment" in _KEY_NAMES
 
     def test_total_key_count(self) -> None:
-        """Should now have 19 key entries (15 original + 4 AI)."""
+        """Should now have 20 key entries (15 original + 4 AI + 1 Copilot)."""
         from bits_whisperer.storage.key_store import _KEY_NAMES
 
-        assert len(_KEY_NAMES) == 19
+        assert len(_KEY_NAMES) == 20
