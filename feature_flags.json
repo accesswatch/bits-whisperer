@@ -1,0 +1,79 @@
+{
+  "$schema": "https://raw.githubusercontent.com/accesswatch/bits-whisperer/main/feature_flags.schema.json",
+  "version": 1,
+  "description": "Remote feature flags for BITS Whisperer staged rollout. Edit this file to enable/disable features across all deployed instances.",
+  "features": {
+    "live_transcription": {
+      "enabled": true,
+      "min_version": "1.0.0",
+      "label": "Live Transcription",
+      "description": "Real-time microphone transcription using faster-whisper"
+    },
+    "ai_translate": {
+      "enabled": true,
+      "min_version": "1.0.0",
+      "label": "AI Translation",
+      "description": "Translate transcripts using cloud AI providers"
+    },
+    "ai_summarize": {
+      "enabled": true,
+      "min_version": "1.0.0",
+      "label": "AI Summarization",
+      "description": "Summarize transcripts using cloud AI providers"
+    },
+    "ai_chat": {
+      "enabled": true,
+      "min_version": "1.0.0",
+      "label": "AI Chat",
+      "description": "Interactive AI chat panel for transcript Q&A"
+    },
+    "agent_builder": {
+      "enabled": true,
+      "min_version": "1.0.0",
+      "label": "Agent Builder",
+      "description": "Custom AI agent configuration builder"
+    },
+    "audio_preview": {
+      "enabled": true,
+      "min_version": "1.0.0",
+      "label": "Audio Preview",
+      "description": "Pitch-preserving audio playback with clip-range selection"
+    },
+    "diarization": {
+      "enabled": true,
+      "min_version": "1.0.0",
+      "label": "Speaker Diarization",
+      "description": "Speaker identification and labelling in transcripts"
+    },
+    "plugins": {
+      "enabled": true,
+      "min_version": "1.0.0",
+      "label": "Plugin System",
+      "description": "Extensible plugin architecture for custom providers"
+    },
+    "copilot": {
+      "enabled": true,
+      "min_version": "1.0.0",
+      "label": "GitHub Copilot",
+      "description": "GitHub Copilot SDK integration for AI chat"
+    },
+    "self_updater": {
+      "enabled": true,
+      "min_version": "1.0.0",
+      "label": "Self-Updater",
+      "description": "Check for and apply application updates from GitHub"
+    },
+    "budget_tracking": {
+      "enabled": true,
+      "min_version": "1.0.0",
+      "label": "Budget Tracking",
+      "description": "Per-provider spending limits and cost confirmation"
+    },
+    "multi_language_translate": {
+      "enabled": true,
+      "min_version": "1.0.0",
+      "label": "Multi-Language Translation",
+      "description": "Translate transcripts to multiple languages at once"
+    }
+  }
+}

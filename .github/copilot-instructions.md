@@ -103,6 +103,7 @@ src/bits_whisperer/
     copilot_service.py        # GitHub Copilot SDK integration
     context_manager.py        # Context window management
     document_reader.py        # Document text extraction
+    feature_flags.py          # Remote feature flag service
   providers/               # 17 provider adapters (strategy pattern)
     base.py              # TranscriptionProvider ABC
     local_whisper.py     # faster-whisper (local, free)
@@ -261,7 +262,46 @@ When adding features, providers, settings, or changing architecture:
    post-production). Both are in `auphonic_provider.py`. Keep
    capabilities tables, pricing, and API endpoint references current.
 
-## 10. Common Patterns
+## 10. Feature Flags (Staged Rollout)
+
+The app uses a **remote feature flag service** for staged feature
+rollout. A JSON config file hosted on GitHub controls which features
+are visible to users. This allows QA-gated releases without code
+changes.
+
+### Architecture
+- **Remote config**: `feature_flags.json` in the repo root, fetched
+  via raw GitHub URL.
+- **Service**: `core/feature_flags.py` — `FeatureFlagService` class
+  with TTL-based caching (24h default), offline fallback, version
+  gating, and local overrides.
+- **Settings**: `FeatureFlagSettings` dataclass in `core/settings.py`
+  with `remote_url`, `refresh_hours`, and `local_overrides` dict.
+- **UI integration**: `main_frame.py` uses `feature_flags.is_enabled()`
+  in `_build_menu_bar()` to conditionally show/hide menu items and
+  in `_refresh_chat_tab_visibility()` for tab visibility.
+- **Tests**: `tests/test_feature_flags.py` (35 tests).
+
+### Feature flag identifiers
+`live_transcription`, `ai_translate`, `ai_summarize`, `ai_chat`,
+`agent_builder`, `audio_preview`, `diarization`, `plugins`,
+`copilot`, `self_updater`, `budget_tracking`,
+`multi_language_translate`.
+
+### Adding a new feature flag
+1. Add the flag to `feature_flags.json` in the repo root.
+2. Use `self.feature_flags.is_enabled("flag_name")` in
+   `main_frame.py` to gate the UI element.
+3. Add tests in `tests/test_feature_flags.py`.
+4. Run all verification gates.
+
+### Disabling a feature for staged rollout
+1. Set `"enabled": false` in `feature_flags.json`.
+2. Commit and push — all deployed instances will pick up the
+   change within 24 hours (or on next app restart).
+3. When QA approves, set `"enabled": true` and push.
+
+## 11. Common Patterns
 
 ### Adding a new provider
 1. Create `providers/new_provider.py` implementing
@@ -287,5 +327,5 @@ When adding features, providers, settings, or changing architecture:
 4. `wx.CallAfter()` for cross-thread updates.
 5. Run all verification gates.
 
-## 11. When in Doubt
+## 12. When in Doubt
 - Ask a concise question with options and a recommended default.

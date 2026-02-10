@@ -132,6 +132,18 @@ class MainFrame(wx.Frame):
         self.plugin_manager = PluginManager(self.app_settings.plugins, self.provider_manager)
         self.plugin_manager.load_all()
 
+        # ---- Feature flag service (fetch remote config for staged rollout) ----
+        from bits_whisperer.core.feature_flags import FeatureFlagService
+
+        ff_settings = self.app_settings.feature_flags
+        self.feature_flags = FeatureFlagService(
+            remote_url=ff_settings.remote_url,
+            ttl_hours=ff_settings.refresh_hours,
+            local_overrides=ff_settings.local_overrides,
+        )
+        # Non-blocking refresh — uses cache if remote is unreachable
+        self.feature_flags.refresh()
+
         # ---- Copilot service (lazy start) ----
         self._copilot_service = None
 
@@ -188,6 +200,7 @@ class MainFrame(wx.Frame):
 
     def _build_menu_bar(self) -> None:
         menu_bar = wx.MenuBar()
+        ff = self.feature_flags
 
         # -- File --
         file_menu = wx.Menu()
@@ -218,11 +231,12 @@ class MainFrame(wx.Frame):
         queue_menu.Append(ID_START, "&Start Transcription\tF5", "Begin processing the queue")
         queue_menu.Append(ID_PAUSE, "&Pause\tCtrl+P", "Pause the queue")
         queue_menu.Append(ID_CANCEL, "&Cancel Selected\tDel", "Cancel the selected job")
-        queue_menu.Append(
-            ID_AUDIO_PREVIEW_SELECTED,
-            "Audio &Preview Selected…\tCtrl+Alt+P",
-            "Preview the selected audio file in the queue",
-        )
+        if ff.is_enabled("audio_preview"):
+            queue_menu.Append(
+                ID_AUDIO_PREVIEW_SELECTED,
+                "Audio &Preview Selected…\tCtrl+Alt+P",
+                "Preview the selected audio file in the queue",
+            )
         queue_menu.AppendSeparator()
         queue_menu.Append(ID_RENAME, "Re&name Selected\tF2", "Rename the selected queue item")
         queue_menu.AppendSeparator()
@@ -248,11 +262,12 @@ class MainFrame(wx.Frame):
         tools_menu.Append(ID_SETTINGS, "&Settings…\tCtrl+,", "Open application settings")
         tools_menu.Append(ID_MODELS, "&Manage Models…\tCtrl+M", "Download or remove Whisper models")
         tools_menu.Append(ID_HARDWARE, "&Hardware Info…", "View your computer's capabilities")
-        tools_menu.Append(
-            ID_AUDIO_PREVIEW,
-            "Audio &Preview…\tCtrl+Shift+P",
-            "Listen to an audio file and select a range",
-        )
+        if ff.is_enabled("audio_preview"):
+            tools_menu.Append(
+                ID_AUDIO_PREVIEW,
+                "Audio &Preview…\tCtrl+Shift+P",
+                "Listen to an audio file and select a range",
+            )
         tools_menu.AppendSeparator()
         tools_menu.Append(
             ID_ADD_PROVIDER,
@@ -264,52 +279,63 @@ class MainFrame(wx.Frame):
             "&AI Provider Settings…",
             "Configure AI providers for translation and summarization",
         )
-        tools_menu.Append(
-            ID_PLUGINS,
-            "P&lugins…",
-            "View and manage installed plugins",
-        )
+        if ff.is_enabled("plugins"):
+            tools_menu.Append(
+                ID_PLUGINS,
+                "P&lugins…",
+                "View and manage installed plugins",
+            )
         tools_menu.AppendSeparator()
-        tools_menu.Append(
-            ID_LIVE_TRANSCRIPTION,
-            "&Live Transcription…\tCtrl+L",
-            "Start real-time microphone transcription",
-        )
+        if ff.is_enabled("live_transcription"):
+            tools_menu.Append(
+                ID_LIVE_TRANSCRIPTION,
+                "&Live Transcription…\tCtrl+L",
+                "Start real-time microphone transcription",
+            )
 
         # -- AI --
         ai_menu = wx.Menu()
-        ai_menu.Append(
-            ID_TRANSLATE,
-            "&Translate Transcript…\tCtrl+T",
-            "Translate the current transcript using AI",
-        )
-        ai_menu.Append(
-            ID_TRANSLATE_MULTI,
-            "Translate to &Multiple Languages…",
-            "Translate the transcript to all configured target languages",
-        )
-        ai_menu.AppendSeparator()
-        ai_menu.Append(
-            ID_SUMMARIZE,
-            "&Summarize Transcript…\tCtrl+Shift+S",
-            "Summarize the current transcript using AI",
-        )
-        ai_menu.AppendSeparator()
-        self._copilot_chat_item = ai_menu.AppendCheckItem(
-            ID_COPILOT_CHAT,
-            "&Chat with Transcript…\tCtrl+Shift+C",
-            "Toggle the AI chat panel for interactive transcript analysis",
-        )
-        ai_menu.Append(
-            ID_COPILOT_SETUP,
-            "Copilot &Setup…",
-            "Set up GitHub Copilot CLI and authentication",
-        )
-        ai_menu.Append(
-            ID_AGENT_BUILDER,
-            "&Agent Builder…",
-            "Design a custom AI agent for transcript analysis",
-        )
+        if ff.is_enabled("ai_translate"):
+            ai_menu.Append(
+                ID_TRANSLATE,
+                "&Translate Transcript…\tCtrl+T",
+                "Translate the current transcript using AI",
+            )
+        if ff.is_enabled("multi_language_translate"):
+            ai_menu.Append(
+                ID_TRANSLATE_MULTI,
+                "Translate to &Multiple Languages…",
+                "Translate the transcript to all configured target languages",
+            )
+        if ff.is_enabled("ai_translate") or ff.is_enabled("multi_language_translate"):
+            ai_menu.AppendSeparator()
+        if ff.is_enabled("ai_summarize"):
+            ai_menu.Append(
+                ID_SUMMARIZE,
+                "&Summarize Transcript…\tCtrl+Shift+S",
+                "Summarize the current transcript using AI",
+            )
+            ai_menu.AppendSeparator()
+        if ff.is_enabled("ai_chat"):
+            self._copilot_chat_item = ai_menu.AppendCheckItem(
+                ID_COPILOT_CHAT,
+                "&Chat with Transcript…\tCtrl+Shift+C",
+                "Toggle the AI chat panel for interactive transcript analysis",
+            )
+        else:
+            self._copilot_chat_item = None
+        if ff.is_enabled("copilot"):
+            ai_menu.Append(
+                ID_COPILOT_SETUP,
+                "Copilot &Setup…",
+                "Set up GitHub Copilot CLI and authentication",
+            )
+        if ff.is_enabled("agent_builder"):
+            ai_menu.Append(
+                ID_AGENT_BUILDER,
+                "&Agent Builder…",
+                "Design a custom AI agent for transcript analysis",
+            )
 
         # -- View --
         view_menu = wx.Menu()
@@ -350,17 +376,30 @@ class MainFrame(wx.Frame):
             "Open the BITS website in your browser",
         )
         help_menu.AppendSeparator()
-        help_menu.Append(
-            ID_CHECK_UPDATES,
-            "Check for &Updates…",
-            "Check GitHub for a newer version",
-        )
-        help_menu.AppendSeparator()
+        if ff.is_enabled("self_updater"):
+            help_menu.Append(
+                ID_CHECK_UPDATES,
+                "Check for &Updates…",
+                "Check GitHub for a newer version",
+            )
+            help_menu.AppendSeparator()
         help_menu.Append(ID_ABOUT, "&About…\tF1", f"About {APP_NAME}")
 
         menu_bar.Append(file_menu, "&File")
         menu_bar.Append(queue_menu, "&Queue")
-        menu_bar.Append(ai_menu, "&AI")
+        # Only show AI menu if at least one AI feature is enabled
+        if any(
+            ff.is_enabled(f)
+            for f in (
+                "ai_translate",
+                "ai_summarize",
+                "ai_chat",
+                "copilot",
+                "agent_builder",
+                "multi_language_translate",
+            )
+        ):
+            menu_bar.Append(ai_menu, "&AI")
         menu_bar.Append(view_menu, "&View")
         menu_bar.Append(tools_menu, "&Tools")
         menu_bar.Append(help_menu, "&Help")
@@ -374,12 +413,14 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_start, id=ID_START)
         self.Bind(wx.EVT_MENU, self._on_pause, id=ID_PAUSE)
         self.Bind(wx.EVT_MENU, self._on_cancel, id=ID_CANCEL)
-        self.Bind(wx.EVT_MENU, self._on_audio_preview_selected, id=ID_AUDIO_PREVIEW_SELECTED)
+        if ff.is_enabled("audio_preview"):
+            self.Bind(wx.EVT_MENU, self._on_audio_preview_selected, id=ID_AUDIO_PREVIEW_SELECTED)
         self.Bind(wx.EVT_MENU, self._on_clear_queue, id=ID_CLEAR_QUEUE)
         self.Bind(wx.EVT_MENU, self._on_settings, id=ID_SETTINGS)
         self.Bind(wx.EVT_MENU, self._on_models, id=ID_MODELS)
         self.Bind(wx.EVT_MENU, self._on_hardware_info, id=ID_HARDWARE)
-        self.Bind(wx.EVT_MENU, self._on_check_updates, id=ID_CHECK_UPDATES)
+        if ff.is_enabled("self_updater"):
+            self.Bind(wx.EVT_MENU, self._on_check_updates, id=ID_CHECK_UPDATES)
         self.Bind(wx.EVT_MENU, self._on_about, id=ID_ABOUT)
         self.Bind(wx.EVT_MENU, self._on_setup_wizard, id=ID_SETUP_WIZARD)
         self.Bind(wx.EVT_MENU, self._on_learn_more, id=ID_LEARN_MORE)
@@ -388,16 +429,25 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_toggle_auto_export, id=ID_AUTO_EXPORT)
         self.Bind(wx.EVT_MENU, self._on_view_log, id=ID_VIEW_LOG)
         self.Bind(wx.EVT_MENU, self._on_add_provider, id=ID_ADD_PROVIDER)
-        self.Bind(wx.EVT_MENU, self._on_live_transcription, id=ID_LIVE_TRANSCRIPTION)
+        if ff.is_enabled("live_transcription"):
+            self.Bind(wx.EVT_MENU, self._on_live_transcription, id=ID_LIVE_TRANSCRIPTION)
         self.Bind(wx.EVT_MENU, self._on_ai_settings, id=ID_AI_SETTINGS)
-        self.Bind(wx.EVT_MENU, self._on_translate, id=ID_TRANSLATE)
-        self.Bind(wx.EVT_MENU, self._on_summarize, id=ID_SUMMARIZE)
-        self.Bind(wx.EVT_MENU, self._on_plugins, id=ID_PLUGINS)
-        self.Bind(wx.EVT_MENU, self._on_audio_preview, id=ID_AUDIO_PREVIEW)
-        self.Bind(wx.EVT_MENU, self._on_copilot_setup, id=ID_COPILOT_SETUP)
-        self.Bind(wx.EVT_MENU, self._on_copilot_chat, id=ID_COPILOT_CHAT)
-        self.Bind(wx.EVT_MENU, self._on_agent_builder, id=ID_AGENT_BUILDER)
-        self.Bind(wx.EVT_MENU, self._on_translate_multi, id=ID_TRANSLATE_MULTI)
+        if ff.is_enabled("ai_translate"):
+            self.Bind(wx.EVT_MENU, self._on_translate, id=ID_TRANSLATE)
+        if ff.is_enabled("ai_summarize"):
+            self.Bind(wx.EVT_MENU, self._on_summarize, id=ID_SUMMARIZE)
+        if ff.is_enabled("plugins"):
+            self.Bind(wx.EVT_MENU, self._on_plugins, id=ID_PLUGINS)
+        if ff.is_enabled("audio_preview"):
+            self.Bind(wx.EVT_MENU, self._on_audio_preview, id=ID_AUDIO_PREVIEW)
+        if ff.is_enabled("copilot"):
+            self.Bind(wx.EVT_MENU, self._on_copilot_setup, id=ID_COPILOT_SETUP)
+        if ff.is_enabled("ai_chat"):
+            self.Bind(wx.EVT_MENU, self._on_copilot_chat, id=ID_COPILOT_CHAT)
+        if ff.is_enabled("agent_builder"):
+            self.Bind(wx.EVT_MENU, self._on_agent_builder, id=ID_AGENT_BUILDER)
+        if ff.is_enabled("multi_language_translate"):
+            self.Bind(wx.EVT_MENU, self._on_translate_multi, id=ID_TRANSLATE_MULTI)
         self.Bind(wx.EVT_MENU, self._on_clear_completed, id=ID_CLEAR_COMPLETED)
         self.Bind(wx.EVT_MENU, self._on_retry_failed, id=ID_RETRY_FAILED)
         self.Bind(wx.EVT_MENU, self._on_rename_selected, id=ID_RENAME)
@@ -509,21 +559,24 @@ class MainFrame(wx.Frame):
     def _refresh_chat_tab_visibility(self) -> None:
         """Show or hide the Chat tab based on AI provider availability.
 
-        The Chat tab is only visible when at least one AI chat provider
-        is configured (has an API key or is otherwise enabled).  This
-        should be called on startup and after AI settings change.
+        The Chat tab is only visible when the ``ai_chat`` feature flag
+        is enabled AND at least one AI chat provider is configured (has
+        an API key or is otherwise enabled).  This should be called on
+        startup and after AI settings change.
         """
         from bits_whisperer.core.ai_service import AIService
 
         ai_service = AIService(self.key_store, self.app_settings.ai)
         has_provider = ai_service.is_configured()
+        chat_flag_enabled = self.feature_flags.is_enabled("ai_chat")
+        should_show = has_provider and chat_flag_enabled
 
-        if has_provider and not self._chat_visible:
+        if should_show and not self._chat_visible:
             # Add the Chat tab
             self._notebook.AddPage(self.chat_panel, "Chat")
             self._chat_visible = True
             self._TAB_CHAT = self._notebook.GetPageCount() - 1
-        elif not has_provider and self._chat_visible:
+        elif not should_show and self._chat_visible:
             # Remove the Chat tab
             for idx in range(self._notebook.GetPageCount()):
                 if self._notebook.GetPage(idx) is self.chat_panel:
@@ -716,10 +769,14 @@ class MainFrame(wx.Frame):
 
         # Export / AI items require a loaded transcript
         menu_bar.Enable(ID_EXPORT, has_transcript)
-        menu_bar.Enable(ID_TRANSLATE, has_transcript)
-        menu_bar.Enable(ID_TRANSLATE_MULTI, has_transcript)
-        menu_bar.Enable(ID_SUMMARIZE, has_transcript)
-        menu_bar.Enable(ID_COPILOT_CHAT, has_transcript)
+        if self.feature_flags.is_enabled("ai_translate"):
+            menu_bar.Enable(ID_TRANSLATE, has_transcript)
+        if self.feature_flags.is_enabled("multi_language_translate"):
+            menu_bar.Enable(ID_TRANSLATE_MULTI, has_transcript)
+        if self.feature_flags.is_enabled("ai_summarize"):
+            menu_bar.Enable(ID_SUMMARIZE, has_transcript)
+        if self.feature_flags.is_enabled("ai_chat") and self._copilot_chat_item is not None:
+            menu_bar.Enable(ID_COPILOT_CHAT, has_transcript)
         # AI Action Builder is always accessible — users create templates anytime
 
         # Queue actions need pending jobs
@@ -940,6 +997,10 @@ class MainFrame(wx.Frame):
                 and self.registration_service.verify_key()
             ):
                 safe_call_after(self._update_window_title)
+
+            # Only check for updates if feature flag is enabled
+            if not self.feature_flags.is_enabled("self_updater"):
+                return
 
             try:
                 updater = Updater(
@@ -1398,12 +1459,14 @@ class MainFrame(wx.Frame):
         if current == self._TAB_CHAT:
             # Already on chat — toggle back to transcript
             self._notebook.SetSelection(self._TAB_TRANSCRIPT)
-            self._copilot_chat_item.Check(False)
+            if self._copilot_chat_item is not None:
+                self._copilot_chat_item.Check(False)
             announce_status(self, "Switched to Transcript tab")
         else:
             # Switch to chat tab
             self._notebook.SetSelection(self._TAB_CHAT)
-            self._copilot_chat_item.Check(True)
+            if self._copilot_chat_item is not None:
+                self._copilot_chat_item.Check(True)
 
             # Only start CopilotService if Copilot is the selected provider
             settings = AppSettings.load()
@@ -1808,6 +1871,8 @@ class MainFrame(wx.Frame):
 
         # 3. Save settings to persist any unsaved changes
         try:
+            # Persist feature flag overrides back to settings
+            self.app_settings.feature_flags.local_overrides = self.feature_flags.get_overrides()
             self.app_settings.save()
         except Exception as exc:
             logger.debug("Error saving settings on exit: %s", exc)

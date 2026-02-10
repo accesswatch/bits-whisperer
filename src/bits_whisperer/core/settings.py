@@ -273,6 +273,20 @@ class CopilotSettings:
 
 
 @dataclass
+class FeatureFlagSettings:
+    """Remote feature flag configuration.
+
+    Controls how the application fetches and applies feature flags
+    from a remote JSON file for staged feature rollout.
+    """
+
+    enabled: bool = True
+    remote_url: str = ""  # empty = default GitHub raw URL
+    refresh_hours: float = 24.0
+    local_overrides: dict[str, bool] = field(default_factory=dict)
+
+
+@dataclass
 class BudgetSettings:
     """Per-provider spending limits for transcription.
 
@@ -376,6 +390,7 @@ class AppSettings:
     plugins: PluginSettings = field(default_factory=PluginSettings)
     copilot: CopilotSettings = field(default_factory=CopilotSettings)
     budget: BudgetSettings = field(default_factory=BudgetSettings)
+    feature_flags: FeatureFlagSettings = field(default_factory=FeatureFlagSettings)
 
     # ------------------------------------------------------------------ #
     # Persistence                                                          #
@@ -443,6 +458,10 @@ class AppSettings:
         budget_data = data.get("budget", {})
         budget = _safe(BudgetSettings, budget_data)
 
+        # FeatureFlagSettings has a dict field; handle specially
+        ff_data = data.get("feature_flags", {})
+        ff_settings = _safe(FeatureFlagSettings, ff_data)
+
         return cls(
             general=_safe(GeneralSettings, data.get("general")),
             transcription=_safe(
@@ -467,4 +486,5 @@ class AppSettings:
             plugins=_safe(PluginSettings, data.get("plugins")),
             copilot=_safe(CopilotSettings, data.get("copilot")),
             budget=budget,
+            feature_flags=ff_settings,
         )

@@ -131,8 +131,10 @@ Entry point: `src/bits_whisperer/__main__.py` -> `app.py` (wx.App)
 - **`core/`** — Business logic. `transcription_service.py`
   orchestrates job queue. `provider_manager.py` routes to providers.
   `ai_service.py` handles translation/summarization.
-  `copilot_service.py` manages GitHub Copilot SDK. Provider SDKs are
-  installed on-demand at runtime via `sdk_installer.py`.
+  `copilot_service.py` manages GitHub Copilot SDK.
+  `feature_flags.py` provides remote feature flag service.
+  Provider SDKs are installed on-demand at runtime via
+  `sdk_installer.py`.
 - **`providers/`** — Strategy pattern. `base.py` defines
   `TranscriptionProvider` ABC. 17 concrete adapters (cloud + local).
   Each provider is lazy-imported only when selected.
@@ -155,6 +157,33 @@ Entry point: `src/bits_whisperer/__main__.py` -> `app.py` (wx.App)
 4. Add tests in `tests/test_providers.py`.
 5. Update provider count in all docs.
 6. Run all verification gates.
+
+## Feature Flags (Staged Rollout)
+
+Remote feature flag service for QA-gated feature rollout.
+
+- **Config**: `feature_flags.json` in repo root — fetched via raw
+  GitHub URL, cached locally with 24h TTL.
+- **Service**: `core/feature_flags.py` — `FeatureFlagService` with
+  remote fetch, local cache, version gating, local overrides.
+- **Settings**: `FeatureFlagSettings` in `core/settings.py` —
+  `remote_url`, `refresh_hours`, `local_overrides`.
+- **UI**: `main_frame.py` calls `feature_flags.is_enabled()` in
+  `_build_menu_bar()` to show/hide menu items.
+
+### Flag identifiers
+
+`live_transcription`, `ai_translate`, `ai_summarize`, `ai_chat`,
+`agent_builder`, `audio_preview`, `diarization`, `plugins`,
+`copilot`, `self_updater`, `budget_tracking`,
+`multi_language_translate`.
+
+### Adding a feature flag
+
+1. Add entry to `feature_flags.json`.
+2. Gate UI with `self.feature_flags.is_enabled("flag_name")`.
+3. Add tests in `tests/test_feature_flags.py`.
+4. Run all verification gates.
 
 ## Accessibility (Non-Negotiable for UI work)
 
