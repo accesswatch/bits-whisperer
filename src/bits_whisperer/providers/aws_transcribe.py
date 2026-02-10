@@ -188,7 +188,7 @@ class AWSTranscribeProvider(TranscriptionProvider):
                 if status == "COMPLETED":
                     output_uri = job_info.get("Transcript", {}).get("TranscriptFileUri", "")
                     break
-                elif status == "FAILED":
+                if status == "FAILED":
                     reason = job_info.get("FailureReason", "Unknown")
                     raise RuntimeError(f"Amazon Transcribe job failed: {reason}")
 

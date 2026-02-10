@@ -52,6 +52,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Final
 
+from bits_whisperer.utils.accessibility import (
+    accessible_message_box,
+    announce_to_screen_reader,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -266,6 +271,13 @@ _SDK_REGISTRY: Final[dict[str, SDKInfo]] = {
         test_import="nemo",
         install_size_mb=2000,
     ),
+    "copilot_sdk": SDKInfo(
+        provider_key="copilot_sdk",
+        display_name="GitHub Copilot SDK",
+        pip_packages=["github-copilot-sdk>=0.1.0"],
+        test_import="copilot",
+        install_size_mb=110,
+    ),
 }
 
 
@@ -401,6 +413,7 @@ def _install_dev(info: SDKInfo, packages_str: str) -> tuple[bool, str]:
             capture_output=True,
             text=True,
             timeout=600,
+            check=False,
             creationflags=(subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0),
             env={**os.environ, "PIP_DISABLE_PIP_VERSION_CHECK": "1"},
         )
@@ -471,7 +484,7 @@ def _purge_package(sp: Path, norm_name: str) -> None:
             continue
         item_norm = item.name.lower().replace("-", "_")
         # Match dist-info directories: <name>-<version>.dist-info
-        if item_norm.endswith(".dist_info") or item_norm.endswith(".dist-info"):
+        if item_norm.endswith((".dist_info", ".dist-info")):
             pkg_part = item_norm.rsplit("-", 1)[0] if "-" in item_norm else item_norm
             # dist-info names have version: e.g. "openai-1.82.0.dist-info"
             # After rsplit we get "openai_1.82.0" — split once more
@@ -536,6 +549,7 @@ def ensure_sdk(provider_key: str, parent_window=None) -> bool:
         f"Install {info.display_name} SDK",
         wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION,
     )
+    announce_to_screen_reader(f"Install {info.display_name} SDK? {msg}")
     answer = dlg.ShowModal()
     dlg.Destroy()
 
@@ -577,7 +591,7 @@ def ensure_sdk(provider_key: str, parent_window=None) -> bool:
     success, error = result_holder[0]
 
     if success:
-        wx.MessageBox(
+        accessible_message_box(
             f"{info.display_name} SDK installed successfully!\n\n"
             "The provider is now ready to use.",
             "Installation Complete",
@@ -596,7 +610,7 @@ def ensure_sdk(provider_key: str, parent_window=None) -> bool:
         else:
             fallback_msg += f"  pip install {packages_str}"
 
-        wx.MessageBox(
+        accessible_message_box(
             fallback_msg,
             "Installation Failed",
             wx.OK | wx.ICON_WARNING,

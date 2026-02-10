@@ -23,20 +23,29 @@ DOCS_DIR = ROOT / "docs"
 
 # (source_md_path, output_html_name, html_title)
 DOCS: list[tuple[Path, str, str]] = [
-    (DOCS_DIR / "README.md", "README.html", "BITS Whisperer — README"),
-    (DOCS_DIR / "ANNOUNCEMENT.md", "ANNOUNCEMENT.html", "BITS Whisperer — Announcement"),
-    (DOCS_DIR / "PRD.md", "PRD.html", "BITS Whisperer — Product Requirements Document"),
-    (DOCS_DIR / "USER_GUIDE.md", "USER_GUIDE.html", "BITS Whisperer — User Guide"),
+    (
+        DOCS_DIR / "README.md",
+        "README.html",
+        "BITS Whisperer \u2014 README",
+    ),
+    (
+        DOCS_DIR / "ANNOUNCEMENT.md",
+        "ANNOUNCEMENT.html",
+        "BITS Whisperer \u2014 Announcement",
+    ),
+    (
+        DOCS_DIR / "PRD.md",
+        "PRD.html",
+        "BITS Whisperer \u2014 Product Requirements Document",
+    ),
+    (
+        DOCS_DIR / "USER_GUIDE.md",
+        "USER_GUIDE.html",
+        "BITS Whisperer \u2014 User Guide",
+    ),
 ]
 
-HTML_TEMPLATE = """\
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{title}</title>
-<style>
+CSS_STYLES = """
   :root {{
     --bg: #ffffff;
     --fg: #1a1a1a;
@@ -59,8 +68,9 @@ HTML_TEMPLATE = """\
   }}
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
   body {{
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
-                 sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    font-family: -apple-system, BlinkMacSystemFont,
+                 "Segoe UI", Helvetica, Arial, sans-serif,
+                 "Apple Color Emoji", "Segoe UI Emoji";
     font-size: 16px;
     line-height: 1.6;
     color: var(--fg);
@@ -75,14 +85,23 @@ HTML_TEMPLATE = """\
     font-weight: 600;
     line-height: 1.25;
   }}
-  h1 {{ font-size: 2em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }}
-  h2 {{ font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }}
+  h1 {{
+    font-size: 2em;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.3em;
+  }}
+  h2 {{
+    font-size: 1.5em;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.3em;
+  }}
   h3 {{ font-size: 1.25em; }}
   p {{ margin: 0.5em 0 1em; }}
   a {{ color: var(--accent); text-decoration: none; }}
   a:hover {{ text-decoration: underline; }}
   code {{
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-family: "SFMono-Regular", Consolas,
+                 "Liberation Mono", Menlo, monospace;
     font-size: 0.875em;
     background: var(--code-bg);
     padding: 0.2em 0.4em;
@@ -116,6 +135,8 @@ HTML_TEMPLATE = """\
     font-weight: 600;
   }}
   tr:nth-child(even) {{ background: var(--table-alt); }}
+  .text-center {{ text-align: center; }}
+  .text-right {{ text-align: right; }}
   blockquote {{
     border-left: 4px solid var(--accent);
     padding: 0.5em 1em;
@@ -149,7 +170,16 @@ HTML_TEMPLATE = """\
     color: var(--blockquote);
     text-align: center;
   }}
-</style>
+"""
+
+HTML_TEMPLATE = """\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title}</title>
+<link rel="stylesheet" href="docs.css">
 </head>
 <body>
 {body}
@@ -173,17 +203,41 @@ def convert_md_to_html(md_text: str, title: str, source_name: str) -> str:
         output_format="html",
     )
     body_html = md.convert(md_text)
+    body_html = _replace_table_alignment(body_html)
     # Insert TOC at the top if it has content
     toc_html = getattr(md, "toc", "")
     if toc_html and "<li>" in toc_html:
-        toc_section = f'<nav class="toc"><strong>Table of Contents</strong>\n{toc_html}</nav>\n'
+        toc_section = (
+            '<nav class="toc">'
+            '<strong>Table of Contents</strong>\n'
+            f'{toc_html}</nav>\n'
+        )
         body_html = toc_section + body_html
-    return HTML_TEMPLATE.format(title=title, body=body_html, source=source_name)
+    return HTML_TEMPLATE.format(
+        title=title, body=body_html, source=source_name,
+    )
+
+
+def _replace_table_alignment(html: str) -> str:
+    """Replace inline table alignment styles with CSS classes."""
+    replacements = {
+        '<th style="text-align: center;">': '<th class="text-center">',
+        '<td style="text-align: center;">': '<td class="text-center">',
+        '<th style="text-align: right;">': '<th class="text-right">',
+        '<td style="text-align: right;">': '<td class="text-right">',
+    }
+    for old, new in replacements.items():
+        html = html.replace(old, new)
+    return html
 
 
 def build_all() -> None:
     """Build HTML for all documentation files."""
     DOCS_DIR.mkdir(exist_ok=True)
+    css_path = DOCS_DIR / "docs.css"
+    css_path.write_text(
+        CSS_STYLES.strip() + "\n", encoding="utf-8",
+    )
     for src_path, out_name, title in DOCS:
         if not src_path.exists():
             print(f"  SKIP  {src_path} (not found)")
@@ -192,7 +246,10 @@ def build_all() -> None:
         html = convert_md_to_html(md_text, title, src_path.name)
         out_path = DOCS_DIR / out_name
         out_path.write_text(html, encoding="utf-8")
-        print(f"  OK    {src_path.relative_to(ROOT)} -> docs/{out_name}")
+        print(
+            f"  OK    {src_path.relative_to(ROOT)}"
+            f" -> docs/{out_name}",
+        )
 
 
 if __name__ == "__main__":

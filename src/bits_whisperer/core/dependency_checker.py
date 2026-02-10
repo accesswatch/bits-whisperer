@@ -18,6 +18,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+from bits_whisperer.utils.accessibility import (
+    accessible_message_box,
+    announce_to_screen_reader,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -48,6 +53,7 @@ def _has_winget() -> bool:
             capture_output=True,
             text=True,
             timeout=10,
+            check=False,
             creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
         )
         return result.returncode == 0
@@ -80,6 +86,7 @@ def install_ffmpeg_winget(progress_callback=None) -> bool:
             capture_output=True,
             text=True,
             timeout=300,  # 5-minute timeout
+            check=False,
             creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
         )
         if result.returncode == 0:
@@ -182,6 +189,7 @@ def _handle_ffmpeg_install(parent_window) -> bool:
             "Install Required Dependency",
             wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION,
         )
+        announce_to_screen_reader("ffmpeg is required for audio conversion. Install it now?")
         answer = dlg.ShowModal()
         dlg.Destroy()
 
@@ -250,7 +258,7 @@ def _install_with_progress(parent_window) -> bool:
         success = is_ffmpeg_available()
 
     if success:
-        wx.MessageBox(
+        accessible_message_box(
             "ffmpeg has been installed successfully!\n\n"
             "Audio processing is now fully available.",
             "Installation Complete",
@@ -258,7 +266,7 @@ def _install_with_progress(parent_window) -> bool:
             parent_window,
         )
     else:
-        wx.MessageBox(
+        accessible_message_box(
             "Automatic installation did not complete successfully.\n\n"
             "You can install ffmpeg manually — see the instructions "
             "in the next dialog.",

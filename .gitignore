@@ -22,11 +22,19 @@ build/
 *.spec
 
 # --- IDE / Editor ---
-.vscode/
+# Track .vscode/settings.json and .vscode/extensions.json for
+# standardised workspace config (ruff, black, spell checker).
+# Exclude user-specific launch/task configs.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
 *~
+
+# --- AI agent / assistant ---
+.claude/
 
 # --- Testing & Linting ---
 .pytest_cache/
@@ -39,12 +47,22 @@ htmlcov/
 .DS_Store
 Thumbs.db
 desktop.ini
+nul
 
 # --- Logs ---
 *.log
 
-# --- Build scripts (development only) ---
-run_build.bat
+# --- Temp / scratch files ---
+*.bak
+verify.txt
+test_final.txt
+lint_output*.txt
+pip_output.txt
 test_output.txt
+test_result.txt
+test_results.txt
 build_stderr.log
 build_stdout.log
+
+# --- Build scripts (development only) ---
+run_build.bat

@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     import numpy as np
 
 
-def _np():  # noqa: ANN202
+def _np():
     """Lazily import and cache numpy."""
     import numpy
 

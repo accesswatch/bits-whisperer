@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.black-formatter",
+    "charliermarsh.ruff",
+    "editorconfig.editorconfig",
+    "streetsidesoftware.code-spell-checker",
+    "ms-python.mypy-type-checker"
+  ],
+  "unwantedRecommendations": [
+    "ms-python.flake8",
+    "ms-python.pylint"
+  ]
+}

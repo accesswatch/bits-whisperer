@@ -10,9 +10,12 @@ from pathlib import Path
 import wx
 import wx.adv
 
+from bits_whisperer.core.job import JobStatus
 from bits_whisperer.core.settings import AppSettings
 from bits_whisperer.utils.accessibility import (
+    accessible_message_box,
     announce_status,
+    announce_to_screen_reader,
     safe_call_after,
     set_accessible_name,
 )
@@ -58,6 +61,13 @@ ID_COPILOT_SETUP = wx.NewIdRef()
 ID_COPILOT_CHAT = wx.NewIdRef()
 ID_AGENT_BUILDER = wx.NewIdRef()
 ID_TRANSLATE_MULTI = wx.NewIdRef()
+ID_AUDIO_PREVIEW = wx.NewIdRef()
+ID_AUDIO_PREVIEW_SELECTED = wx.NewIdRef()
+
+# Queue batch operation IDs
+ID_CLEAR_COMPLETED = wx.NewIdRef()
+ID_RETRY_FAILED = wx.NewIdRef()
+ID_RENAME = wx.NewIdRef()
 
 # Maximum recent-file entries
 _MAX_RECENT = 10
@@ -91,6 +101,7 @@ class MainFrame(wx.Frame):
         from bits_whisperer.core.device_probe import DeviceProbe
         from bits_whisperer.core.model_manager import ModelManager
         from bits_whisperer.core.provider_manager import ProviderManager
+        from bits_whisperer.core.registration_service import BITS_RegistrationService
         from bits_whisperer.core.transcoder import Transcoder
         from bits_whisperer.core.transcription_service import TranscriptionService
         from bits_whisperer.storage.database import Database
@@ -98,6 +109,7 @@ class MainFrame(wx.Frame):
 
         self.database = Database()
         self.key_store = KeyStore()
+        self.registration_service = BITS_RegistrationService(self.key_store)
         self.device_probe = DeviceProbe()
         self.device_profile = self.device_probe.probe()
         self.model_manager = ModelManager()
@@ -145,6 +157,9 @@ class MainFrame(wx.Frame):
         # ---- Event bindings ----
         self.Bind(wx.EVT_CLOSE, self._on_close)
 
+        # ---- Registration update ----
+        self._update_window_title()
+
         # ---- Initial status ----
         hw = self.device_profile
         gpu_label = hw.gpu_name if hw.gpu_name else "No GPU"
@@ -154,10 +169,18 @@ class MainFrame(wx.Frame):
         )
         logger.info("Main frame initialised")
 
+        # Disable transcript-dependent menu items initially
+        self._update_menu_state()
+
         # ---- Deferred startup update check ----
         self._startup_timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self._on_startup_timer, self._startup_timer)
         self._startup_timer.StartOnce(3000)  # Check 3 seconds after startup
+
+    def _update_window_title(self) -> None:
+        """Update window title based on version and membership status."""
+        status_msg = self.registration_service.get_status_message()
+        self.SetTitle(f"{APP_NAME} v{APP_VERSION} — {status_msg}")
 
     # =================================================================== #
     # Menu bar                                                              #
@@ -168,7 +191,11 @@ class MainFrame(wx.Frame):
 
         # -- File --
         file_menu = wx.Menu()
-        file_menu.Append(ID_ADD_FILES, "&Add Files…\tCtrl+O", "Add audio files to the queue")
+        file_menu.Append(
+            ID_ADD_FILES,
+            "Add File to &Transcribe…\tCtrl+O",
+            "Choose audio files and configure transcription settings",
+        )
         file_menu.Append(
             ID_ADD_FOLDER,
             "Add &Folder…\tCtrl+Shift+O",
@@ -189,8 +216,26 @@ class MainFrame(wx.Frame):
         # -- Queue --
         queue_menu = wx.Menu()
         queue_menu.Append(ID_START, "&Start Transcription\tF5", "Begin processing the queue")
-        queue_menu.Append(ID_PAUSE, "&Pause\tF6", "Pause the queue")
+        queue_menu.Append(ID_PAUSE, "&Pause\tCtrl+P", "Pause the queue")
         queue_menu.Append(ID_CANCEL, "&Cancel Selected\tDel", "Cancel the selected job")
+        queue_menu.Append(
+            ID_AUDIO_PREVIEW_SELECTED,
+            "Audio &Preview Selected…\tCtrl+Alt+P",
+            "Preview the selected audio file in the queue",
+        )
+        queue_menu.AppendSeparator()
+        queue_menu.Append(ID_RENAME, "Re&name Selected\tF2", "Rename the selected queue item")
+        queue_menu.AppendSeparator()
+        queue_menu.Append(
+            ID_CLEAR_COMPLETED,
+            "Clear C&ompleted",
+            "Remove all completed jobs from the queue",
+        )
+        queue_menu.Append(
+            ID_RETRY_FAILED,
+            "&Retry All Failed\tCtrl+Shift+R",
+            "Re-queue all failed jobs for another attempt",
+        )
         queue_menu.AppendSeparator()
         queue_menu.Append(
             ID_CLEAR_QUEUE,
@@ -203,6 +248,11 @@ class MainFrame(wx.Frame):
         tools_menu.Append(ID_SETTINGS, "&Settings…\tCtrl+,", "Open application settings")
         tools_menu.Append(ID_MODELS, "&Manage Models…\tCtrl+M", "Download or remove Whisper models")
         tools_menu.Append(ID_HARDWARE, "&Hardware Info…", "View your computer's capabilities")
+        tools_menu.Append(
+            ID_AUDIO_PREVIEW,
+            "Audio &Preview…\tCtrl+Shift+P",
+            "Listen to an audio file and select a range",
+        )
         tools_menu.AppendSeparator()
         tools_menu.Append(
             ID_ADD_PROVIDER,
@@ -324,6 +374,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_start, id=ID_START)
         self.Bind(wx.EVT_MENU, self._on_pause, id=ID_PAUSE)
         self.Bind(wx.EVT_MENU, self._on_cancel, id=ID_CANCEL)
+        self.Bind(wx.EVT_MENU, self._on_audio_preview_selected, id=ID_AUDIO_PREVIEW_SELECTED)
         self.Bind(wx.EVT_MENU, self._on_clear_queue, id=ID_CLEAR_QUEUE)
         self.Bind(wx.EVT_MENU, self._on_settings, id=ID_SETTINGS)
         self.Bind(wx.EVT_MENU, self._on_models, id=ID_MODELS)
@@ -342,19 +393,29 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_translate, id=ID_TRANSLATE)
         self.Bind(wx.EVT_MENU, self._on_summarize, id=ID_SUMMARIZE)
         self.Bind(wx.EVT_MENU, self._on_plugins, id=ID_PLUGINS)
+        self.Bind(wx.EVT_MENU, self._on_audio_preview, id=ID_AUDIO_PREVIEW)
         self.Bind(wx.EVT_MENU, self._on_copilot_setup, id=ID_COPILOT_SETUP)
         self.Bind(wx.EVT_MENU, self._on_copilot_chat, id=ID_COPILOT_CHAT)
         self.Bind(wx.EVT_MENU, self._on_agent_builder, id=ID_AGENT_BUILDER)
         self.Bind(wx.EVT_MENU, self._on_translate_multi, id=ID_TRANSLATE_MULTI)
+        self.Bind(wx.EVT_MENU, self._on_clear_completed, id=ID_CLEAR_COMPLETED)
+        self.Bind(wx.EVT_MENU, self._on_retry_failed, id=ID_RETRY_FAILED)
+        self.Bind(wx.EVT_MENU, self._on_rename_selected, id=ID_RENAME)
 
     def _build_accelerators(self) -> None:
+        # Panel-navigation IDs (not in the menu bar)
+        self._id_next_tab = wx.NewIdRef()
+        self._id_prev_tab = wx.NewIdRef()
+        self._id_next_pane = wx.NewIdRef()
+        self._id_prev_pane = wx.NewIdRef()
+
         accel = wx.AcceleratorTable(
             [
                 wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("O"), ID_ADD_FILES),
                 wx.AcceleratorEntry(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("O"), ID_ADD_FOLDER),
                 wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("E"), ID_EXPORT),
                 wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_F5, ID_START),
-                wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_F6, ID_PAUSE),
+                wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("P"), ID_PAUSE),
                 wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_DELETE, ID_CANCEL),
                 wx.AcceleratorEntry(wx.ACCEL_CTRL, ord(","), ID_SETTINGS),
                 wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("M"), ID_MODELS),
@@ -364,9 +425,26 @@ class MainFrame(wx.Frame):
                 wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("T"), ID_TRANSLATE),
                 wx.AcceleratorEntry(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("S"), ID_SUMMARIZE),
                 wx.AcceleratorEntry(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("C"), ID_COPILOT_CHAT),
+                wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_F2, ID_RENAME),
+                wx.AcceleratorEntry(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("R"), ID_RETRY_FAILED),
+                wx.AcceleratorEntry(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("P"), ID_AUDIO_PREVIEW),
+                wx.AcceleratorEntry(
+                    wx.ACCEL_CTRL | wx.ACCEL_ALT, ord("P"), ID_AUDIO_PREVIEW_SELECTED
+                ),
+                # Tab / pane navigation
+                wx.AcceleratorEntry(wx.ACCEL_CTRL, wx.WXK_TAB, self._id_next_tab),
+                wx.AcceleratorEntry(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, wx.WXK_TAB, self._id_prev_tab),
+                wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_F6, self._id_next_pane),
+                wx.AcceleratorEntry(wx.ACCEL_SHIFT, wx.WXK_F6, self._id_prev_pane),
             ]
         )
         self.SetAcceleratorTable(accel)
+
+        # Bind navigation handlers
+        self.Bind(wx.EVT_MENU, self._on_next_tab, id=self._id_next_tab)
+        self.Bind(wx.EVT_MENU, self._on_prev_tab, id=self._id_prev_tab)
+        self.Bind(wx.EVT_MENU, self._on_next_pane, id=self._id_next_pane)
+        self.Bind(wx.EVT_MENU, self._on_prev_pane, id=self._id_prev_pane)
 
     # =================================================================== #
     # Status bar                                                            #
@@ -401,33 +479,57 @@ class MainFrame(wx.Frame):
         from bits_whisperer.ui.queue_panel import QueuePanel
         from bits_whisperer.ui.transcript_panel import TranscriptPanel
 
-        # Outer vertical splitter — top workspace / bottom chat panel
-        self._outer_splitter = wx.SplitterWindow(self, style=wx.SP_LIVE_UPDATE | wx.SP_3DSASH)
-        set_accessible_name(self._outer_splitter, "Main layout")
+        # Main notebook — one tab per workspace area
+        self._notebook = wx.Notebook(self, style=wx.NB_TOP)
+        set_accessible_name(self._notebook, "Main workspace tabs")
 
-        # Inner horizontal splitter — queue (left) / transcript (right)
-        self._splitter = wx.SplitterWindow(
-            self._outer_splitter, style=wx.SP_LIVE_UPDATE | wx.SP_3DSASH
-        )
-        set_accessible_name(self._splitter, "Main workspace")
+        self.queue_panel = QueuePanel(self._notebook, main_frame=self)
+        self.transcript_panel = TranscriptPanel(self._notebook, main_frame=self)
+        self.chat_panel = CopilotChatPanel(self._notebook, main_frame=self)
 
-        self.queue_panel = QueuePanel(self._splitter, main_frame=self)
-        self.transcript_panel = TranscriptPanel(self._splitter, main_frame=self)
+        self._notebook.AddPage(self.queue_panel, "Queue")
+        self._notebook.AddPage(self.transcript_panel, "Transcript")
 
-        self._splitter.SplitVertically(self.queue_panel, self.transcript_panel, sashPosition=360)
-        self._splitter.SetMinimumPaneSize(250)
+        # Track which tabs are open
+        self._TAB_QUEUE = 0
+        self._TAB_TRANSCRIPT = 1
+        self._TAB_CHAT = 2  # index when visible
 
-        # Chat panel (bottom, initially hidden)
-        self.chat_panel = CopilotChatPanel(self._outer_splitter, main_frame=self)
-
-        # Start unsplit (chat hidden)
-        self._outer_splitter.Initialize(self._splitter)
-        self._outer_splitter.SetMinimumPaneSize(120)
+        # Chat tab — only shown when at least one AI chat provider is configured
         self._chat_visible = False
+        self._refresh_chat_tab_visibility()
 
         sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self._outer_splitter, 1, wx.EXPAND)
+        sizer.Add(self._notebook, 1, wx.EXPAND)
         self.SetSizer(sizer)
+
+        # Notebook page change event — update state management
+        self._notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self._on_tab_changed)
+
+    def _refresh_chat_tab_visibility(self) -> None:
+        """Show or hide the Chat tab based on AI provider availability.
+
+        The Chat tab is only visible when at least one AI chat provider
+        is configured (has an API key or is otherwise enabled).  This
+        should be called on startup and after AI settings change.
+        """
+        from bits_whisperer.core.ai_service import AIService
+
+        ai_service = AIService(self.key_store, self.app_settings.ai)
+        has_provider = ai_service.is_configured()
+
+        if has_provider and not self._chat_visible:
+            # Add the Chat tab
+            self._notebook.AddPage(self.chat_panel, "Chat")
+            self._chat_visible = True
+            self._TAB_CHAT = self._notebook.GetPageCount() - 1
+        elif not has_provider and self._chat_visible:
+            # Remove the Chat tab
+            for idx in range(self._notebook.GetPageCount()):
+                if self._notebook.GetPage(idx) is self.chat_panel:
+                    self._notebook.RemovePage(idx)
+                    break
+            self._chat_visible = False
 
     # =================================================================== #
     # Menu event handlers                                                   #
@@ -442,8 +544,10 @@ class MainFrame(wx.Frame):
         )
         if dlg.ShowModal() == wx.ID_OK:
             paths = dlg.GetPaths()
-            self._enqueue_files(paths)
-        dlg.Destroy()
+            dlg.Destroy()
+            self._show_add_wizard(paths)
+        else:
+            dlg.Destroy()
 
     def _on_add_folder(self, _event: wx.CommandEvent) -> None:
         dlg = wx.DirDialog(
@@ -452,22 +556,74 @@ class MainFrame(wx.Frame):
             style=wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST,
         )
         if dlg.ShowModal() == wx.ID_OK:
-            folder = Path(dlg.GetPath())
-            files = [
-                str(f)
-                for f in sorted(folder.rglob("*"))
-                if f.suffix.lower() in SUPPORTED_AUDIO_EXTENSIONS
-            ]
-            if files:
-                self._enqueue_files(files)
-            else:
-                wx.MessageBox(
-                    f"No audio files found in:\n{folder}",
-                    "No Audio Files",
-                    wx.OK | wx.ICON_INFORMATION,
-                    self,
-                )
-        dlg.Destroy()
+            folder = dlg.GetPath()
+            dlg.Destroy()
+            self._process_folder(folder)
+        else:
+            dlg.Destroy()
+
+    def _process_folder(self, folder: str) -> None:
+        """Discover audio files in *folder*, estimate costs, and enqueue.
+
+        For paid (cloud) providers the user is shown a cost estimate
+        dialog and must confirm before files are queued.  Local / free
+        providers skip the estimate and go straight to the wizard.
+
+        Args:
+            folder: Absolute path of the selected folder.
+        """
+        folder_path = Path(folder)
+        files = [
+            str(f)
+            for f in sorted(folder_path.rglob("*"))
+            if f.suffix.lower() in SUPPORTED_AUDIO_EXTENSIONS
+        ]
+        if not files:
+            accessible_message_box(
+                f"No audio files found in:\n{folder}",
+                "No Audio Files",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            return
+
+        # Show the add-file wizard so the user can pick provider/model
+        from bits_whisperer.ui.add_file_wizard import AddFileWizard
+
+        wizard = AddFileWizard(self, main_frame=self, paths=files)
+        if wizard.ShowModal() != wx.ID_OK or not wizard.result_jobs:
+            wizard.Destroy()
+            return
+
+        jobs = wizard.result_jobs
+        wizard.Destroy()
+
+        # Ensure cost estimates are populated on jobs (wizard may
+        # have already set them, but fill any gaps)
+        provider_key = jobs[0].provider if jobs else ""
+        caps = self.provider_manager.get_capabilities(provider_key) if provider_key else None
+        is_paid = (
+            caps is not None
+            and getattr(caps, "provider_type", "local") == "cloud"
+            and getattr(caps, "rate_per_minute_usd", 0) > 0
+        )
+
+        if is_paid:
+            for job in jobs:
+                if job.cost_estimate <= 0:
+                    dur = job.duration_seconds or 0.0
+                    if dur <= 0:
+                        dur = max(60.0, job.file_size_bytes / (10 * 1024 * 1024) * 60)
+                    job.cost_estimate = self.provider_manager.estimate_cost(provider_key, dur)
+
+        # Add jobs as a folder branch in the tree
+        self.queue_panel.add_folder(folder, jobs)
+        self._add_to_recent([str(f) for f in files[:5]])  # keep recent list manageable
+        announce_status(
+            self,
+            f"Added folder with {len(jobs)} file{'s' if len(jobs) != 1 else ''} to queue",
+        )
+        self._notebook.SetSelection(self._TAB_QUEUE)
 
     def _enqueue_files(self, paths: list[str]) -> None:
         """Add file paths to the queue panel."""
@@ -475,13 +631,114 @@ class MainFrame(wx.Frame):
         self._add_to_recent(paths)
         count = len(paths)
         announce_status(self, f"Added {count} file{'s' if count != 1 else ''} to queue")
+        # Switch to Queue tab so the user sees the new items
+        self._notebook.SetSelection(self._TAB_QUEUE)
+
+    def _show_add_wizard(self, paths: list[str]) -> None:
+        """Open the Add File wizard to configure and enqueue files.
+
+        Args:
+            paths: List of absolute audio file paths.
+        """
+        from bits_whisperer.ui.add_file_wizard import AddFileWizard
+
+        wizard = AddFileWizard(self, main_frame=self, paths=paths)
+        if wizard.ShowModal() == wx.ID_OK and wizard.result_jobs:
+            jobs = wizard.result_jobs
+            for job in jobs:
+                self.queue_panel.add_job(job)
+            self._add_to_recent(paths)
+            count = len(jobs)
+            announce_status(self, f"Added {count} file{'s' if count != 1 else ''} to queue")
+            # Switch to Queue tab
+            self._notebook.SetSelection(self._TAB_QUEUE)
+        wizard.Destroy()
+
+    # ------------------------------------------------------------------ #
+    # Tab navigation                                                       #
+    # ------------------------------------------------------------------ #
+
+    def _on_tab_changed(self, event: wx.BookCtrlEvent) -> None:
+        """Respond to tab selection changes for state management."""
+        event.Skip()
+        self._update_menu_state()
+
+    def _on_next_tab(self, _event: wx.CommandEvent) -> None:
+        """Ctrl+Tab — switch to the next tab."""
+        sel = self._notebook.GetSelection()
+        count = self._notebook.GetPageCount()
+        self._notebook.SetSelection((sel + 1) % count)
+
+    def _on_prev_tab(self, _event: wx.CommandEvent) -> None:
+        """Ctrl+Shift+Tab — switch to the previous tab."""
+        sel = self._notebook.GetSelection()
+        count = self._notebook.GetPageCount()
+        self._notebook.SetSelection((sel - 1) % count)
+
+    def _on_next_pane(self, _event: wx.CommandEvent) -> None:
+        """F6 — move focus into the current tab's main control."""
+        page = self._notebook.GetCurrentPage()
+        if page:
+            page.SetFocus()
+            tab_name = self._notebook.GetPageText(self._notebook.GetSelection())
+            announce_status(self, f"Focus: {tab_name} tab")
+
+    def _on_prev_pane(self, _event: wx.CommandEvent) -> None:
+        """Shift+F6 — move focus back to the tab strip."""
+        self._notebook.SetFocus()
+        tab_name = self._notebook.GetPageText(self._notebook.GetSelection())
+        announce_status(self, f"Tab strip — {tab_name}")
+
+    # ------------------------------------------------------------------ #
+    # Menu / button state management                                       #
+    # ------------------------------------------------------------------ #
+
+    def _update_menu_state(self) -> None:
+        """Enable or disable menu items based on whether a transcript is loaded.
+
+        Called on tab changes, job completions, and other state transitions.
+        """
+        has_transcript = (
+            self.transcript_panel._current_job is not None
+            and self.transcript_panel._current_job.result is not None
+        )
+        has_pending = bool(self.queue_panel.get_pending_jobs())
+        has_jobs = bool(self.queue_panel._jobs)
+        has_completed = any(
+            j.status == JobStatus.COMPLETED for j in self.queue_panel._jobs.values()
+        )
+        has_failed = any(j.status == JobStatus.FAILED for j in self.queue_panel._jobs.values())
+        is_queue_tab = self._notebook.GetSelection() == self._TAB_QUEUE
+
+        menu_bar = self.GetMenuBar()
+        if not menu_bar:
+            return
+
+        # Export / AI items require a loaded transcript
+        menu_bar.Enable(ID_EXPORT, has_transcript)
+        menu_bar.Enable(ID_TRANSLATE, has_transcript)
+        menu_bar.Enable(ID_TRANSLATE_MULTI, has_transcript)
+        menu_bar.Enable(ID_SUMMARIZE, has_transcript)
+        menu_bar.Enable(ID_COPILOT_CHAT, has_transcript)
+        # AI Action Builder is always accessible — users create templates anytime
+
+        # Queue actions need pending jobs
+        menu_bar.Enable(ID_START, has_pending)
+
+        # Batch operations
+        menu_bar.Enable(ID_CLEAR_COMPLETED, has_completed)
+        menu_bar.Enable(ID_RETRY_FAILED, has_failed)
+        menu_bar.Enable(ID_RENAME, is_queue_tab and has_jobs)
+
+        # Update transcript panel button states
+        self.transcript_panel.update_button_state(has_transcript)
 
     def _on_start(self, _event: wx.CommandEvent) -> None:
         from bits_whisperer.core.sdk_installer import ensure_sdk
 
         jobs = self.queue_panel.get_pending_jobs()
         if not jobs:
-            announce_status(self, "No pending jobs to process")
+            announce_status(self, "No pending jobs — add files first with Ctrl+O")
             return
 
         # Ensure SDKs are available for all providers used in this batch.
@@ -497,6 +754,9 @@ class MainFrame(wx.Frame):
 
         # Refresh provider availability in case an SDK was just installed
         self.provider_manager.refresh_availability()
+
+        # Reset old completed jobs so batch-complete fires cleanly
+        self.transcription_service.reset_for_new_batch()
 
         self.transcription_service.add_jobs(jobs)
         self.transcription_service.start()
@@ -517,9 +777,56 @@ class MainFrame(wx.Frame):
             self.queue_panel.update_job_status(job_id, "Cancelled")
             announce_status(self, "Job cancelled")
 
+    def _on_audio_preview_selected(self, _event: wx.CommandEvent) -> None:
+        """Preview the audio file for the selected queue item."""
+        job_id = self.queue_panel.get_selected_job_id()
+        if not job_id:
+            accessible_message_box(
+                "Select a file in the queue to preview it.",
+                "No File Selected",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            return
+
+        job = self.queue_panel.get_job(job_id)
+        if not job:
+            accessible_message_box(
+                "The selected item is no longer available.",
+                "Preview Not Available",
+                wx.OK | wx.ICON_WARNING,
+                self,
+            )
+            return
+
+        from bits_whisperer.ui.audio_player_dialog import AudioPlayerDialog
+
+        dlg = AudioPlayerDialog(
+            self,
+            job.file_path,
+            settings=self.app_settings.playback,
+        )
+        dlg.ShowModal()
+        dlg.Destroy()
+
     def _on_clear_queue(self, _event: wx.CommandEvent) -> None:
         self.queue_panel.clear_all()
         announce_status(self, "Queue cleared")
+
+    def _on_clear_completed(self, _event: wx.CommandEvent) -> None:
+        """Remove all completed jobs from the queue."""
+        self.queue_panel._on_clear_completed(None)
+
+    def _on_retry_failed(self, _event: wx.CommandEvent) -> None:
+        """Retry all failed jobs in the queue."""
+        self.queue_panel._on_retry_all_failed(None)
+
+    def _on_rename_selected(self, _event: wx.CommandEvent) -> None:
+        """Rename the selected item in the queue panel."""
+        if self._notebook.GetSelection() == self._TAB_QUEUE:
+            self.queue_panel._on_rename_item()
+        else:
+            announce_status(self, "Switch to the Queue tab to rename items")
 
     def _on_export(self, _event: wx.CommandEvent) -> None:
 
@@ -560,7 +867,7 @@ class MainFrame(wx.Frame):
             f"Models needing caution: {len(hp.warned_models)}\n"
             f"Models too demanding: {len(hp.ineligible_models)}"
         )
-        wx.MessageBox(msg, "Hardware Information", wx.OK | wx.ICON_INFORMATION, self)
+        accessible_message_box(msg, "Hardware Information", wx.OK | wx.ICON_INFORMATION, self)
 
     def _on_check_updates(self, _event: wx.CommandEvent) -> None:
         """Check GitHub for a newer version in a background thread."""
@@ -603,7 +910,7 @@ class MainFrame(wx.Frame):
                     dlg.Destroy()
                     announce_status(self, f"Update available: v{info.latest_version}")
                 else:
-                    wx.MessageBox(
+                    accessible_message_box(
                         f"You are running the latest version (v{APP_VERSION}).",
                         "No Updates",
                         wx.OK | wx.ICON_INFORMATION,
@@ -627,6 +934,13 @@ class MainFrame(wx.Frame):
         )
 
         def _check() -> None:
+            # Also verify registration key
+            if (
+                self.key_store.has_key("registration_key")
+                and self.registration_service.verify_key()
+            ):
+                safe_call_after(self._update_window_title)
+
             try:
                 updater = Updater(
                     repo_owner=GITHUB_REPO_OWNER,
@@ -680,8 +994,32 @@ class MainFrame(wx.Frame):
         result = dlg.ShowModal()
         if result == wx.ID_OK:
             self.app_settings = AppSettings.load()
+            self._refresh_chat_tab_visibility()
             announce_status(self, "AI settings updated")
         dlg.Destroy()
+
+    def _on_audio_preview(self, _event: wx.CommandEvent) -> None:
+        """Open the audio preview dialog for a selected file."""
+        from bits_whisperer.ui.audio_player_dialog import AudioPlayerDialog
+
+        dlg = wx.FileDialog(
+            self,
+            message="Choose an audio file to preview",
+            wildcard=AUDIO_WILDCARD,
+            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+        )
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            dlg.Destroy()
+            preview = AudioPlayerDialog(
+                self,
+                path,
+                settings=self.app_settings.playback,
+            )
+            preview.ShowModal()
+            preview.Destroy()
+        else:
+            dlg.Destroy()
 
     def _on_translate(self, _event: wx.CommandEvent) -> None:
         """Translate the current transcript using AI."""
@@ -695,7 +1033,7 @@ class MainFrame(wx.Frame):
 
         job = self.transcript_panel._current_job
         if not job or not job.result:
-            wx.MessageBox(
+            accessible_message_box(
                 "No transcript loaded. Transcribe a file first.",
                 "No Transcript",
                 wx.OK | wx.ICON_INFORMATION,
@@ -707,7 +1045,7 @@ class MainFrame(wx.Frame):
         if not text:
             text = "\n".join(s.text for s in job.result.segments)
         if not text.strip():
-            wx.MessageBox(
+            accessible_message_box(
                 "The transcript is empty.",
                 "Empty Transcript",
                 wx.OK | wx.ICON_INFORMATION,
@@ -717,7 +1055,7 @@ class MainFrame(wx.Frame):
 
         ai_service = AIService(self.key_store, self.app_settings.ai)
         if not ai_service.is_configured():
-            result = wx.MessageBox(
+            result = accessible_message_box(
                 "No AI provider is configured.\n\n"
                 "Would you like to open AI Settings to add an API key?",
                 "AI Not Configured",
@@ -730,7 +1068,7 @@ class MainFrame(wx.Frame):
 
         targets = self.app_settings.ai.multi_target_languages
         if not targets:
-            wx.MessageBox(
+            accessible_message_box(
                 "No target languages configured.\n\n"
                 "Go to AI > AI Provider Settings > Multi-Language tab "
                 "and select target languages.",
@@ -759,7 +1097,7 @@ class MainFrame(wx.Frame):
                         parts.append(f"=== {lang} ===\n{resp.text}\n")
 
                 if errors:
-                    wx.MessageBox(
+                    accessible_message_box(
                         "Some translations failed:\n\n" + "\n".join(errors),
                         "Translation Errors",
                         wx.OK | wx.ICON_WARNING,
@@ -838,7 +1176,7 @@ class MainFrame(wx.Frame):
         # Check for transcript
         job = self.transcript_panel._current_job
         if not job or not job.result:
-            wx.MessageBox(
+            accessible_message_box(
                 "No transcript loaded. Transcribe a file first.",
                 "No Transcript",
                 wx.OK | wx.ICON_INFORMATION,
@@ -852,7 +1190,7 @@ class MainFrame(wx.Frame):
             text = "\n".join(s.text for s in job.result.segments)
 
         if not text.strip():
-            wx.MessageBox(
+            accessible_message_box(
                 "The transcript is empty.",
                 "Empty Transcript",
                 wx.OK | wx.ICON_INFORMATION,
@@ -863,7 +1201,7 @@ class MainFrame(wx.Frame):
         # Check AI service is configured
         ai_service = AIService(self.key_store, self.app_settings.ai)
         if not ai_service.is_configured():
-            result = wx.MessageBox(
+            result = accessible_message_box(
                 "No AI provider is configured.\n\n"
                 "Would you like to open AI Settings to add an API key?",
                 "AI Not Configured",
@@ -888,7 +1226,7 @@ class MainFrame(wx.Frame):
 
             def _show_result() -> None:
                 if response.error:
-                    wx.MessageBox(
+                    accessible_message_box(
                         f"AI {action} failed:\n\n{response.error}",
                         f"{action.title()} Error",
                         wx.OK | wx.ICON_ERROR,
@@ -974,7 +1312,7 @@ class MainFrame(wx.Frame):
 
         if not plugins:
             plugin_dir = plugin_mgr.get_plugin_dir()
-            wx.MessageBox(
+            accessible_message_box(
                 f"No plugins found.\n\n"
                 f"To add plugins, place Python files in:\n{plugin_dir}\n\n"
                 f"Each plugin must define a register(manager) function.",
@@ -1030,32 +1368,47 @@ class MainFrame(wx.Frame):
         result = dlg.ShowModal()
         if result == wx.ID_OK:
             self.app_settings = AppSettings.load()
-            # Reinitialise the service with new settings
+            # Reinitialise the service with new settings.
+            # Stop old service if running.
+            if self._copilot_service is not None:
+                with contextlib.suppress(Exception):
+                    self._copilot_service.stop()
             self._copilot_service = None
-            self._ensure_copilot_service()
-            announce_status(self, "Copilot setup complete")
+            # Only eagerly start the service if the chat panel is visible;
+            # otherwise it will start on demand when the user opens chat.
+            if self._chat_visible:
+                self._ensure_copilot_service()
+            announce_status(self, "Copilot setup saved")
         dlg.Destroy()
 
     def _on_copilot_chat(self, _event: wx.CommandEvent) -> None:
-        """Toggle the AI chat panel visibility."""
-        if self._chat_visible:
-            # Hide the chat panel
-            self._outer_splitter.Unsplit(self.chat_panel)
-            self._chat_visible = False
-            self._copilot_chat_item.Check(False)
-            announce_status(self, "AI chat panel hidden")
-        else:
-            # Show the chat panel
-            height = self.GetSize().GetHeight()
-            sash_pos = int(height * 0.6)
-            self._outer_splitter.SplitHorizontally(
-                self._splitter, self.chat_panel, sashPosition=sash_pos
+        """Toggle focus to / from the AI chat tab."""
+        if not self._chat_visible:
+            accessible_message_box(
+                "No AI chat provider is configured.\n\n"
+                "Go to AI > AI Provider Settings to set up an "
+                "AI provider, then try again.",
+                "Chat Not Available",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
             )
-            self._chat_visible = True
+            return
+
+        current = self._notebook.GetSelection()
+        if current == self._TAB_CHAT:
+            # Already on chat — toggle back to transcript
+            self._notebook.SetSelection(self._TAB_TRANSCRIPT)
+            self._copilot_chat_item.Check(False)
+            announce_status(self, "Switched to Transcript tab")
+        else:
+            # Switch to chat tab
+            self._notebook.SetSelection(self._TAB_CHAT)
             self._copilot_chat_item.Check(True)
 
-            # Ensure service is ready
-            self._ensure_copilot_service()
+            # Only start CopilotService if Copilot is the selected provider
+            settings = AppSettings.load()
+            if settings.ai.selected_provider == "copilot":
+                self._ensure_copilot_service()
 
             # Inject current transcript context if available
             job = self.transcript_panel._current_job
@@ -1067,17 +1420,18 @@ class MainFrame(wx.Frame):
                     self.chat_panel.set_transcript_context(text)
 
             self.chat_panel._input_text.SetFocus()
-            announce_status(self, "AI chat panel opened — ask anything about your transcript")
+            announce_status(self, "AI chat tab \u2014 ask anything about your transcript")
 
     def _on_agent_builder(self, _event: wx.CommandEvent) -> None:
-        """Open the Agent Builder dialog."""
+        """Open the AI Action Builder dialog."""
         from bits_whisperer.ui.agent_builder_dialog import AgentBuilderDialog
 
         self._ensure_copilot_service()
 
         dlg = AgentBuilderDialog(
             self,
-            current_config=self._copilot_service.agent_config,
+            main_frame=self,
+            config=self._copilot_service.agent_config,
         )
         result = dlg.ShowModal()
         if result == wx.ID_OK:
@@ -1086,7 +1440,7 @@ class MainFrame(wx.Frame):
                 self._copilot_service.agent_config = new_config
                 announce_status(
                     self,
-                    f"Agent '{new_config.name}' configured",
+                    f"AI action template '{new_config.name}' configured",
                 )
         dlg.Destroy()
 
@@ -1125,7 +1479,7 @@ class MainFrame(wx.Frame):
         if LOG_PATH.exists():
             open_file_or_folder(LOG_PATH)
         else:
-            wx.MessageBox(
+            accessible_message_box(
                 "No log file found yet.",
                 "View Log",
                 wx.OK | wx.ICON_INFORMATION,
@@ -1213,7 +1567,8 @@ class MainFrame(wx.Frame):
         wx.adv.AboutBox(info, self)
 
     def _on_exit(self, _event: wx.CommandEvent) -> None:
-        self.Close()
+        """Handle explicit exit (File > Exit or Alt+F4) — always truly quit."""
+        self._request_exit()
 
     # =================================================================== #
     # Callbacks from transcription service (called from worker threads)     #
@@ -1225,7 +1580,7 @@ class MainFrame(wx.Frame):
 
     def _on_batch_complete(self, jobs) -> None:
         """Called when all queued jobs have finished."""
-        safe_call_after(self._handle_batch_complete)
+        safe_call_after(self._handle_batch_complete, jobs)
 
     def _handle_job_update(self, job) -> None:
         self.queue_panel.update_job(job)
@@ -1243,6 +1598,9 @@ class MainFrame(wx.Frame):
 
         if job.result and job.status.value == "completed":
             self.transcript_panel.show_transcript(job)
+            # Auto-switch to the Transcript tab
+            self._notebook.SetSelection(self._TAB_TRANSCRIPT)
+            self._update_menu_state()
 
             # Tray notification (especially useful when minimized)
             if not self.IsShown():
@@ -1252,15 +1610,81 @@ class MainFrame(wx.Frame):
             if self._auto_export:
                 self._auto_export_transcript(job)
 
-        elif job.status.value == "failed" and not self.IsShown():
-            self._tray_icon.notify_error(
-                job.display_name,
-                job.error_message or "Unknown error",
-            )
+        elif job.status.value == "failed":
+            error_msg = job.error_message or "Unknown error"
+            announce_to_screen_reader(f"Transcription failed for {job.display_name}: {error_msg}")
+            if not self.IsShown():
+                self._tray_icon.notify_error(
+                    job.display_name,
+                    error_msg,
+                )
 
-    def _handle_batch_complete(self) -> None:
+        # Handle AI action status updates
+        if job.ai_action_status == "running":
+            announce_status(
+                self,
+                f"{job.display_name}: Running AI action\u2026",
+            )
+        elif job.ai_action_status == "completed":
+            # Refresh transcript display with AI action results
+            self.transcript_panel.show_transcript(job)
+            self._notebook.SetSelection(self._TAB_TRANSCRIPT)
+            announce_status(
+                self,
+                f"{job.display_name}: AI action completed",
+            )
+            announce_to_screen_reader(
+                f"AI action completed for {job.display_name}. "
+                "Results are shown below the transcript."
+            )
+        elif job.ai_action_status == "failed":
+            error_msg = job.ai_action_error or "Unknown error"
+            announce_status(
+                self,
+                f"{job.display_name}: AI action failed \u2014 {error_msg}",
+            )
+            announce_to_screen_reader(f"AI action failed for {job.display_name}: {error_msg}")
+
+    def _handle_batch_complete(self, jobs: list | None = None) -> None:
         self._progress_gauge.SetValue(100)
-        announce_status(self, "All transcription jobs complete!")
+
+        # Build a meaningful summary based on actual job outcomes
+        if jobs:
+            from bits_whisperer.core.job import JobStatus
+
+            completed = sum(1 for j in jobs if j.status == JobStatus.COMPLETED)
+            failed = sum(1 for j in jobs if j.status == JobStatus.FAILED)
+            cancelled = sum(1 for j in jobs if j.status == JobStatus.CANCELLED)
+            total = len(jobs)
+
+            if failed == total:
+                msg = f"All {total} job(s) failed"
+                announce_status(self, msg)
+                announce_to_screen_reader(msg)
+                # Collect first error for extra context
+                first_err = next(
+                    (j.error_message for j in jobs if j.error_message), "Unknown error"
+                )
+                announce_to_screen_reader(f"Error: {first_err}")
+            elif failed > 0:
+                msg = (
+                    f"Batch finished: {completed} completed, "
+                    f"{failed} failed, {cancelled} cancelled"
+                )
+                announce_status(self, msg)
+                announce_to_screen_reader(msg)
+            elif cancelled == total:
+                msg = f"All {total} job(s) cancelled"
+                announce_status(self, msg)
+                announce_to_screen_reader(msg)
+            else:
+                msg = f"All {completed} transcription job(s) complete!"
+                announce_status(self, msg)
+                announce_to_screen_reader(msg)
+        else:
+            announce_status(self, "All transcription jobs complete!")
+            announce_to_screen_reader("All transcription jobs complete!")
+
         self._tray_icon.set_idle()
 
         summary = self.transcription_service.get_progress_summary()
@@ -1269,9 +1693,11 @@ class MainFrame(wx.Frame):
             failed=summary["failed"],
         )
 
-        # Play notification sound
+        # Play notification sound only for successful completions
         if self.app_settings.general.play_sound:
-            wx.Bell()
+            has_success = jobs and any(j.status.value == "completed" for j in jobs)
+            if has_success or not jobs:
+                wx.Bell()
 
         # Restore window if hidden
         if not self.IsShown():
@@ -1307,21 +1733,141 @@ class MainFrame(wx.Frame):
     # Window close                                                          #
     # =================================================================== #
 
-    def _on_close(self, event: wx.CloseEvent) -> None:
-        # If minimize-to-tray is enabled and this isn't a forced quit,
-        # hide to tray instead of actually closing.
-        force = getattr(self, "_force_quit", False)
-        if self._minimize_to_tray and not force and event.CanVeto():
-            self.Show(False)
-            event.Veto()
-            return
+    def _request_exit(self) -> None:
+        """Initiate a true application exit with optional confirmation.
 
-        self.transcription_service.stop()
+        Called from File > Exit, Alt+F4, and tray Quit. Uses a
+        confirmation dialog controlled by the ``confirm_before_quit``
+        setting, with a "Don't ask me again" checkbox.
+        """
+        if self.app_settings.general.confirm_before_quit:
+            dlg = wx.RichMessageDialog(
+                self,
+                "Are you sure you want to exit BITS Whisperer?",
+                "Confirm Exit",
+                wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
+            )
+            dlg.ShowCheckBox("Don't ask me again")
+            set_accessible_name(dlg, "Confirm exit dialog")
+            announce_to_screen_reader("Are you sure you want to exit BITS Whisperer?")
+            result = dlg.ShowModal()
+
+            if dlg.IsCheckBoxChecked():
+                self.app_settings.general.confirm_before_quit = False
+                self.app_settings.save()
+
+            dlg.Destroy()
+
+            if result != wx.ID_YES:
+                return
+
+        # Proceed with real shutdown
+        self._force_quit = True
+        self.Close()
+
+    def _on_close(self, event: wx.CloseEvent) -> None:
+        """Handle the window close event.
+
+        - If ``_force_quit`` is set (from ``_request_exit``, tray Quit,
+          or the OS forcing shutdown), perform a full cleanup and exit.
+        - Otherwise, the close was triggered by the window manager's X
+          button. If minimize-to-tray is enabled, hide to tray instead
+          of quitting; otherwise, route through ``_request_exit`` for
+          the confirmation dialog.
+        """
+        force = getattr(self, "_force_quit", False)
+
+        if not force:
+            # X button / system close — decide whether to minimize or confirm exit
+            if self._minimize_to_tray and event.CanVeto():
+                self.Show(False)
+                announce_to_screen_reader("BITS Whisperer minimized to system tray")
+                event.Veto()
+                return
+            else:
+                # No minimize-to-tray: show confirmation dialog
+                event.Veto()
+                self._request_exit()
+                return
+
+        # ---- True shutdown path ----
+        logger.info("Shutting down — stopping services")
+
+        # 1. Stop transcription workers and clean up their temp files
+        try:
+            self.transcription_service.stop()
+        except Exception as exc:
+            logger.debug("Error stopping transcription service: %s", exc)
+
+        # 2. Stop Copilot SDK (session + event loop + thread join)
         if self._copilot_service:
-            self._copilot_service.stop()
+            try:
+                self._copilot_service.stop()
+            except Exception as exc:
+                logger.debug("Error stopping Copilot service: %s", exc)
+
+        # 3. Save settings to persist any unsaved changes
+        try:
+            self.app_settings.save()
+        except Exception as exc:
+            logger.debug("Error saving settings on exit: %s", exc)
+
+        # 4. Remove tray icon
         if hasattr(self, "_tray_icon"):
-            self._tray_icon.cleanup()
+            try:
+                self._tray_icon.cleanup()
+            except Exception as exc:
+                logger.debug("Error cleaning up tray icon: %s", exc)
+
+        # 5. Clean up stale temp files from prior runs
+        self._cleanup_stale_temp_files()
+
+        logger.info("Shutdown cleanup complete")
         self.Destroy()
+
+    @staticmethod
+    def _cleanup_stale_temp_files() -> None:
+        """Remove leftover temp files from prior BITS Whisperer runs.
+
+        Scans the system temp directory for files matching the known
+        prefixes used by the transcoder (``bw_transcode_``),
+        preprocessor (``bw_preprocess_``), and updater (``bw_update_``).
+        Files older than 1 hour are deleted to avoid removing files
+        from a concurrent instance.
+        """
+        import tempfile
+        import time
+
+        tmp_dir = Path(tempfile.gettempdir())
+        cutoff = time.time() - 3600  # 1 hour ago
+        prefixes = ("bw_transcode_", "bw_preprocess_")
+        dir_prefixes = ("bw_update_",)
+        removed = 0
+
+        # Clean stale temp files
+        for prefix in prefixes:
+            for p in tmp_dir.glob(f"{prefix}*"):
+                try:
+                    if p.is_file() and p.stat().st_mtime < cutoff:
+                        p.unlink()
+                        removed += 1
+                except Exception:
+                    pass
+
+        # Clean stale update directories
+        import shutil
+
+        for prefix in dir_prefixes:
+            for p in tmp_dir.glob(f"{prefix}*"):
+                try:
+                    if p.is_dir() and p.stat().st_mtime < cutoff:
+                        shutil.rmtree(p, ignore_errors=True)
+                        removed += 1
+                except Exception:
+                    pass
+
+        if removed:
+            logger.info("Cleaned up %d stale temp file(s) from prior runs", removed)
 
     # =================================================================== #
     # Recent files                                                          #
@@ -1380,9 +1926,9 @@ class MainFrame(wx.Frame):
     def _on_recent_file(self, path: str) -> None:
         """Open a file from the recent files list."""
         if Path(path).exists():
-            self._enqueue_files([path])
+            self._show_add_wizard([path])
         else:
-            wx.MessageBox(
+            accessible_message_box(
                 f"File not found:\n{path}",
                 "File Not Found",
                 wx.OK | wx.ICON_WARNING,

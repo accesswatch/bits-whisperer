@@ -119,7 +119,7 @@ class AzureEmbeddedSpeechProvider(TranscriptionProvider):
             TranscriptionResult.
         """
         try:
-            import azure.cognitiveservices.speech as speechsdk  # type: ignore[import]  # noqa: E501
+            import azure.cognitiveservices.speech as speechsdk  # type: ignore[import]
         except ImportError:
             raise RuntimeError(
                 "azure-cognitiveservices-speech not installed. "

@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Cloud provider definitions:
-# (keystore_id, display_name, provider_manager_key, key_url, description, aux_keys)
+# (keystore_id, display_name, provider_manager_key, key_url, description, aux_keys)  # noqa: ERA001
 # aux_keys is a list of (keystore_id, label, help_text) for providers that
 # need more than one credential field (e.g. AWS needs secret key + region).
 _CLOUD_PROVIDERS: list[tuple[str, str, str, str, str, list[tuple[str, str, str]]]] = [

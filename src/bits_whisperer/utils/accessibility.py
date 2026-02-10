@@ -2,12 +2,67 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import logging
 
 import wx
 
-if TYPE_CHECKING:
-    pass
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Screen reader direct-speech via accessible_output2
+# ---------------------------------------------------------------------------
+_screen_reader_output = None
+
+
+def _get_screen_reader():
+    """Lazily initialise the accessible_output2 Auto output.
+
+    Returns ``None`` when the library is unavailable so every call-site
+    can fall back gracefully to status-bar announcements.
+    """
+    global _screen_reader_output
+    if _screen_reader_output is not None:
+        return _screen_reader_output
+    try:
+        from accessible_output2.outputs.auto import Auto
+
+        _screen_reader_output = Auto()
+    except Exception:
+        logger.debug("accessible_output2 not available — screen reader speech disabled")
+        _screen_reader_output = False  # sentinel: tried and failed
+    return _screen_reader_output if _screen_reader_output else None
+
+
+def speak(message: str, interrupt: bool = True) -> None:
+    """Speak a message directly to the active screen reader.
+
+    Uses *accessible_output2* to route speech to NVDA, JAWS, Narrator,
+    or any other running screen reader. Falls back silently when no
+    screen reader is detected.
+
+    Args:
+        message: Text to announce.
+        interrupt: If ``True`` (default), interrupt any current speech.
+    """
+    sr = _get_screen_reader()
+    if sr:
+        try:
+            sr.speak(message, interrupt=interrupt)
+        except Exception:
+            logger.debug("Screen reader speak failed for: %s", message)
+
+
+def announce_to_screen_reader(message: str, interrupt: bool = True) -> None:
+    """Announce a message to the screen reader (convenience alias).
+
+    This is the primary function to call for alerts, errors, warnings,
+    and important status changes that the user must hear.
+
+    Args:
+        message: Text to announce.
+        interrupt: If ``True`` (default), interrupt any current speech.
+    """
+    speak(message, interrupt=interrupt)
 
 
 def set_accessible_name(ctrl: wx.Window, name: str) -> None:
@@ -40,17 +95,27 @@ def label_control(label: wx.StaticText, ctrl: wx.Window) -> None:
     ctrl.SetName(label.GetLabel())
 
 
-def announce_status(frame: wx.Frame, message: str, field: int = 0) -> None:
+def announce_status(
+    frame: wx.Frame,
+    message: str,
+    field: int = 0,
+    *,
+    speak_to_reader: bool = False,
+) -> None:
     """Update the status bar text — picked up by screen readers.
 
     Args:
         frame: The frame containing the status bar.
         message: Text to display and announce.
         field: Status bar field index (default 0).
+        speak_to_reader: If ``True``, also force-speak through
+            accessible_output2 for critical messages.
     """
     status_bar = frame.GetStatusBar()
     if status_bar:
         status_bar.SetStatusText(message, field)
+    if speak_to_reader:
+        speak(message)
 
 
 def safe_call_after(func, *args, **kwargs) -> None:
@@ -85,3 +150,39 @@ def make_panel_accessible(panel: wx.Panel) -> None:
         panel: The wx.Panel to configure.
     """
     panel.SetWindowStyleFlag(panel.GetWindowStyleFlag() | wx.TAB_TRAVERSAL)
+
+
+def accessible_message_box(
+    message: str,
+    caption: str,
+    style: int = wx.OK | wx.ICON_INFORMATION,
+    parent: wx.Window | None = None,
+) -> int:
+    """Show a ``wx.MessageBox`` and simultaneously announce the message
+    to the active screen reader via *accessible_output2*.
+
+    This ensures that error, warning, and informational dialogs are
+    always audible to screen reader users, even if the dialog itself
+    doesn't trigger a proper alert event.
+
+    Args:
+        message: The dialog body text.
+        caption: The dialog title / caption.
+        style: wx dialog style flags (``wx.OK``, ``wx.ICON_ERROR``, etc.).
+        parent: Parent window (may be ``None``).
+
+    Returns:
+        The button ID pressed by the user (e.g. ``wx.OK``, ``wx.YES``).
+    """
+    # Determine severity prefix for the screen reader announcement
+    if style & wx.ICON_ERROR:
+        prefix = "Error"
+    elif style & wx.ICON_WARNING:
+        prefix = "Warning"
+    else:
+        prefix = "Alert"
+
+    # Announce to screen reader
+    speak(f"{prefix}: {caption}. {message}")
+
+    return wx.MessageBox(message, caption, style, parent)

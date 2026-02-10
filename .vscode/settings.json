@@ -1,0 +1,99 @@
+{
+  // ── Python Analysis ─────────────────────────────────────────────────
+  "python.analysis.extraPaths": ["./src"],
+  "python.analysis.stubPath": "./typings",
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingImports": "none",
+    "reportMissingTypeStubs": "none",
+    "reportMissingModuleSource": "none",
+    "reportUnknownMemberType": "none",
+    "reportUnknownArgumentType": "none",
+    "reportUnknownParameterType": "none",
+    "reportUnknownVariableType": "none",
+    "reportUnknownLambdaType": "none",
+    "reportArgumentType": "none",
+    "reportCallIssue": "none",
+    "reportIndexIssue": "none",
+    "reportGeneralTypeIssues": "none"
+  },
+
+  // ── Formatting ──────────────────────────────────────────────────────
+  // Black is the authoritative formatter (via the Black Formatter extension).
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true,
+    "editor.rulers": [100],
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true
+  },
+  "black-formatter.args": ["--line-length", "100"],
+
+  // ── Linting ─────────────────────────────────────────────────────────
+  // Ruff replaces flake8, pylint, isort, pyupgrade, bandit, etc.
+  // Disable flake8 entirely — ruff is the single source of truth.
+  "flake8.enabled": false,
+  "python.linting.flake8Enabled": false,
+  "python.linting.pylintEnabled": false,
+  "python.linting.enabled": false,
+
+  // Ruff extension — reads rules from pyproject.toml automatically.
+  "ruff.enable": true,
+  "ruff.lint.run": "onType",
+  "ruff.organizeImports": true,
+  "ruff.fixAll": true,
+
+  // ── Editor ──────────────────────────────────────────────────────────
+  "editor.rulers": [100],
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+
+  // ── Spell Checking ─────────────────────────────────────────────────
+  "cSpell.words": [
+    "BITS",
+    "whisperer",
+    "wxpython",
+    "ffmpeg",
+    "ffprobe",
+    "deepgram",
+    "assemblyai",
+    "speechmatics",
+    "elevenlabs",
+    "auphonic",
+    "diarization",
+    "pyannote",
+    "parakeet",
+    "transcoder",
+    "keyring",
+    "callafter",
+    "setuptools",
+    "pyinstaller",
+    "docx",
+    "httpx",
+    "pydub",
+    "psutil",
+    "platformdirs",
+    "nemo",
+    "kaldi",
+    "vosk",
+    "sapi",
+    "copilot",
+    "ollama"
+  ],
+
+  // ── Files ───────────────────────────────────────────────────────────
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.egg-info": true,
+    "build/": true,
+    "dist/": true
+  },
+  "search.exclude": {
+    "**/__pycache__": true,
+    "**/*.egg-info": true,
+    "build/": true,
+    "dist/": true
+  }
+}

@@ -36,11 +36,11 @@ def open_file_or_folder(path: str | Path) -> None:
     path_str = str(path)
     try:
         if IS_WINDOWS:
-            os.startfile(path_str)  # type: ignore[attr-defined]  # noqa: S606
+            os.startfile(path_str)  # type: ignore[attr-defined]
         elif IS_MACOS:
-            subprocess.Popen(["open", path_str])  # noqa: S603,S607
+            subprocess.Popen(["open", path_str])
         else:
-            subprocess.Popen(["xdg-open", path_str])  # noqa: S603,S607
+            subprocess.Popen(["xdg-open", path_str])
     except Exception:
         logger.warning("Failed to open: %s", path_str)
 

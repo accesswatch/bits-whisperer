@@ -228,7 +228,7 @@ class TrayIcon(wx.adv.TaskBarIcon):
         """Left-click on the tray icon toggles window visibility."""
         self.toggle_main_window()
 
-    def CreatePopupMenu(self) -> wx.Menu:  # noqa: N802 — wx convention
+    def CreatePopupMenu(self) -> wx.Menu:
         """Build the right-click context menu for the tray icon.
 
         Returns:
@@ -277,9 +277,8 @@ class TrayIcon(wx.adv.TaskBarIcon):
             svc.pause()
 
     def _on_quit(self, _event: wx.CommandEvent) -> None:
-        """Quit the application completely."""
-        self._main_frame._force_quit = True
-        self._main_frame.Close()
+        """Quit the application completely — bypass minimize-to-tray."""
+        self._main_frame._request_exit()
 
     # ------------------------------------------------------------------ #
     # Cleanup                                                              #

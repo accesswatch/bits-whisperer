@@ -95,12 +95,23 @@ class Job:
     error_message: str = ""
     include_timestamps: bool = True
     include_diarization: bool = False
+    clip_start_seconds: float | None = None
+    clip_end_seconds: float | None = None
+    custom_name: str = ""
+    ai_action_template: str = ""  # Path to AgentConfig JSON or built-in preset name
+    ai_action_attachments: list[dict[str, str]] = field(default_factory=list)  # Per-job attachments
+    ai_action_result: str = ""  # Output from post-transcription AI processing
+    ai_action_status: str = ""  # "", "running", "completed", "failed"
+    ai_action_error: str = ""  # Error message if AI action failed
     result: TranscriptionResult | None = None
 
     @property
     def display_name(self) -> str:
-        """Human-readable name for display in the queue."""
-        return self.file_name or Path(self.file_path).name
+        """Human-readable name for display in the queue.
+
+        Priority: custom_name > file_name > derived from file_path.
+        """
+        return self.custom_name or self.file_name or Path(self.file_path).name
 
     @property
     def status_text(self) -> str:

@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING
 import wx
 
 from bits_whisperer.core.audio_preprocessor import PreprocessorSettings
-from bits_whisperer.core.settings import AppSettings
+from bits_whisperer.core.settings import AppSettings, PlaybackSettings
 from bits_whisperer.storage.key_store import KeyStore
 from bits_whisperer.utils.accessibility import (
     announce_status,
@@ -123,6 +123,8 @@ _LOG_LEVELS: list[str] = [
     "ERROR",
 ]
 
+_JUMP_SECONDS: list[int] = [1, 2, 3, 5, 10, 15, 30, 60]
+
 
 class SettingsDialog(wx.Dialog):
     """Seven-tab settings dialog for BITS Whisperer.
@@ -173,6 +175,8 @@ class SettingsDialog(wx.Dialog):
             "&Transcription",
         )
         self._notebook.AddPage(self._build_output_tab(), "&Output")
+        self._notebook.AddPage(self._build_playback_tab(), "&Playback")
+        self._notebook.AddPage(self._build_budget_tab(), "&Budget")
         self._notebook.AddPage(
             self._build_providers_tab(),
             "P&roviders && Keys",
@@ -336,6 +340,30 @@ class SettingsDialog(wx.Dialog):
             grid.Add(hint, 0, wx.EXPAND)
 
         outer.Add(grid, 0, wx.ALL | wx.EXPAND, 12)
+
+        # --- BITS Registration Section ---
+        reg_box = wx.StaticBox(panel, label="BITS Registration (All Products)")
+        reg_sizer = wx.StaticBoxSizer(reg_box, wx.VERTICAL)
+
+        status_msg = self._main_frame.registration_service.get_status_message()
+        self._reg_status_lbl = wx.StaticText(panel, label=f"Status: {status_msg}")
+        reg_sizer.Add(self._reg_status_lbl, 0, wx.ALL, 5)
+
+        key_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        lbl_key = wx.StaticText(panel, label="&Registration Key:")
+        self._reg_key_txt = wx.TextCtrl(panel, style=wx.TE_PASSWORD)
+        self._reg_key_txt.SetValue(self._key_store.get_key("registration_key") or "")
+        label_control(lbl_key, self._reg_key_txt)
+
+        btn_verify = wx.Button(panel, label="&Verify Key")
+        self.Bind(wx.EVT_BUTTON, self._on_verify_reg_key, btn_verify)
+
+        key_sizer.Add(lbl_key, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 5)
+        key_sizer.Add(self._reg_key_txt, 1, wx.EXPAND | wx.RIGHT, 5)
+        key_sizer.Add(btn_verify, 0)
+
+        reg_sizer.Add(key_sizer, 0, wx.EXPAND | wx.ALL, 5)
+        outer.Add(reg_sizer, 0, wx.ALL | wx.EXPAND, 12)
 
         # --- Behaviour ---
         beh_box = wx.StaticBox(panel, label="Behaviour")
@@ -792,7 +820,324 @@ class SettingsDialog(wx.Dialog):
         return panel
 
     # ================================================================== #
-    # Tab 4: Providers & Keys                                              #
+    # Tab 3b: Playback                                                    #
+    # ================================================================== #
+
+    def _build_playback_tab(self) -> wx.Panel:
+        panel = wx.Panel(self._notebook)
+        make_panel_accessible(panel)
+        p = self._settings.playback
+
+        outer = wx.BoxSizer(wx.VERTICAL)
+
+        intro = wx.StaticText(
+            panel,
+            label=(
+                "Configure audio preview speed controls used in the Add File Wizard. "
+                "These settings affect the playback slider range and step size."
+            ),
+        )
+        intro.Wrap(640)
+        set_accessible_name(intro, "Playback settings introduction")
+        outer.Add(intro, 0, wx.ALL, 8)
+
+        grid = wx.FlexGridSizer(cols=2, vgap=10, hgap=12)
+        grid.AddGrowableCol(1, 1)
+
+        def _spin(lbl_text, value, min_v, max_v, inc, name, help_text):
+            lbl = wx.StaticText(panel, label=lbl_text)
+            sp = wx.SpinCtrlDouble(
+                panel,
+                min=min_v,
+                max=max_v,
+                inc=inc,
+                initial=value,
+            )
+            sp.SetDigits(2)
+            label_control(lbl, sp)
+            set_accessible_name(sp, name)
+            set_accessible_help(sp, help_text)
+            grid.Add(lbl, 0, wx.ALIGN_CENTER_VERTICAL)
+            grid.Add(sp, 0, wx.EXPAND)
+            return sp
+
+        self._playback_default_speed = _spin(
+            "Default &speed:",
+            p.default_speed,
+            0.25,
+            8.0,
+            0.05,
+            "Default playback speed",
+            "Default speed for audio preview playback",
+        )
+        self._playback_min_speed = _spin(
+            "&Minimum speed:",
+            p.min_speed,
+            0.25,
+            8.0,
+            0.05,
+            "Minimum playback speed",
+            "Lowest speed available on the playback slider",
+        )
+        self._playback_max_speed = _spin(
+            "Ma&ximum speed:",
+            p.max_speed,
+            0.25,
+            8.0,
+            0.05,
+            "Maximum playback speed",
+            "Highest speed available on the playback slider",
+        )
+        self._playback_step = _spin(
+            "Speed &step:",
+            p.speed_step,
+            0.01,
+            1.0,
+            0.01,
+            "Playback speed step",
+            "Increment used by the speed step buttons",
+        )
+
+        jump_box = wx.StaticBox(panel, label="Jump Timing")
+        set_accessible_name(jump_box, "Jump timing")
+        jump_sizer = wx.StaticBoxSizer(jump_box, wx.VERTICAL)
+
+        self._jump_back_label = wx.StaticText(panel, label="Back jump: 5 seconds")
+        set_accessible_name(self._jump_back_label, "Back jump summary")
+        jump_sizer.Add(self._jump_back_label, 0, wx.ALL, 4)
+
+        self._jump_back_slider = wx.Slider(
+            panel,
+            value=0,
+            minValue=0,
+            maxValue=len(_JUMP_SECONDS) - 1,
+            style=wx.SL_HORIZONTAL | wx.SL_AUTOTICKS,
+        )
+        set_accessible_name(self._jump_back_slider, "Back jump selector")
+        set_accessible_help(
+            self._jump_back_slider,
+            "Select how many seconds to jump backward during preview playback",
+        )
+        jump_sizer.Add(self._jump_back_slider, 0, wx.ALL | wx.EXPAND, 4)
+
+        self._jump_forward_label = wx.StaticText(panel, label="Forward jump: 5 seconds")
+        set_accessible_name(self._jump_forward_label, "Forward jump summary")
+        jump_sizer.Add(self._jump_forward_label, 0, wx.ALL, 4)
+
+        self._jump_forward_slider = wx.Slider(
+            panel,
+            value=0,
+            minValue=0,
+            maxValue=len(_JUMP_SECONDS) - 1,
+            style=wx.SL_HORIZONTAL | wx.SL_AUTOTICKS,
+        )
+        set_accessible_name(self._jump_forward_slider, "Forward jump selector")
+        set_accessible_help(
+            self._jump_forward_slider,
+            "Select how many seconds to jump forward during preview playback",
+        )
+        jump_sizer.Add(self._jump_forward_slider, 0, wx.ALL | wx.EXPAND, 4)
+
+        outer.Add(jump_sizer, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
+
+        self._sync_jump_controls(p)
+
+        self._jump_back_slider.Bind(wx.EVT_SLIDER, self._on_jump_slider)
+        self._jump_forward_slider.Bind(wx.EVT_SLIDER, self._on_jump_slider)
+
+        outer.Add(grid, 0, wx.ALL | wx.EXPAND, 12)
+
+        panel.SetSizer(outer)
+        return panel
+
+    def _sync_jump_controls(self, settings: PlaybackSettings) -> None:
+        back_idx = self._nearest_jump_index(settings.jump_back_seconds)
+        fwd_idx = self._nearest_jump_index(settings.jump_forward_seconds)
+        self._jump_back_slider.SetValue(back_idx)
+        self._jump_forward_slider.SetValue(fwd_idx)
+        self._update_jump_labels()
+
+    def _on_jump_slider(self, _event: wx.CommandEvent) -> None:
+        self._update_jump_labels()
+
+    def _update_jump_labels(self) -> None:
+        back_val = _JUMP_SECONDS[self._jump_back_slider.GetValue()]
+        fwd_val = _JUMP_SECONDS[self._jump_forward_slider.GetValue()]
+        self._jump_back_label.SetLabel(f"Back jump: {back_val} seconds")
+        self._jump_forward_label.SetLabel(f"Forward jump: {fwd_val} seconds")
+
+    @staticmethod
+    def _nearest_jump_index(value: int) -> int:
+        closest = min(_JUMP_SECONDS, key=lambda v: abs(v - value))
+        return _JUMP_SECONDS.index(closest)
+
+    # ================================================================== #
+    # Tab 4: Budget                                                        #
+    # ================================================================== #
+
+    def _build_budget_tab(self) -> wx.Panel:
+        """Build the spending-limits / budget configuration tab.
+
+        Allows the user to set a master budget toggle, a default limit,
+        always-confirm-paid preference, and per-provider dollar limits.
+        """
+        panel = wx.Panel(self._notebook)
+        make_panel_accessible(panel)
+        b = self._settings.budget
+
+        outer = wx.BoxSizer(wx.VERTICAL)
+
+        intro = wx.StaticText(
+            panel,
+            label=(
+                "Set spending limits for paid transcription providers. "
+                "When a transcription's estimated cost exceeds a limit "
+                "you will be warned before it is queued."
+            ),
+        )
+        intro.Wrap(640)
+        set_accessible_name(intro, "Budget settings introduction")
+        outer.Add(intro, 0, wx.ALL, 8)
+
+        # --- Master switches ---
+        switches_box = wx.StaticBox(panel, label="Budget Controls")
+        set_accessible_name(switches_box, "Budget controls")
+        sw_sizer = wx.StaticBoxSizer(switches_box, wx.VERTICAL)
+
+        self._cb_budget_enabled = wx.CheckBox(
+            panel,
+            label="&Enable spending-limit warnings",
+        )
+        self._cb_budget_enabled.SetValue(b.enabled)
+        set_accessible_name(
+            self._cb_budget_enabled,
+            "Enable spending limit warnings",
+        )
+        set_accessible_help(
+            self._cb_budget_enabled,
+            "When enabled, you will be warned if a transcription " "exceeds your spending limit",
+        )
+        sw_sizer.Add(self._cb_budget_enabled, 0, wx.ALL, 4)
+
+        self._cb_always_confirm = wx.CheckBox(
+            panel,
+            label="Always &confirm before using a paid provider",
+        )
+        self._cb_always_confirm.SetValue(b.always_confirm_paid)
+        set_accessible_name(
+            self._cb_always_confirm,
+            "Always confirm paid provider usage",
+        )
+        set_accessible_help(
+            self._cb_always_confirm,
+            "Ask for confirmation every time a paid cloud provider "
+            "is selected, even if within budget",
+        )
+        sw_sizer.Add(self._cb_always_confirm, 0, wx.ALL, 4)
+
+        # Default limit
+        def_row = wx.BoxSizer(wx.HORIZONTAL)
+        lbl_def = wx.StaticText(panel, label="Default spending &limit (USD):")
+        self._budget_default_spin = wx.SpinCtrlDouble(
+            panel,
+            min=0.0,
+            max=1000.0,
+            inc=0.50,
+            initial=b.default_limit_usd,
+        )
+        self._budget_default_spin.SetDigits(2)
+        label_control(lbl_def, self._budget_default_spin)
+        set_accessible_help(
+            self._budget_default_spin,
+            "Default maximum cost in USD for any single transcription "
+            "job. Set to 0 for no limit.",
+        )
+        def_row.Add(lbl_def, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+        def_row.Add(self._budget_default_spin, 0)
+        sw_sizer.Add(def_row, 0, wx.ALL, 4)
+
+        outer.Add(sw_sizer, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 8)
+
+        # --- Per-provider limits ---
+        prov_box = wx.StaticBox(
+            panel,
+            label="Per-Provider Spending Limits",
+        )
+        set_accessible_name(prov_box, "Per-provider spending limits")
+        prov_sizer = wx.StaticBoxSizer(prov_box, wx.VERTICAL)
+
+        prov_intro = wx.StaticText(
+            panel,
+            label=(
+                "Set a maximum dollar amount per transcription for each "
+                "paid provider. Leave at 0 to use the default limit above."
+            ),
+        )
+        prov_intro.Wrap(600)
+        set_accessible_name(prov_intro, "Per-provider limits explanation")
+        prov_sizer.Add(prov_intro, 0, wx.ALL, 4)
+
+        # Scrolled area for provider rows
+        sw = wx.ScrolledWindow(panel)
+        sw.SetScrollRate(0, 10)
+        make_panel_accessible(sw)
+
+        grid = wx.FlexGridSizer(cols=3, vgap=6, hgap=10)
+        grid.AddGrowableCol(0, 1)
+
+        # Build rows for each paid cloud provider
+        self._budget_provider_spins: dict[str, wx.SpinCtrlDouble] = {}
+        _paid_providers: list[tuple[str, str]] = [
+            ("openai_whisper", "OpenAI Whisper API"),
+            ("google_speech", "Google Cloud Speech"),
+            ("azure_speech", "Azure Speech"),
+            ("deepgram", "Deepgram Nova-2"),
+            ("assemblyai", "AssemblyAI"),
+            ("gemini", "Google Gemini"),
+            ("aws_transcribe", "Amazon Transcribe"),
+            ("groq_whisper", "Groq Whisper"),
+            ("rev_ai", "Rev.ai"),
+            ("speechmatics", "Speechmatics"),
+            ("elevenlabs", "ElevenLabs Scribe"),
+            ("auphonic", "Auphonic"),
+        ]
+
+        for pkey, pname in _paid_providers:
+            lbl = wx.StaticText(sw, label=f"{pname}:")
+            current_limit = b.provider_limits.get(pkey, 0.0)
+            spin = wx.SpinCtrlDouble(
+                sw,
+                min=0.0,
+                max=1000.0,
+                inc=0.50,
+                initial=current_limit,
+            )
+            spin.SetDigits(2)
+            label_control(lbl, spin)
+            set_accessible_help(
+                spin,
+                f"Maximum cost in USD per transcription for {pname}. " f"0 = use default limit.",
+            )
+            unit = wx.StaticText(sw, label="USD")
+            grid.Add(lbl, 0, wx.ALIGN_CENTER_VERTICAL)
+            grid.Add(spin, 0)
+            grid.Add(unit, 0, wx.ALIGN_CENTER_VERTICAL)
+            self._budget_provider_spins[pkey] = spin
+
+        sw.SetSizer(grid)
+        prov_sizer.Add(sw, 1, wx.ALL | wx.EXPAND, 4)
+        outer.Add(
+            prov_sizer,
+            1,
+            wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND,
+            8,
+        )
+
+        panel.SetSizer(outer)
+        return panel
+
+    # ================================================================== #
+    # Tab 5: Providers & Keys                                              #
     # ================================================================== #
 
     def _build_providers_tab(self) -> wx.Panel:
@@ -1445,6 +1790,22 @@ class SettingsDialog(wx.Dialog):
         o.include_header = self._cb_header.GetValue()
         o.include_metadata = self._cb_metadata.GetValue()
 
+        # --- Playback ---
+        pb = s.playback
+        pb.default_speed = self._playback_default_speed.GetValue()
+        pb.min_speed = self._playback_min_speed.GetValue()
+        pb.max_speed = self._playback_max_speed.GetValue()
+        pb.speed_step = self._playback_step.GetValue()
+        pb.jump_back_seconds = _JUMP_SECONDS[self._jump_back_slider.GetValue()]
+        pb.jump_forward_seconds = _JUMP_SECONDS[self._jump_forward_slider.GetValue()]
+
+        if pb.max_speed < pb.min_speed:
+            pb.max_speed = pb.min_speed
+        if pb.default_speed < pb.min_speed:
+            pb.default_speed = pb.min_speed
+        if pb.default_speed > pb.max_speed:
+            pb.default_speed = pb.max_speed
+
         # --- Paths ---
         p = s.paths
         p.output_directory = self._path_output.GetValue()
@@ -1452,6 +1813,18 @@ class SettingsDialog(wx.Dialog):
         temp_val = self._path_temp.GetValue()
         p.temp_directory = "" if temp_val == "(system default)" else temp_val
         p.log_file = self._path_log.GetValue()
+
+        # --- Budget ---
+        bgt = s.budget
+        bgt.enabled = self._cb_budget_enabled.GetValue()
+        bgt.always_confirm_paid = self._cb_always_confirm.GetValue()
+        bgt.default_limit_usd = self._budget_default_spin.GetValue()
+        new_limits: dict[str, float] = {}
+        for pkey, spin in self._budget_provider_spins.items():
+            val = spin.GetValue()
+            if val > 0:
+                new_limits[pkey] = val
+        bgt.provider_limits = new_limits
 
         # --- Audio Processing (only if controls exist) ---
         a = s.audio_processing
@@ -1497,6 +1870,13 @@ class SettingsDialog(wx.Dialog):
     def _apply_to_app(self, settings: AppSettings) -> None:
         """Push settings values into the live application state."""
         mf = self._main_frame
+
+        # Save registration key
+        reg_key = self._reg_key_txt.GetValue().strip()
+        if reg_key != self._key_store.get_key("registration_key"):
+            self._key_store.store_key("registration_key", reg_key)
+            # Re-verify in background when key is changed
+            threading.Thread(target=mf.registration_service.verify_key, daemon=True).start()
 
         # General / behaviour flags
         mf._minimize_to_tray = settings.general.minimize_to_tray
@@ -1554,6 +1934,31 @@ class SettingsDialog(wx.Dialog):
     # ================================================================== #
     # Button handlers                                                      #
     # ================================================================== #
+
+    def _on_verify_reg_key(self, _event: wx.CommandEvent) -> None:
+        """Verify the registration key immediately."""
+        key = self._reg_key_txt.GetValue().strip()
+        if not key:
+            wx.MessageBox("Please enter a registration key.", "Error", wx.OK | wx.ICON_ERROR)
+            return
+
+        self._key_store.store_key("registration_key", key)
+        if self._main_frame.registration_service.verify_key():
+            msg = self._main_frame.registration_service.get_status_message()
+            self._reg_status_lbl.SetLabel(f"Status: {msg}")
+            self._main_frame._update_window_title()
+            wx.MessageBox(
+                f"Key verified successfully!\n{msg}",
+                "Success",
+                wx.OK | wx.ICON_INFORMATION,
+            )
+        else:
+            self._reg_status_lbl.SetLabel("Status: Verification Failed")
+            wx.MessageBox(
+                "Key verification failed. Please check your key or internet connection.",
+                "Error",
+                wx.OK | wx.ICON_ERROR,
+            )
 
     def _on_ok(self, _event: wx.CommandEvent) -> None:
         """Save settings and close."""

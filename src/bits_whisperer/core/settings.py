@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import asdict, dataclass, field
-from typing import Any
+from typing import Any, cast
 
 from bits_whisperer.utils.constants import (
     DATA_DIR,
@@ -181,22 +181,35 @@ class ProviderDefaultSettings:
 class AISettings:
     """AI service configuration for translation and summarization."""
 
-    selected_provider: str = "openai"  # openai, anthropic, azure_openai, gemini, copilot
+    # openai, anthropic, azure_openai, gemini, copilot, ollama
+    selected_provider: str = "openai"
     openai_model: str = "gpt-4o-mini"
     anthropic_model: str = "claude-sonnet-4-20250514"
     azure_openai_deployment: str = ""
     azure_openai_endpoint: str = ""
     gemini_model: str = "gemini-2.0-flash"
     copilot_model: str = "gpt-4o"
+    ollama_model: str = "llama3.2"
+    ollama_endpoint: str = "http://localhost:11434"
+    # HuggingFace repo ID or custom Ollama model name
+    ollama_custom_model: str = ""
     translation_target_language: str = "en"
     multi_target_languages: list[str] = field(default_factory=list)
-    summarization_style: str = "concise"  # "concise", "detailed", "bullet_points"
+    # "concise", "detailed", "bullet_points"
+    summarization_style: str = "concise"
     max_tokens: int = 4096
     temperature: float = 0.3
     custom_vocabulary: list[str] = field(default_factory=list)
     active_translation_template: str = "translate_standard"
     active_summarization_template: str = "summary_concise"
     custom_prompt_templates: list[dict[str, str]] = field(default_factory=list)
+    # Context window management
+    context_strategy: str = "smart"  # "truncate", "tail", "head_tail", "smart"
+    # fraction of available context for transcript
+    context_transcript_budget_pct: float = 0.70
+    context_response_reserve_tokens: int = 4096  # tokens reserved for response
+    # max chat turns to keep (0 = unlimited)
+    context_max_conversation_turns: int = 20
 
 
 @dataclass
@@ -211,6 +224,18 @@ class LiveTranscriptionSettings:
     chunk_duration_seconds: float = 3.0
     vad_filter: bool = True
     input_device: str = ""  # empty = system default
+
+
+@dataclass
+class PlaybackSettings:
+    """Audio preview and playback controls."""
+
+    default_speed: float = 1.0
+    min_speed: float = 0.25
+    max_speed: float = 4.0
+    speed_step: float = 0.05
+    jump_back_seconds: int = 5
+    jump_forward_seconds: int = 5
 
 
 @dataclass
@@ -230,6 +255,8 @@ class CopilotSettings:
     enabled: bool = False
     cli_path: str = ""  # empty = auto-detect from PATH
     use_logged_in_user: bool = True
+    auth_method: str = "cli_login"  # "cli_login", "browser_oauth", "pat"
+    oauth_client_id: str = ""  # Override GITHUB_OAUTH_CLIENT_ID constant
     default_model: str = "gpt-4o"
     subscription_tier: str = "pro"  # "free", "pro", "business", "enterprise"
     streaming: bool = True
@@ -243,6 +270,65 @@ class CopilotSettings:
     auto_start_cli: bool = True
     allow_transcript_tools: bool = True
     chat_panel_visible: bool = False
+
+
+@dataclass
+class BudgetSettings:
+    """Per-provider spending limits for transcription.
+
+    Allows users to set maximum dollar amounts per provider
+    (or per provider:model combination). When an estimated
+    transcription cost exceeds the limit, the user is warned
+    before proceeding.
+    """
+
+    enabled: bool = True
+    default_limit_usd: float = 0.0  # 0 = no limit
+    provider_limits: dict[str, float] = field(default_factory=dict)
+    always_confirm_paid: bool = True
+
+    def get_limit(self, provider_key: str, model: str = "") -> float:
+        """Return the spending limit for a provider/model combination.
+
+        Checks for a model-specific key first (``provider:model``),
+        then falls back to the provider key, then the default.
+
+        Args:
+            provider_key: Provider identifier.
+            model: Optional model identifier.
+
+        Returns:
+            Limit in USD. 0.0 means unlimited.
+        """
+        if model:
+            combo_key = f"{provider_key}:{model}"
+            if combo_key in self.provider_limits:
+                return self.provider_limits[combo_key]
+        if provider_key in self.provider_limits:
+            return self.provider_limits[provider_key]
+        return self.default_limit_usd
+
+    def exceeds_limit(
+        self, provider_key: str, model: str, estimated_cost: float
+    ) -> tuple[bool, float]:
+        """Check whether *estimated_cost* exceeds the budget limit.
+
+        Args:
+            provider_key: Provider identifier.
+            model: Model identifier.
+            estimated_cost: Total estimated cost in USD.
+
+        Returns:
+            Tuple of (exceeds, limit). *exceeds* is True when the
+            cost is over the limit. *limit* is the applicable limit
+            value (0.0 means unlimited → never exceeds).
+        """
+        if not self.enabled:
+            return False, 0.0
+        limit = self.get_limit(provider_key, model)
+        if limit <= 0:
+            return False, 0.0
+        return estimated_cost > limit, limit
 
 
 @dataclass
@@ -276,7 +362,9 @@ class AppSettings:
     )
     paths: PathSettings = field(default_factory=PathSettings)
     advanced: AdvancedSettings = field(default_factory=AdvancedSettings)
-    diarization: DiarizationSettings = field(default_factory=DiarizationSettings)
+    diarization: DiarizationSettings = field(
+        default_factory=DiarizationSettings,
+    )
     provider_settings: ProviderDefaultSettings = field(
         default_factory=ProviderDefaultSettings,
     )
@@ -284,8 +372,10 @@ class AppSettings:
     live_transcription: LiveTranscriptionSettings = field(
         default_factory=LiveTranscriptionSettings,
     )
+    playback: PlaybackSettings = field(default_factory=PlaybackSettings)
     plugins: PluginSettings = field(default_factory=PluginSettings)
     copilot: CopilotSettings = field(default_factory=CopilotSettings)
+    budget: BudgetSettings = field(default_factory=BudgetSettings)
 
     # ------------------------------------------------------------------ #
     # Persistence                                                          #
@@ -327,7 +417,10 @@ class AppSettings:
         older settings file always works.
         """
 
-        def _safe(dc_cls, section: dict | None):
+        def _safe(
+            dc_cls: type[Any],
+            section: dict[str, Any] | None,
+        ) -> Any:
             if not section:
                 return dc_cls()
             valid = {f.name for f in dc_cls.__dataclass_fields__.values()}
@@ -339,8 +432,16 @@ class AppSettings:
 
         # ProviderDefaultSettings wraps a nested dict
         ps_data = data.get("provider_settings", {})
-        ps_defaults = ps_data.get("defaults", {}) if isinstance(ps_data, dict) else {}
+        if isinstance(ps_data, dict):
+            raw_defaults = ps_data.get("defaults", {})
+            ps_defaults = cast("dict[str, dict[str, Any]]", raw_defaults)
+        else:
+            ps_defaults = {}
         provider_settings = ProviderDefaultSettings(defaults=ps_defaults)
+
+        # BudgetSettings has a dict field; handle specially
+        budget_data = data.get("budget", {})
+        budget = _safe(BudgetSettings, budget_data)
 
         return cls(
             general=_safe(GeneralSettings, data.get("general")),
@@ -362,6 +463,8 @@ class AppSettings:
                 LiveTranscriptionSettings,
                 data.get("live_transcription"),
             ),
+            playback=_safe(PlaybackSettings, data.get("playback")),
             plugins=_safe(PluginSettings, data.get("plugins")),
             copilot=_safe(CopilotSettings, data.get("copilot")),
+            budget=budget,
         )

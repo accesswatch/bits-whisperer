@@ -102,6 +102,8 @@ class AudioPreprocessor:
         self,
         input_path: str | Path,
         output_path: str | Path | None = None,
+        start_seconds: float | None = None,
+        end_seconds: float | None = None,
     ) -> Path:
         """Apply the configured filter chain to *input_path*.
 
@@ -124,13 +126,16 @@ class AudioPreprocessor:
 
         input_path = Path(input_path)
         if output_path is None:
-            fd, tmp = tempfile.mkstemp(suffix=".wav")
+            fd, tmp = tempfile.mkstemp(suffix=".wav", prefix="bw_preprocess_")
             os.close(fd)
             output_path = Path(tmp)
         else:
             output_path = Path(output_path)
 
-        filters = self._build_filter_chain()
+        filters = self._build_filter_chain(
+            start_seconds=start_seconds,
+            end_seconds=end_seconds,
+        )
         if not filters:
             # Nothing to do — copy input as-is
             return Path(input_path)
@@ -154,7 +159,11 @@ class AudioPreprocessor:
             str(output_path),
         ]
 
-        logger.info("Preprocessing audio: %s (filters: %s)", input_path.name, af_chain)
+        logger.info(
+            "Preprocessing audio: %s (filters: %s)",
+            input_path.name,
+            af_chain,
+        )
 
         try:
             result = subprocess.run(
@@ -162,6 +171,7 @@ class AudioPreprocessor:
                 capture_output=True,
                 text=True,
                 timeout=600,
+                check=False,
             )
             if result.returncode != 0:
                 logger.error("Preprocessor ffmpeg stderr: %s", result.stderr)
@@ -179,10 +189,24 @@ class AudioPreprocessor:
     # Filter chain construction                                            #
     # ------------------------------------------------------------------ #
 
-    def _build_filter_chain(self) -> list[str]:
+    def _build_filter_chain(
+        self,
+        *,
+        start_seconds: float | None = None,
+        end_seconds: float | None = None,
+    ) -> list[str]:
         """Build the ffmpeg ``-af`` filter list from current settings."""
         s = self._settings
         filters: list[str] = []
+
+        if start_seconds is not None or end_seconds is not None:
+            parts: list[str] = []
+            if start_seconds is not None and start_seconds > 0:
+                parts.append(f"start={start_seconds}")
+            if end_seconds is not None and end_seconds > 0:
+                parts.append(f"end={end_seconds}")
+            if parts:
+                filters.append("atrim=" + ":".join(parts))
 
         if s.highpass_enabled:
             filters.append(f"highpass=f={s.highpass_freq}")
@@ -193,7 +217,7 @@ class AudioPreprocessor:
         if s.noise_gate_enabled:
             # agate: threshold in dB, ratio high = hard gate
             filters.append(
-                f"agate=threshold={s.noise_gate_threshold_db}dB" f":ratio=10:attack=5:release=50"
+                f"agate=threshold={s.noise_gate_threshold_db}dB" ":ratio=10:attack=5:release=50"
             )
 
         if s.deesser_enabled:

@@ -1,0 +1,33 @@
+{
+  "include": ["src"],
+  "extraPaths": ["src"],
+  "executionEnvironments": [
+    {
+      "root": "src"
+    }
+  ],
+  "stubPath": "typings",
+  "pythonVersion": "3.13",
+
+  "typeCheckingMode": "basic",
+
+  "reportMissingImports": "warning",
+  "reportMissingTypeStubs": "none",
+  "reportMissingModuleSource": "none",
+
+  "reportUnusedImport": "warning",
+  "reportUnusedVariable": "warning",
+  "reportDuplicateImport": "warning",
+  "reportUntypedFunctionDecorator": "none",
+  "reportPrivateUsage": "warning",
+
+  "reportUnknownMemberType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportUnknownParameterType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownLambdaType": "none",
+  "reportArgumentType": "none",
+  "reportCallIssue": "none",
+  "reportIndexIssue": "none",
+  "reportGeneralTypeIssues": "none"
+}

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import TYPE_CHECKING
 
 import wx
 
@@ -12,15 +11,13 @@ from bits_whisperer.core.device_probe import DeviceProfile
 from bits_whisperer.core.model_manager import ModelManager
 from bits_whisperer.core.sdk_installer import ensure_sdk
 from bits_whisperer.utils.accessibility import (
+    accessible_message_box,
     safe_call_after,
     set_accessible_help,
     set_accessible_name,
 )
 from bits_whisperer.utils.constants import WHISPER_MODELS, WhisperModelInfo
 from bits_whisperer.utils.platform_utils import get_free_disk_space_mb, has_sufficient_disk_space
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 
@@ -250,7 +247,7 @@ class ModelManagerDialog(wx.Dialog):
     def _on_close(self, _event: wx.CommandEvent) -> None:
         """Handle Close button press."""
         if self._downloading:
-            wx.MessageBox(
+            accessible_message_box(
                 "A model download is in progress.\n\n"
                 "Please wait for it to finish before closing.",
                 "Download In Progress",
@@ -263,7 +260,7 @@ class ModelManagerDialog(wx.Dialog):
     def _on_close_event(self, event: wx.CloseEvent) -> None:
         """Handle window close (X button, Alt+F4)."""
         if self._downloading and event.CanVeto():
-            wx.MessageBox(
+            accessible_message_box(
                 "A model download is in progress.\n\n"
                 "Please wait for it to finish before closing.",
                 "Download In Progress",
@@ -280,7 +277,7 @@ class ModelManagerDialog(wx.Dialog):
             return
         mi = WHISPER_MODELS[idx]
         if self._mm.is_downloaded(mi.id):
-            wx.MessageBox(
+            accessible_message_box(
                 f"{mi.name} is already downloaded.",
                 "Already Downloaded",
                 wx.OK | wx.ICON_INFORMATION,
@@ -296,7 +293,7 @@ class ModelManagerDialog(wx.Dialog):
         required_mb = mi.disk_size_mb * 1.1
         if not has_sufficient_disk_space(self._mm.models_dir, required_mb):
             free = get_free_disk_space_mb(self._mm.models_dir)
-            wx.MessageBox(
+            accessible_message_box(
                 f"Not enough disk space to download {mi.name}.\n\n"
                 f"Required: {mi.disk_size_mb} MB\n"
                 f"Available: {free:.0f} MB\n\n"
@@ -407,7 +404,7 @@ class ModelManagerDialog(wx.Dialog):
             )
             logger.info("Model '%s' downloaded successfully.", mi.id)
         else:
-            wx.MessageBox(
+            accessible_message_box(
                 f"Failed to download {mi.name}:\n{error}",
                 "Download Failed",
                 wx.OK | wx.ICON_ERROR,
@@ -423,7 +420,7 @@ class ModelManagerDialog(wx.Dialog):
             return
 
         if (
-            wx.MessageBox(
+            accessible_message_box(
                 f"Delete {mi.name} ({mi.disk_size_mb} MB)?\n\n" "You can re-download it later.",
                 "Confirm Delete",
                 wx.YES_NO | wx.ICON_QUESTION,

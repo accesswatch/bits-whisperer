@@ -11,6 +11,7 @@ import wx
 from bits_whisperer.core.job import Job
 from bits_whisperer.export.base import ExportFormatter
 from bits_whisperer.utils.accessibility import (
+    accessible_message_box,
     make_panel_accessible,
     set_accessible_help,
     set_accessible_name,
@@ -92,8 +93,12 @@ class TranscriptPanel(wx.Panel):
         toolbar.Add(header, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
 
         self._search_ctrl = wx.SearchCtrl(self, size=(200, -1))
-        set_accessible_name(self._search_ctrl, "Search in transcript")
-        set_accessible_help(self._search_ctrl, "Type to highlight text in the transcript")
+        self._search_ctrl.SetDescriptiveText("Find in transcript…")
+        set_accessible_name(self._search_ctrl, "Find in transcript")
+        set_accessible_help(
+            self._search_ctrl,
+            "Type text to find in the transcript. Press Enter to search, F3 for next match.",
+        )
         toolbar.Add(self._search_ctrl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
 
         self._copy_btn = wx.Button(self, label="&Copy")
@@ -168,10 +173,51 @@ class TranscriptPanel(wx.Panel):
         self._text_ctrl.SetFont(font)
         sizer.Add(self._text_ctrl, 1, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 5)
 
+        # -- AI Action result section (hidden/shown dynamically) --
+        self._ai_action_box = wx.StaticBox(self, label="AI Action Result")
+        set_accessible_name(self._ai_action_box, "AI action result section")
+        ai_sizer = wx.StaticBoxSizer(self._ai_action_box, wx.VERTICAL)
+
+        self._ai_action_label = wx.StaticText(self, label="")
+        self._ai_action_label.SetForegroundColour(
+            wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT)
+        )
+        set_accessible_name(self._ai_action_label, "AI action status")
+        ai_sizer.Add(self._ai_action_label, 0, wx.EXPAND | wx.ALL, 4)
+
+        self._ai_action_text = wx.TextCtrl(
+            self,
+            style=(wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2 | wx.TE_WORDWRAP),
+            size=(-1, 150),
+        )
+        set_accessible_name(self._ai_action_text, "AI action output")
+        set_accessible_help(
+            self._ai_action_text,
+            "Output from the post-transcription AI action. "
+            "Use Ctrl+A to select all, Ctrl+C to copy.",
+        )
+        self._ai_action_text.SetFont(font)
+        ai_sizer.Add(self._ai_action_text, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
+
+        self._ai_action_copy_btn = wx.Button(self, label="Copy AI &Result")
+        set_accessible_name(self._ai_action_copy_btn, "Copy AI action result to clipboard")
+        ai_sizer.Add(self._ai_action_copy_btn, 0, wx.LEFT | wx.BOTTOM, 4)
+
+        sizer.Add(ai_sizer, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 5)
+
+        # Initially hide the AI action section
+        self._ai_action_box.Hide()
+        self._ai_action_label.Hide()
+        self._ai_action_text.Hide()
+        self._ai_action_copy_btn.Hide()
+
         self.SetSizer(sizer)
 
         # Show a helpful welcome message
         self._show_empty_state()
+
+        # Initially disable all action buttons — no transcript loaded yet
+        self.update_button_state(False)
 
         # Events
         self._copy_btn.Bind(wx.EVT_BUTTON, self._on_copy)
@@ -183,6 +229,7 @@ class TranscriptPanel(wx.Panel):
         self._search_ctrl.Bind(wx.EVT_TEXT, self._on_search_text_changed)
         self._text_ctrl.Bind(wx.EVT_CONTEXT_MENU, self._on_text_context_menu)
         self._manage_speakers_btn.Bind(wx.EVT_BUTTON, self._on_manage_speakers)
+        self._ai_action_copy_btn.Bind(wx.EVT_BUTTON, self._on_copy_ai_result)
 
         # F3 = Find Next (bound at panel level so it works globally)
         find_next_id = wx.NewIdRef()
@@ -258,11 +305,76 @@ class TranscriptPanel(wx.Panel):
         else:
             self._speaker_label.Hide()
             self._manage_speakers_btn.Hide()
+
+        # Show/hide AI action results section
+        self._show_ai_action_results(job)
+
         self.Layout()
 
     def export_transcript(self) -> None:
         """Open the export dialog for the current transcript."""
         self._on_export(None)
+
+    def update_button_state(self, has_transcript: bool) -> None:
+        """Enable or disable buttons based on whether a transcript is loaded.
+
+        Args:
+            has_transcript: ``True`` if a completed transcript is available.
+        """
+        self._copy_btn.Enable(has_transcript)
+        self._export_btn.Enable(has_transcript)
+        self._translate_btn.Enable(has_transcript)
+        self._summarize_btn.Enable(has_transcript)
+        self._search_ctrl.Enable(has_transcript)
+
+    def _show_ai_action_results(self, job: Job) -> None:
+        """Show or hide the AI action result section based on job state.
+
+        Args:
+            job: The current job being displayed.
+        """
+        has_ai = bool(
+            job.ai_action_result or job.ai_action_status == "running" or job.ai_action_error
+        )
+
+        if not has_ai and not job.ai_action_template:
+            # No AI action configured — hide everything
+            self._ai_action_box.Hide()
+            self._ai_action_label.Hide()
+            self._ai_action_text.Hide()
+            self._ai_action_copy_btn.Hide()
+            return
+
+        self._ai_action_box.Show()
+        self._ai_action_label.Show()
+        self._ai_action_text.Show()
+
+        if job.ai_action_status == "running":
+            self._ai_action_label.SetLabel("AI Action: Processing\u2026")
+            self._ai_action_text.SetValue("The AI is processing your transcript. Please wait\u2026")
+            self._ai_action_copy_btn.Hide()
+        elif job.ai_action_status == "completed" and job.ai_action_result:
+            template = job.ai_action_template or "Custom"
+            self._ai_action_label.SetLabel(f"AI Action: {template} \u2014 Completed")
+            self._ai_action_text.SetValue(job.ai_action_result)
+            self._ai_action_copy_btn.Show()
+        elif job.ai_action_status == "failed":
+            error = job.ai_action_error or "Unknown error"
+            self._ai_action_label.SetLabel(f"AI Action: Failed \u2014 {error}")
+            self._ai_action_text.SetValue(
+                f"The AI action failed with the following error:\n\n{error}"
+            )
+            self._ai_action_copy_btn.Hide()
+        elif job.ai_action_template:
+            # Template configured but not yet run
+            self._ai_action_label.SetLabel(f"AI Action: {job.ai_action_template} \u2014 Pending")
+            self._ai_action_text.SetValue("This AI action will run after transcription completes.")
+            self._ai_action_copy_btn.Hide()
+        else:
+            self._ai_action_box.Hide()
+            self._ai_action_label.Hide()
+            self._ai_action_text.Hide()
+            self._ai_action_copy_btn.Hide()
 
     # ------------------------------------------------------------------ #
     # Events                                                               #
@@ -277,9 +389,19 @@ class TranscriptPanel(wx.Panel):
 
             announce_status(self._main_frame, "Transcript copied to clipboard")
 
+    def _on_copy_ai_result(self, _event: wx.CommandEvent | None) -> None:
+        """Copy the AI action result text to the clipboard."""
+        text = self._ai_action_text.GetValue()
+        if text and wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(wx.TextDataObject(text))
+            wx.TheClipboard.Close()
+            from bits_whisperer.utils.accessibility import announce_status
+
+            announce_status(self._main_frame, "AI action result copied to clipboard")
+
     def _on_export(self, _event: wx.CommandEvent | None) -> None:
         if not self._current_job or not self._current_job.result:
-            wx.MessageBox(
+            accessible_message_box(
                 "No transcript to export. Transcribe a file first.",
                 "No Transcript",
                 wx.OK | wx.ICON_INFORMATION,
@@ -326,7 +448,7 @@ class TranscriptPanel(wx.Panel):
                     )
                 except Exception as exc:
                     logger.exception("Export failed")
-                    wx.MessageBox(
+                    accessible_message_box(
                         f"Export failed:\n{exc}",
                         "Export Error",
                         wx.OK | wx.ICON_ERROR,
@@ -396,10 +518,17 @@ class TranscriptPanel(wx.Panel):
         self._text_ctrl.SetValue(
             "Welcome to BITS Whisperer!\n\n"
             "To get started:\n"
-            "  1. Add audio files (Ctrl+O or drag and drop)\n"
-            "  2. Press F5 to begin transcription\n"
-            "  3. Your transcript will appear here\n\n"
-            "Tip: Press F3 to find next in search results."
+            "  1. Press Ctrl+O to add an audio file\n"
+            "  2. Choose your provider, model, and language\n"
+            "  3. Press F5 to begin transcription\n"
+            "  4. Your transcript will appear here automatically\n\n"
+            "Keyboard shortcuts:\n"
+            "  Ctrl+Tab / Ctrl+Shift+Tab — Switch tabs\n"
+            "  F6 / Shift+F6 — Navigate between panes\n"
+            "  F3 — Find next in search results\n"
+            "  Ctrl+E — Export transcript\n"
+            "  Ctrl+T — Translate with AI\n"
+            "  Ctrl+Shift+S — Summarize with AI"
         )
 
     @staticmethod
@@ -428,7 +557,7 @@ class TranscriptPanel(wx.Panel):
                 seen.add(seg.speaker)
 
         if not unique_ids:
-            wx.MessageBox(
+            accessible_message_box(
                 "No speakers detected in this transcript.\n\n"
                 "Enable speaker diarization in settings to detect speakers.",
                 "No Speakers",

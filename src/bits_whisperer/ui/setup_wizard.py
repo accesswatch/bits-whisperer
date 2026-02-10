@@ -27,6 +27,7 @@ from bits_whisperer.core.model_manager import ModelManager
 from bits_whisperer.core.settings import AppSettings
 from bits_whisperer.storage.key_store import KeyStore
 from bits_whisperer.utils.accessibility import (
+    accessible_message_box,
     label_control,
     make_panel_accessible,
     safe_call_after,
@@ -58,9 +59,10 @@ PAGE_HARDWARE = 2
 PAGE_MODELS = 3
 PAGE_PROVIDERS = 4
 PAGE_AI_COPILOT = 5
-PAGE_PREFERENCES = 6
-PAGE_SUMMARY = 7
-_TOTAL_PAGES = 8
+PAGE_BUDGET = 6
+PAGE_PREFERENCES = 7
+PAGE_SUMMARY = 8
+_TOTAL_PAGES = 9
 
 
 def needs_wizard() -> bool:
@@ -211,6 +213,7 @@ class SetupWizard(wx.Dialog):
             PAGE_MODELS: "Model selection page",
             PAGE_PROVIDERS: "Cloud services setup page",
             PAGE_AI_COPILOT: "AI and Copilot setup page",
+            PAGE_BUDGET: "Spending limits page",
             PAGE_PREFERENCES: "Preferences page",
             PAGE_SUMMARY: "Setup summary page",
         }
@@ -221,6 +224,7 @@ class SetupWizard(wx.Dialog):
             PAGE_MODELS: self._build_models_page,
             PAGE_PROVIDERS: self._build_providers_page,
             PAGE_AI_COPILOT: self._build_ai_copilot_page,
+            PAGE_BUDGET: self._build_budget_page,
             PAGE_PREFERENCES: self._build_preferences_page,
             PAGE_SUMMARY: self._build_summary_page,
         }
@@ -314,7 +318,8 @@ class SetupWizard(wx.Dialog):
             "  3.  Recommend AI models that work best on your machine\n"
             "  4.  Let you download models for offline use\n"
             "  5.  Help you connect cloud services (optional)\n"
-            "  6.  Set your preferences\n\n"
+            "  6.  Set up AI features and spending limits\n"
+            "  7.  Set your preferences\n\n"
             "You can always change these settings later from the Tools menu."
         )
         intro = self._create_info_text(panel, intro_text, "Setup wizard introduction")
@@ -710,7 +715,7 @@ class SetupWizard(wx.Dialog):
         try:
             import faster_whisper  # noqa: F401
         except ImportError:
-            wx.MessageBox(
+            accessible_message_box(
                 "The faster-whisper library is not installed.\n\n"
                 "Install it with:\n"
                 "  pip install faster-whisper\n\n"
@@ -725,7 +730,7 @@ class SetupWizard(wx.Dialog):
             mid for mid in self._selected_models if not self._model_manager.is_downloaded(mid)
         ]
         if not to_download:
-            wx.MessageBox(
+            accessible_message_box(
                 "All selected models are already downloaded!",
                 "Nothing to Download",
                 wx.OK | wx.ICON_INFORMATION,
@@ -743,7 +748,7 @@ class SetupWizard(wx.Dialog):
 
         if not has_sufficient_disk_space(MODELS_DIR, total_mb * 1.1):
             free_mb = get_free_disk_space_mb(MODELS_DIR)
-            wx.MessageBox(
+            accessible_message_box(
                 f"Not enough disk space!\n\n"
                 f"Required: {total_mb} MB\n"
                 f"Available: {free_mb:.0f} MB\n\n"
@@ -829,7 +834,7 @@ class SetupWizard(wx.Dialog):
             # Show completion notification
             failed = sum(1 for s in self._download_status.values() if s.startswith("Failed"))
             if failed == 0:
-                wx.MessageBox(
+                accessible_message_box(
                     f"All {self._downloads_total} model(s) downloaded successfully!\n\n"
                     "You're all set for offline transcription.",
                     "Downloads Complete",
@@ -837,7 +842,7 @@ class SetupWizard(wx.Dialog):
                     self,
                 )
             else:
-                wx.MessageBox(
+                accessible_message_box(
                     f"Downloaded: {self._downloads_total - failed}\n"
                     f"Failed: {failed}\n\n"
                     "You can retry failed downloads later from Tools, then Manage Models.",
@@ -1059,22 +1064,19 @@ class SetupWizard(wx.Dialog):
         copilot_desc.Wrap(560)
         copilot_sizer.Add(copilot_desc, 0, wx.ALL, 4)
 
-        # CLI detection status
-        from bits_whisperer.core.copilot_service import CopilotService
+        # SDK detection status
+        from bits_whisperer.core.sdk_installer import is_sdk_available
 
-        cli_path = CopilotService.detect_cli()
-        if cli_path:
-            cli_status = f"Copilot CLI detected: {cli_path}"
+        sdk_ok = is_sdk_available("copilot_sdk")
+        if sdk_ok:
+            sdk_status = "Copilot SDK: Installed (includes CLI)"
         else:
-            cli_status = (
-                "Copilot CLI not found. Install later via AI > Copilot Setup, "
-                "or run: winget install GitHub.Copilot"
-            )
+            sdk_status = "Copilot SDK not installed. Install later via AI > Copilot Setup."
 
-        cli_label = wx.StaticText(scroll, label=cli_status)
-        cli_label.Wrap(560)
-        set_accessible_name(cli_label, "Copilot CLI status")
-        copilot_sizer.Add(cli_label, 0, wx.ALL, 4)
+        sdk_label = wx.StaticText(scroll, label=sdk_status)
+        sdk_label.Wrap(560)
+        set_accessible_name(sdk_label, "Copilot SDK status")
+        copilot_sizer.Add(sdk_label, 0, wx.ALL, 4)
 
         # Enable Copilot checkbox
         self._wizard_copilot_enable = wx.CheckBox(scroll, label="&Enable GitHub Copilot features")
@@ -1082,7 +1084,7 @@ class SetupWizard(wx.Dialog):
             self._wizard_copilot_enable,
             "Enable GitHub Copilot for transcript AI features",
         )
-        self._wizard_copilot_enable.SetValue(self._settings.copilot.enabled if cli_path else False)
+        self._wizard_copilot_enable.SetValue(self._settings.copilot.enabled if sdk_ok else False)
         copilot_sizer.Add(self._wizard_copilot_enable, 0, wx.ALL, 4)
 
         scroll_sizer.Add(copilot_sizer, 0, wx.EXPAND | wx.BOTTOM, 8)
@@ -1124,7 +1126,111 @@ class SetupWizard(wx.Dialog):
         sizer.Add(scroll, 1, wx.EXPAND | wx.ALL, 4)
 
     # ================================================================== #
-    # Page 6: Quick Preferences                                            #
+    # Page 7: Spending Limits / Budget                                     #
+    # ================================================================== #
+
+    def _build_budget_page(self) -> None:
+        """Build the spending-limits / budget configuration page."""
+        self._header.SetLabel("Spending Limits")
+        self._subtitle.SetLabel("Control how much you spend on paid cloud transcription services.")
+
+        panel = self._page_panel
+        sizer = self._page_sizer
+        b = self._settings.budget
+
+        intro_text = (
+            "Cloud transcription providers charge per minute of audio. "
+            "Setting a spending limit helps you stay in control. "
+            "When a transcription's estimated cost exceeds your limit, "
+            "you'll be warned before it is queued.\n\n"
+            "Tip: You can set detailed per-provider limits later in "
+            "Settings \u2192 Budget."
+        )
+        intro = self._create_info_text(panel, intro_text, "Spending limits introduction")
+        sizer.Add(intro, 0, wx.EXPAND | wx.ALL, 8)
+
+        # --- Main controls ---
+        ctrl_box = wx.StaticBox(panel, label="Budget Controls")
+        set_accessible_name(ctrl_box, "Budget controls")
+        ctrl_sizer = wx.StaticBoxSizer(ctrl_box, wx.VERTICAL)
+
+        self._wiz_budget_enabled = wx.CheckBox(
+            panel,
+            label="&Enable spending-limit warnings",
+        )
+        self._wiz_budget_enabled.SetValue(b.enabled)
+        set_accessible_name(
+            self._wiz_budget_enabled,
+            "Enable spending limit warnings",
+        )
+        set_accessible_help(
+            self._wiz_budget_enabled,
+            "Show a warning when a transcription's estimated cost " "exceeds your spending limit",
+        )
+        ctrl_sizer.Add(self._wiz_budget_enabled, 0, wx.ALL, 6)
+
+        self._wiz_always_confirm = wx.CheckBox(
+            panel,
+            label="Always &confirm before using a paid provider",
+        )
+        self._wiz_always_confirm.SetValue(b.always_confirm_paid)
+        set_accessible_name(
+            self._wiz_always_confirm,
+            "Always confirm paid provider usage",
+        )
+        set_accessible_help(
+            self._wiz_always_confirm,
+            "Ask for confirmation every time you queue audio with a "
+            "paid cloud provider, even if within budget",
+        )
+        ctrl_sizer.Add(self._wiz_always_confirm, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+
+        # Default limit
+        lim_row = wx.BoxSizer(wx.HORIZONTAL)
+        lim_lbl = wx.StaticText(panel, label="Default spending &limit (USD):")
+        self._wiz_budget_limit = wx.SpinCtrlDouble(
+            panel,
+            min=0.0,
+            max=1000.0,
+            inc=0.50,
+            initial=b.default_limit_usd,
+        )
+        self._wiz_budget_limit.SetDigits(2)
+        label_control(lim_lbl, self._wiz_budget_limit)
+        set_accessible_help(
+            self._wiz_budget_limit,
+            "Maximum cost in USD per transcription. " "Set to 0 for no limit.",
+        )
+        lim_row.Add(lim_lbl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+        lim_row.Add(self._wiz_budget_limit, 0)
+        ctrl_sizer.Add(lim_row, 0, wx.ALL, 6)
+
+        sizer.Add(ctrl_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 8)
+
+        # --- Pricing reference ---
+        pricing_box = wx.StaticBox(panel, label="Cloud Provider Pricing Reference")
+        set_accessible_name(pricing_box, "Provider pricing reference")
+        pr_sizer = wx.StaticBoxSizer(pricing_box, wx.VERTICAL)
+
+        pricing_lines = [
+            "Gemini:            ~$0.0002/min  (cheapest)",
+            "Groq Whisper:      ~$0.003/min",
+            "ElevenLabs Scribe: ~$0.005/min",
+            "OpenAI Whisper:    ~$0.006/min",
+            "AssemblyAI:        ~$0.011/min",
+            "Deepgram Nova-2:   ~$0.013/min",
+            "Azure Speech:      ~$0.017/min",
+            "Auphonic:          2 free hours/month, then paid",
+            "Local models:      Always free",
+        ]
+        pricing_text = "\n".join(pricing_lines)
+        pricing_ctrl = self._create_info_text(panel, pricing_text, "Provider pricing reference")
+        pr_sizer.Add(pricing_ctrl, 0, wx.EXPAND | wx.ALL, 4)
+
+        sizer.Add(pr_sizer, 0, wx.EXPAND | wx.ALL, 8)
+
+    # ================================================================== #
+    # Page 8: Quick Preferences                                            #
     # ================================================================== #
 
     def _build_preferences_page(self) -> None:
@@ -1226,7 +1332,7 @@ class SetupWizard(wx.Dialog):
         sizer.Add(beh_sizer, 0, wx.EXPAND | wx.ALL, 4)
 
     # ================================================================== #
-    # Page 6: Summary & Finish                                             #
+    # Page 9: Summary & Finish                                             #
     # ================================================================== #
 
     def _build_summary_page(self) -> None:
@@ -1274,11 +1380,23 @@ class SetupWizard(wx.Dialog):
         mode = self._settings.general.experience_mode
         mode_display = "Advanced" if mode == "advanced" else "Basic"
 
+        # Budget summary
+        bgt = self._settings.budget
+        if bgt.enabled and bgt.default_limit_usd > 0:
+            budget_text = f"Enabled \u2014 ${bgt.default_limit_usd:.2f} default limit"
+        elif bgt.enabled:
+            budget_text = "Enabled \u2014 no default limit"
+        else:
+            budget_text = "Disabled"
+        if bgt.always_confirm_paid:
+            budget_text += " (always confirm paid)"
+
         summary_items = [
             ("Experience Mode:", mode_display),
             ("Your Hardware:", hw_text),
             ("Downloaded Models:", models_text),
             ("Cloud Services:", providers_text),
+            ("Spending Limits:", budget_text),
         ]
 
         summary_box = wx.StaticBox(panel, label="Setup Summary")
@@ -1412,6 +1530,14 @@ class SetupWizard(wx.Dialog):
             # Save Copilot setting
             if hasattr(self, "_wizard_copilot_enable"):
                 self._settings.copilot.enabled = self._wizard_copilot_enable.GetValue()
+
+        elif self._current_page == PAGE_BUDGET:
+            if hasattr(self, "_wiz_budget_enabled"):
+                self._settings.budget.enabled = self._wiz_budget_enabled.GetValue()
+            if hasattr(self, "_wiz_always_confirm"):
+                self._settings.budget.always_confirm_paid = self._wiz_always_confirm.GetValue()
+            if hasattr(self, "_wiz_budget_limit"):
+                self._settings.budget.default_limit_usd = self._wiz_budget_limit.GetValue()
 
         elif self._current_page == PAGE_PREFERENCES:
             if hasattr(self, "_pref_language"):

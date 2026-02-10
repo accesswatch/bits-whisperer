@@ -18,8 +18,6 @@ import asyncio
 import contextlib
 import json
 import logging
-import shutil
-import subprocess
 import threading
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
@@ -36,6 +34,42 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Agent configuration data model
 # ---------------------------------------------------------------------------
+
+
+@dataclass
+class Attachment:
+    """A file attached as supplementary context for AI actions.
+
+    Attachments provide additional reference material that the AI can use
+    alongside the transcript — e.g. meeting agendas, project specs, style guides.
+    Each attachment can have optional per-attachment instructions.
+    """
+
+    file_path: str  # Absolute path to the attached file
+    instructions: str = ""  # Per-attachment instructions (e.g. "Use this as a glossary")
+    display_name: str = ""  # Friendly display name (defaults to filename if empty)
+
+    @property
+    def name(self) -> str:
+        """Display name or filename."""
+        return self.display_name or Path(self.file_path).name
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to a JSON-compatible dict."""
+        return {
+            "file_path": self.file_path,
+            "instructions": self.instructions,
+            "display_name": self.display_name,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Attachment:
+        """Deserialize from a dict."""
+        return cls(
+            file_path=data.get("file_path", ""),
+            instructions=data.get("instructions", ""),
+            display_name=data.get("display_name", ""),
+        )
 
 
 @dataclass
@@ -73,16 +107,27 @@ class AgentConfig:
         "• Translate sections\n\n"
         "What would you like to know?"
     )
+    attachments: list[Attachment] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-compatible dict."""
-        return asdict(self)
+        d = asdict(self)
+        # Serialize attachments explicitly for clarity
+        d["attachments"] = [a.to_dict() for a in self.attachments]
+        return d
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> AgentConfig:
         """Deserialize from a dict, ignoring unknown keys."""
         valid = {f.name for f in cls.__dataclass_fields__.values()}
-        return cls(**{k: v for k, v in data.items() if k in valid})
+        filtered = {k: v for k, v in data.items() if k in valid}
+        # Deserialize attachments from list of dicts
+        if "attachments" in filtered and isinstance(filtered["attachments"], list):
+            filtered["attachments"] = [
+                Attachment.from_dict(a) if isinstance(a, dict) else a
+                for a in filtered["attachments"]
+            ]
+        return cls(**filtered)
 
     def save(self, path: Path) -> None:
         """Save configuration to a JSON file."""
@@ -155,75 +200,44 @@ class CopilotService:
         self._is_running = False
 
     # ------------------------------------------------------------------ #
-    # CLI detection                                                        #
+    # Availability checks                                                  #
     # ------------------------------------------------------------------ #
 
-    @staticmethod
-    def detect_cli() -> str | None:
-        """Detect the Copilot CLI installation path.
-
-        Returns:
-            Path to the copilot CLI binary, or None if not found.
-        """
-        # Check custom path first, then PATH
-        cli = shutil.which("copilot")
-        if cli:
-            return cli
-        # Common locations on Windows
-        for candidate in [
-            Path.home() / "AppData" / "Local" / "Programs" / "copilot" / "copilot.exe",
-            Path("C:/Program Files/GitHub Copilot CLI/copilot.exe"),
-        ]:
-            if candidate.exists():
-                return str(candidate)
-        return None
-
-    @staticmethod
-    def get_cli_version(cli_path: str | None = None) -> str | None:
-        """Get the Copilot CLI version string.
-
-        Args:
-            cli_path: Path to the copilot binary. Auto-detected if None.
-
-        Returns:
-            Version string, or None if CLI is not available.
-        """
-        path = cli_path or CopilotService.detect_cli()
-        if not path:
-            return None
-        try:
-            result = subprocess.run(
-                [path, "--version"],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            if result.returncode == 0:
-                return result.stdout.strip()
-        except Exception:
-            pass
-        return None
-
     def is_available(self) -> bool:
-        """Check whether the Copilot SDK and CLI are available.
+        """Check whether the Copilot SDK is available.
+
+        The SDK bundles its own CLI binary, so no separate CLI
+        installation is needed.
 
         Returns:
-            True if the SDK is importable and the CLI is detected.
+            True if the SDK is importable.
         """
+        sdk_ok = self.is_sdk_installed()
+        logger.debug(
+            "Copilot availability check: sdk_installed=%s",
+            sdk_ok,
+        )
+        return sdk_ok
+
+    @staticmethod
+    def is_sdk_installed() -> bool:
+        """Check if the github-copilot-sdk package is installed.
+
+        Invalidates import caches first to detect newly-installed packages.
+        """
+        import importlib
+
+        importlib.invalidate_caches()
         try:
-            import copilot  # noqa: F401
+            import copilot
 
-            return self.detect_cli() is not None
-        except ImportError:
-            return False
-
-    def is_sdk_installed(self) -> bool:
-        """Check if the github-copilot-sdk package is installed."""
-        try:
-            import copilot  # noqa: F401
-
+            logger.debug(
+                "Copilot SDK is installed (module location: %s)",
+                getattr(copilot, "__file__", "unknown"),
+            )
             return True
-        except ImportError:
+        except ImportError as exc:
+            logger.debug("Copilot SDK not importable: %s", exc)
             return False
 
     # ------------------------------------------------------------------ #
@@ -266,11 +280,19 @@ class CopilotService:
             True if the client started successfully.
         """
         if self._is_running:
+            logger.debug("Copilot client already running, skipping start")
             return True
 
         try:
             from copilot import CopilotClient
+        except ImportError:
+            logger.error(
+                "github-copilot-sdk not installed — cannot start Copilot. "
+                "Install with: pip install github-copilot-sdk"
+            )
+            return False
 
+        try:
             client_kwargs: dict[str, Any] = {
                 "auto_start": self._settings.auto_start_cli,
             }
@@ -279,36 +301,59 @@ class CopilotService:
             token = self._key_store.get_key("copilot_github_token")
             if token:
                 client_kwargs["github_token"] = token
+                auth_method = self._settings.auth_method
+                logger.info(
+                    "Copilot auth: using stored token (method=%s, prefix=%s...)",
+                    auth_method,
+                    token[:7] if len(token) > 7 else "***",
+                )
             elif self._settings.use_logged_in_user:
                 client_kwargs["use_logged_in_user"] = True
+                logger.info("Copilot auth: using logged-in CLI user")
+            else:
+                logger.warning(
+                    "Copilot auth: no token and use_logged_in_user=False — "
+                    "authentication may fail"
+                )
 
-            cli_path = self._settings.cli_path or self.detect_cli()
-            if cli_path:
-                client_kwargs["cli_path"] = cli_path
+            # The SDK bundles its own CLI binary; only override if
+            # the user has explicitly configured a custom path.
+            if self._settings.cli_path:
+                client_kwargs["cli_path"] = self._settings.cli_path
+                logger.info("Copilot CLI path (custom): %s", self._settings.cli_path)
+
+            # Log sanitised client kwargs (redact token)
+            log_kwargs = {k: ("***" if "token" in k else v) for k, v in client_kwargs.items()}
+            logger.info("Creating CopilotClient with options: %s", log_kwargs)
 
             self._client = CopilotClient(client_kwargs)
+            logger.debug("CopilotClient created, calling start()...")
             self._run_async(self._client.start())
             self._is_running = True
-            logger.info("Copilot client started")
+            logger.info("Copilot client started successfully")
             return True
 
-        except ImportError:
-            logger.error("github-copilot-sdk not installed")
-            return False
         except Exception as exc:
             logger.exception("Failed to start Copilot client: %s", exc)
             return False
 
     def stop(self) -> None:
         """Stop the Copilot client and clean up resources."""
+        logger.debug("Stopping Copilot client...")
         if self._session:
-            with contextlib.suppress(Exception):
+            try:
                 self._run_async(self._session.destroy())
+                logger.debug("Copilot session destroyed")
+            except Exception:
+                logger.debug("Error destroying Copilot session (ignored)", exc_info=True)
             self._session = None
 
         if self._client and self._is_running:
-            with contextlib.suppress(Exception):
+            try:
                 self._run_async(self._client.stop())
+                logger.debug("Copilot client stopped via SDK")
+            except Exception:
+                logger.debug("Error stopping Copilot client (ignored)", exc_info=True)
             self._client = None
             self._is_running = False
 
@@ -321,7 +366,7 @@ class CopilotService:
             self._thread = None
 
         self._conversation_history.clear()
-        logger.info("Copilot client stopped")
+        logger.info("Copilot client stopped and resources cleaned up")
 
     @property
     def is_running(self) -> bool:
@@ -347,11 +392,29 @@ class CopilotService:
         if self._agent_config.instructions:
             system_msg = self._agent_config.instructions
         if self._transcript_context:
-            system_msg += (
-                "\n\n--- TRANSCRIPT CONTEXT ---\n"
-                + self._transcript_context[:50000]  # Limit context size
-                + "\n--- END TRANSCRIPT ---"
+            # Use context manager for model-aware fitting
+            from bits_whisperer.core.context_manager import (
+                ContextWindowManager,
+                ContextWindowSettings,
             )
+
+            ctx_settings = ContextWindowSettings()
+            ctx_mgr = ContextWindowManager(ctx_settings)
+            prepared = ctx_mgr.prepare_chat_context(
+                model=self._settings.default_model,
+                provider="copilot",
+                system_prompt=system_msg,
+                transcript=self._transcript_context,
+                conversation_history=self._conversation_history,
+            )
+            if prepared.fitted_transcript:
+                system_msg += (
+                    "\n\n--- TRANSCRIPT CONTEXT ---\n"
+                    + prepared.fitted_transcript
+                    + "\n--- END TRANSCRIPT ---"
+                )
+            ctx_len = len(prepared.fitted_transcript)
+            logger.debug("Transcript context attached to session (%d chars)", ctx_len)
         session_kwargs["system_message"] = system_msg
 
         # Add transcript tools if enabled
@@ -359,9 +422,21 @@ class CopilotService:
             tools = self._build_transcript_tools()
             if tools:
                 session_kwargs["tools"] = tools
+                logger.debug("Attached %d custom tools to session", len(tools))
 
-        session = await self._client.create_session(session_kwargs)
-        return session
+        logger.info(
+            "Creating Copilot session: model=%s, streaming=%s, system_msg_len=%d",
+            session_kwargs["model"],
+            session_kwargs["streaming"],
+            len(system_msg),
+        )
+        try:
+            session = await self._client.create_session(session_kwargs)
+            logger.info("Copilot session created successfully")
+            return session
+        except Exception:
+            logger.exception("Failed to create Copilot session")
+            raise
 
     def _build_transcript_tools(self) -> list[Any] | None:
         """Build custom tools for transcript analysis.
@@ -464,12 +539,18 @@ class CopilotService:
             on_complete: Called with the full response when done.
             on_error: Called with an error message if something fails.
         """
+        logger.info("Sending Copilot message (len=%d)", len(message))
         self._conversation_history.append(CopilotMessage(role="user", content=message))
 
         def _do_send() -> None:
             try:
                 result = self._run_async(self._async_send(message, on_delta=on_delta))
                 self._conversation_history.append(result)
+                logger.info(
+                    "Copilot response received (len=%d, model=%s)",
+                    len(result.content),
+                    result.model,
+                )
                 if on_complete:
                     on_complete(result)
             except Exception as exc:
@@ -486,35 +567,63 @@ class CopilotService:
         on_delta: Callable[[str], None] | None = None,
     ) -> CopilotMessage:
         """Send a message and collect the response asynchronously."""
-        from copilot.generated.session_events import SessionEventType
-
         # Ensure we have a session
         if not self._session:
+            logger.debug("No active session — creating a new one")
             self._session = await self._create_session()
 
         if self._settings.streaming and on_delta:
             # Streaming mode — collect deltas via event handler
+            logger.debug("Sending message in streaming mode (len=%d)", len(message))
             full_text = ""
+            error_msg = ""
             done_event = asyncio.Event()
 
             def _handle_event(event: Any) -> None:
-                nonlocal full_text
-                if event.type == SessionEventType.ASSISTANT_MESSAGE_DELTA:
-                    delta = getattr(event.data, "content", "") or ""
+                nonlocal full_text, error_msg
+                event_type = getattr(event.type, "value", str(event.type))
+                logger.debug("Copilot event: type=%s", event_type)
+                if event_type == "assistant.message_delta":
+                    # Streaming chunk — use delta_content per SDK docs
+                    delta = getattr(event.data, "delta_content", "") or ""
                     if delta:
                         full_text += delta
                         on_delta(delta)
-                elif event.type == SessionEventType.SESSION_IDLE:
+                elif event_type == "assistant.message":
+                    # Final complete message
+                    final = getattr(event.data, "content", "") or ""
+                    logger.debug("Copilot final message received (len=%d)", len(final))
+                    if not full_text and final:
+                        # No streaming deltas were received — use the final message
+                        full_text = final
+                        on_delta(final)
+                elif event_type == "session.idle":
+                    logger.debug("Copilot session idle — response complete")
                     done_event.set()
-                elif event.type == SessionEventType.SESSION_ERROR:
+                elif event_type in ("session.error", "error"):
+                    error_msg = getattr(event.data, "message", "") or str(event.data)
+                    logger.error("Copilot session error event: %s", error_msg)
                     done_event.set()
+                else:
+                    logger.debug(
+                        "Copilot unhandled event type: %s (data=%s)",
+                        event_type,
+                        type(event.data).__name__,
+                    )
 
             unsubscribe = self._session.on(_handle_event)
             try:
                 await self._session.send({"prompt": message})
                 await asyncio.wait_for(done_event.wait(), timeout=120)
+            except TimeoutError:
+                logger.error("Copilot streaming response timed out after 120s")
+                if not full_text:
+                    full_text = "[Response timed out after 120 seconds]"
             finally:
                 unsubscribe()
+
+            if error_msg and not full_text:
+                full_text = f"[Error: {error_msg}]"
 
             return CopilotMessage(
                 role="assistant",
@@ -524,10 +633,12 @@ class CopilotService:
             )
         else:
             # Non-streaming mode — use send_and_wait
+            logger.debug("Sending message in non-streaming mode (len=%d)", len(message))
             response = await self._session.send_and_wait({"prompt": message})
             text = ""
             if response and hasattr(response, "data"):
                 text = getattr(response.data, "content", "") or ""
+            logger.debug("Non-streaming response received (len=%d)", len(text))
             return CopilotMessage(
                 role="assistant",
                 content=text,

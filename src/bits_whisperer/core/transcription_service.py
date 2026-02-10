@@ -10,7 +10,8 @@ import threading
 import time
 from collections.abc import Callable
 from datetime import datetime
-from typing import Any
+from pathlib import Path
+from typing import Any, cast
 
 from bits_whisperer.core.audio_preprocessor import AudioPreprocessor
 from bits_whisperer.core.job import Job, JobStatus
@@ -18,7 +19,10 @@ from bits_whisperer.core.provider_manager import ProviderManager
 from bits_whisperer.core.settings import AppSettings
 from bits_whisperer.core.transcoder import Transcoder
 from bits_whisperer.storage.key_store import KeyStore
-from bits_whisperer.utils.constants import DEFAULT_MAX_CONCURRENT_JOBS
+from bits_whisperer.utils.constants import (
+    DATA_DIR,
+    DEFAULT_MAX_CONCURRENT_JOBS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +49,7 @@ class TranscriptionService:
         app_settings: AppSettings | None = None,
         max_workers: int = DEFAULT_MAX_CONCURRENT_JOBS,
     ) -> None:
+        """Initialise the transcription service."""
         self._provider_manager = provider_manager
         self._transcoder = transcoder
         self._key_store = key_store
@@ -52,14 +57,18 @@ class TranscriptionService:
         self._app_settings = app_settings
         self._max_workers = max_workers
 
-        self._job_queue: queue.Queue[Job] = queue.Queue()
+        self._job_queue: queue.Queue[Job | None] = queue.Queue()
         self._active_jobs: dict[str, Job] = {}
         self._completed_jobs: list[Job] = []
         self._all_jobs: list[Job] = []
         self._workers: list[threading.Thread] = []
         self._running = False
         self._paused = False
+        self._batch_notified = False
         self._lock = threading.Lock()
+
+        # Temp file tracking — per-job temp files cleaned after completion
+        self._temp_files: dict[str, list[Path]] = {}  # job_id -> [temp_paths]
 
         # Callbacks
         self._on_job_update: JobUpdateCallback | None = None
@@ -97,6 +106,7 @@ class TranscriptionService:
         """
         with self._lock:
             self._all_jobs.append(job)
+            self._batch_notified = False
         self._job_queue.put(job)
         self._notify_update(job)
         logger.info("Job queued: %s (%s)", job.display_name, job.id)
@@ -110,6 +120,37 @@ class TranscriptionService:
         for job in jobs:
             self.add_job(job)
 
+    def reset_for_new_batch(self) -> None:
+        """Clear completed/failed/cancelled jobs to prepare for a fresh batch.
+
+        Called before starting a new transcription run so that old
+        finished jobs do not accumulate and interfere with batch-complete
+        detection.
+        """
+        with self._lock:
+            # Keep only jobs that are still actively processing
+            self._all_jobs = [
+                j
+                for j in self._all_jobs
+                if j.status
+                in (
+                    JobStatus.PENDING,
+                    JobStatus.TRANSCODING,
+                    JobStatus.TRANSCRIBING,
+                )
+            ]
+            self._completed_jobs = [
+                j
+                for j in self._completed_jobs
+                if j.status
+                in (
+                    JobStatus.PENDING,
+                    JobStatus.TRANSCODING,
+                    JobStatus.TRANSCRIBING,
+                )
+            ]
+            self._batch_notified = False
+
     # ------------------------------------------------------------------
     # Queue control
     # ------------------------------------------------------------------
@@ -120,21 +161,45 @@ class TranscriptionService:
             return
         self._running = True
         self._paused = False
+        self._batch_notified = False
         for i in range(self._max_workers):
             t = threading.Thread(
-                target=self._worker_loop, name=f"transcription-worker-{i}", daemon=True
+                target=self._worker_loop,
+                name=f"transcription-worker-{i}",
+                daemon=True,
             )
             t.start()
             self._workers.append(t)
-        logger.info("Transcription service started with %d workers.", self._max_workers)
+        logger.info(
+            "Transcription service started with %d workers.",
+            self._max_workers,
+        )
 
     def stop(self) -> None:
-        """Stop processing and shut down worker threads."""
+        """Stop processing and shut down worker threads.
+
+        Sends sentinel values to unblock workers, then joins each thread
+        with a timeout to ensure a clean shutdown.  Any remaining temp
+        files tracked by the service are cleaned up.
+        """
         self._running = False
-        # Unblock waiting workers
+        # Unblock waiting workers with sentinels
         for _ in self._workers:
             self._job_queue.put(None)  # type: ignore[arg-type]
+
+        # Join worker threads so they finish before we exit
+        for t in self._workers:
+            t.join(timeout=5.0)
+            if t.is_alive():
+                logger.warning(
+                    "Worker thread %s did not exit within timeout",
+                    t.name,
+                )
         self._workers.clear()
+
+        # Clean up any remaining temp files from in-flight jobs
+        self._cleanup_all_temp_files()
+
         logger.info("Transcription service stopped.")
 
     def pause(self) -> None:
@@ -223,7 +288,38 @@ class TranscriptionService:
     # ------------------------------------------------------------------
     # Worker loop
     # ------------------------------------------------------------------
+    def _track_temp_file(self, job_id: str, path: Path) -> None:
+        """Register a temp file for cleanup after the job finishes."""
+        with self._lock:
+            self._temp_files.setdefault(job_id, []).append(path)
 
+    def _cleanup_job_temp_files(self, job_id: str) -> None:
+        """Remove all tracked temp files for a completed/failed job."""
+        with self._lock:
+            paths = self._temp_files.pop(job_id, [])
+        for p in paths:
+            try:
+                if p.exists():
+                    p.unlink()
+                    logger.debug("Cleaned up temp file: %s", p)
+            except Exception as exc:
+                logger.debug("Could not remove temp file %s: %s", p, exc)
+
+    def _cleanup_all_temp_files(self) -> None:
+        """Remove all tracked temp files (called during shutdown)."""
+        with self._lock:
+            all_paths = list(self._temp_files.values())
+            self._temp_files.clear()
+        for paths in all_paths:
+            for p in paths:
+                try:
+                    if p.exists():
+                        p.unlink()
+                        logger.debug("Cleaned up temp file on shutdown: %s", p)
+                except Exception as exc:
+                    logger.debug("Could not remove temp file %s: %s", p, exc)
+
+    # ------------------------------------------------------------------
     def _worker_loop(self) -> None:
         """Worker thread main loop — processes jobs from the queue."""
         while self._running:
@@ -256,6 +352,8 @@ class TranscriptionService:
                 job.completed_at = datetime.now().isoformat()
                 self._notify_update(job)
             finally:
+                # Clean up temp files created during this job
+                self._cleanup_job_temp_files(job.id)
                 with self._lock:
                     self._active_jobs.pop(job.id, None)
                     self._completed_jobs.append(job)
@@ -280,14 +378,18 @@ class TranscriptionService:
             raise RuntimeError(f"Audio file is empty (0 bytes): {job.file_path}")
 
         # Check SDK availability before attempting to load the provider
-        from bits_whisperer.core.sdk_installer import get_provider_sdk_info, is_sdk_available
+        from bits_whisperer.core.sdk_installer import (
+            get_provider_sdk_info,
+            is_sdk_available,
+        )
 
         if not is_sdk_available(job.provider):
             sdk_info = get_provider_sdk_info(job.provider)
             name = sdk_info.display_name if sdk_info else job.provider
             raise RuntimeError(
                 f"The {name} SDK is not installed. "
-                "Please install it from the Model Manager or Settings before transcribing."
+                "Please install it from the Model Manager or Settings "
+                "before transcribing."
             )
 
         # Check provider exists early
@@ -311,7 +413,8 @@ class TranscriptionService:
         if caps.max_file_size_mb and file_size_mb > caps.max_file_size_mb:
             raise RuntimeError(
                 f"File too large for {caps.name}: "
-                f"{file_size_mb:.0f} MB exceeds {caps.max_file_size_mb} MB limit."
+                f"{file_size_mb:.0f} MB exceeds "
+                f"{caps.max_file_size_mb} MB limit."
             )
 
         # --- Configure provider with user defaults ---
@@ -326,13 +429,31 @@ class TranscriptionService:
         self._notify_update(job)
 
         audio_path = job.file_path
+        clip_start = job.clip_start_seconds
+        clip_end = job.clip_end_seconds
+
+        if clip_start is not None or clip_end is not None:
+            if clip_start is not None and clip_start < 0:
+                clip_start = 0.0
+            if clip_end is not None and clip_end <= 0:
+                clip_end = None
+            if clip_start is not None and clip_end is not None and clip_end <= clip_start:
+                raise RuntimeError("Invalid clip range: end must be after start")
 
         pp = self._preprocessor
         if pp and pp.is_available() and pp.settings.enabled:
             try:
                 logger.info("Preprocessing audio: %s", job.display_name)
-                preprocessed = self._preprocessor.process(audio_path)
+                preprocessed = self._preprocessor.process(
+                    audio_path,
+                    start_seconds=clip_start,
+                    end_seconds=clip_end,
+                )
+                if str(preprocessed) != audio_path:
+                    self._track_temp_file(job.id, Path(preprocessed))
                 audio_path = str(preprocessed)
+                clip_start = None
+                clip_end = None
             except Exception as exc:
                 logger.warning("Preprocessing failed, using original: %s", exc)
 
@@ -347,8 +468,13 @@ class TranscriptionService:
         if self._transcoder.is_available():
             try:
                 transcoded = self._transcoder.transcode(
-                    audio_path, progress_callback=transcode_progress
+                    audio_path,
+                    start_seconds=clip_start,
+                    end_seconds=clip_end,
+                    progress_callback=transcode_progress,
                 )
+                if str(transcoded) != audio_path:
+                    self._track_temp_file(job.id, Path(transcoded))
                 audio_path = str(transcoded)
             except Exception as exc:
                 logger.warning(
@@ -416,7 +542,10 @@ class TranscriptionService:
         if self._app_settings and self._app_settings.diarization.speaker_map:
             from bits_whisperer.core.diarization import apply_speaker_map
 
-            apply_speaker_map(result, self._app_settings.diarization.speaker_map)
+            apply_speaker_map(
+                result,
+                self._app_settings.diarization.speaker_map,
+            )
 
         # --- Step 5: Complete ---
         result.job_id = job.id
@@ -428,6 +557,10 @@ class TranscriptionService:
         self._notify_update(job)
 
         logger.info("Job completed: %s", job.display_name)
+
+        # --- Step 6: Post-transcription AI action ---
+        if job.ai_action_template:
+            self._run_ai_action(job)
 
     def _resolve_api_key(self, provider_id: str) -> str:
         """Resolve the API key for a provider from the KeyStore.
@@ -498,10 +631,11 @@ class TranscriptionService:
         progress_callback: Any,
         max_retries: int = 2,
     ) -> Any:
-        """Call provider.transcribe() with automatic retry on transient failures.
+        """Call provider.transcribe() with retry on transient failures.
 
         Uses exponential backoff (2s, 4s) for network/rate-limit errors.
-        Non-transient errors (auth, format, missing key) are raised immediately.
+        Non-transient errors (auth, format, missing key) are raised
+        immediately.
 
         Args:
             provider: TranscriptionProvider instance.
@@ -536,7 +670,7 @@ class TranscriptionService:
 
                 delay = 2 ** (attempt + 1)  # 2s, 4s
                 logger.warning(
-                    "Transient error on attempt %d/%d for %s: %s (retrying in %ds)",
+                    "Transient error on attempt %d/%d for %s: %s " "(retrying in %ds)",
                     attempt + 1,
                     max_retries + 1,
                     job.display_name,
@@ -558,20 +692,417 @@ class TranscriptionService:
             with contextlib.suppress(Exception):
                 self._on_job_update(job)
 
+    # ------------------------------------------------------------------
+    # Post-transcription AI action
+    # ------------------------------------------------------------------
+
+    # Built-in AI action presets (name -> instructions)
+    _BUILTIN_PRESETS: dict[str, str] = {
+        "Meeting Minutes": (
+            "You are a professional meeting minutes writer. "
+            "Given the transcript below, "
+            "produce well-structured meeting minutes that include:\n"
+            "- Date/time and attendees (if identifiable)\n"
+            "- Agenda items discussed\n"
+            "- Key decisions made\n"
+            "- Action items with owners and deadlines (if mentioned)\n"
+            "- Follow-up items\n\n"
+            "Use clear headings, bullet points, and concise language suitable "
+            "for "
+            "sharing with team members who were not present."
+        ),
+        "Action Items": (
+            "You are a task extraction specialist. Analyze this "
+            "transcript and extract every action item, task, "
+            "commitment, follow-up, and to-do mentioned. "
+            "For each item include:\n"
+            "- What needs to be done\n"
+            "- Who is responsible (if mentioned)\n"
+            "- Deadline or timeline (if mentioned)\n"
+            "- Priority level (high/medium/low, inferred from context)\n\n"
+            "Present them as a numbered, actionable list."
+        ),
+        "Executive Summary": (
+            "You are an executive briefing specialist. Produce a "
+            "concise executive summary of this transcript suitable "
+            "for senior leadership. Include:\n"
+            "- One-paragraph overview (3-4 sentences)\n"
+            "- Key takeaways (bullet points)\n"
+            "- Strategic implications or concerns\n"
+            "- Recommended next steps\n\n"
+            "Keep the tone professional and focus on what matters most."
+        ),
+        "Interview Notes": (
+            "You are an interview analysis expert. Create detailed "
+            "interview notes "
+            "from this transcript, including:\n"
+            "- Candidate/interviewee information\n"
+            "- Key questions asked and responses\n"
+            "- Notable strengths and areas of concern\n"
+            "- Relevant quotes\n"
+            "- Overall assessment and recommendation\n\n"
+            "Maintain objectivity and support observations with evidence from "
+            "the transcript."
+        ),
+        "Lecture Notes": (
+            "You are a study notes specialist. Transform this "
+            "lecture/presentation "
+            "transcript into well-organized study notes that include:\n"
+            "- Main topics and subtopics with clear headings\n"
+            "- Key concepts and definitions\n"
+            "- Important examples and explanations\n"
+            "- Formulas, processes, or frameworks mentioned\n"
+            "- Questions raised and any answers given\n"
+            "- Summary of key takeaways\n\n"
+            "Use bullet points, numbered lists, and formatting "
+            "for easy review."
+        ),
+        "Q&A Extraction": (
+            "You are a Q&A extraction specialist. Identify every "
+            "question asked in this transcript and its corresponding "
+            "answer. Present them as a "
+            "clean Q&A format:\n\n"
+            "Q: [question]\n"
+            "A: [answer]\n\n"
+            "If a question was not answered, note it as 'Unanswered'. Include "
+            "the speaker name if identifiable."
+        ),
+    }
+
+    def _run_ai_action(self, job: Job) -> None:
+        """Execute the post-transcription AI action for a completed job.
+
+        Loads the AI action template (built-in preset or saved AgentConfig),
+        builds a prompt with the template instructions and transcript text,
+        and sends it to the configured AI provider.
+
+        Args:
+            job: Completed job with a transcript result and
+                ai_action_template set.
+        """
+        template_ref = job.ai_action_template
+        if not template_ref or not job.result:
+            return
+
+        logger.info(
+            "Running AI action '%s' for job %s",
+            template_ref,
+            job.display_name,
+        )
+        job.ai_action_status = "running"
+        self._notify_update(job)
+
+        try:
+            # Resolve instructions from template reference
+            instructions = self._resolve_ai_action_instructions(template_ref)
+            if not instructions:
+                job.ai_action_status = "failed"
+                job.ai_action_error = f"AI action template '{template_ref}' not found or empty."
+                self._notify_update(job)
+                return
+
+            # Build transcript text
+            result = job.result
+            text = result.full_text
+            if not text:
+                text = "\n".join(s.text for s in result.segments)
+            if not text.strip():
+                job.ai_action_status = "failed"
+                job.ai_action_error = "Transcript is empty — nothing to process."
+                self._notify_update(job)
+                return
+
+            # Get AI provider
+            if not self._app_settings or not self._key_store:
+                job.ai_action_status = "failed"
+                job.ai_action_error = "AI provider not configured."
+                self._notify_update(job)
+                return
+
+            from bits_whisperer.core.ai_service import AIService
+
+            ai_service = AIService(self._key_store, self._app_settings.ai)
+            if not ai_service.is_configured():
+                job.ai_action_status = "failed"
+                job.ai_action_error = (
+                    "No AI provider is configured. " "Add an API key in AI Provider Settings."
+                )
+                self._notify_update(job)
+                return
+
+            # Build prompt: instructions + attachments + transcript
+            # (model-aware fitting).
+            from bits_whisperer.core.context_manager import (
+                create_context_manager,
+            )
+
+            model_id = ai_service.get_model_id()
+            provider_id = self._app_settings.ai.selected_provider
+            ctx_mgr = create_context_manager(self._app_settings.ai)
+
+            # Resolve AI parameters from template
+            max_tokens, temperature = self._resolve_ai_params(template_ref)
+
+            # Resolve attachments from template and/or per-job overrides
+            attachments_text = self._build_attachments_text(template_ref, job)
+
+            prepared = ctx_mgr.prepare_action_context(
+                model=model_id,
+                provider=provider_id,
+                instructions=instructions,
+                transcript=text,
+                attachments_text=attachments_text,
+                response_reserve=max_tokens,
+            )
+
+            # Assemble the final prompt
+            prompt_parts = [instructions, ""]
+            if attachments_text:
+                prompt_parts.append("--- ATTACHED DOCUMENTS ---")
+                prompt_parts.append(attachments_text)
+                prompt_parts.append("--- END ATTACHED DOCUMENTS ---")
+                prompt_parts.append("")
+            prompt_parts.append("--- TRANSCRIPT ---")
+            prompt_parts.append(prepared.fitted_transcript)
+            prompt_parts.append("--- END TRANSCRIPT ---")
+            prompt_parts.append("")
+            prompt_parts.append(
+                "Please process this transcript according to the instructions " "above."
+            )
+            if attachments_text:
+                prompt_parts.append(
+                    "Use the attached documents as reference material " "where relevant."
+                )
+            prompt = "\n".join(prompt_parts)
+
+            if prepared.budget.is_truncated:
+                logger.info(
+                    "AI action transcript truncated: %d -> %d tokens " "(%s strategy) for model %s",
+                    prepared.budget.transcript_actual_tokens,
+                    prepared.budget.transcript_fitted_tokens,
+                    prepared.budget.strategy_used,
+                    model_id,
+                )
+
+            # Call the AI provider
+            provider = ai_service.get_provider()
+            if not provider:
+                job.ai_action_status = "failed"
+                job.ai_action_error = "Failed to create AI provider instance."
+                self._notify_update(job)
+                return
+
+            response = provider.generate(
+                prompt,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+
+            if response.error:
+                job.ai_action_status = "failed"
+                job.ai_action_error = response.error
+                logger.warning(
+                    "AI action failed for %s: %s",
+                    job.display_name,
+                    response.error,
+                )
+            else:
+                job.ai_action_result = response.text
+                job.ai_action_status = "completed"
+                logger.info(
+                    "AI action completed for %s (%d chars, %d tokens)",
+                    job.display_name,
+                    len(response.text),
+                    response.tokens_used,
+                )
+
+        except Exception as exc:
+            job.ai_action_status = "failed"
+            job.ai_action_error = str(exc)
+            logger.exception(
+                "AI action failed for %s: %s",
+                job.display_name,
+                exc,
+            )
+
+        self._notify_update(job)
+
+    def _resolve_ai_action_instructions(self, template_ref: str) -> str:
+        """Resolve template reference to instruction text.
+
+        The template_ref can be:
+        - A built-in preset name (e.g. "Meeting Minutes")
+        - An absolute path to a saved AgentConfig JSON file
+
+        Args:
+            template_ref: Preset name or file path.
+
+        Returns:
+            The instruction text, or empty string if not found.
+        """
+        # Check built-in presets first
+        if template_ref in self._BUILTIN_PRESETS:
+            return self._BUILTIN_PRESETS[template_ref]
+
+        # Try loading from file
+        from pathlib import Path
+
+        template_path = Path(template_ref)
+        if not template_path.is_absolute():
+            # Check in the agents directory
+            template_path = DATA_DIR / "agents" / template_ref
+            if not template_path.suffix:
+                template_path = template_path.with_suffix(".json")
+
+        if template_path.is_file():
+            try:
+                from bits_whisperer.core.copilot_service import AgentConfig
+
+                config = AgentConfig.load(template_path)
+                return config.instructions
+            except Exception as exc:
+                logger.warning(
+                    "Failed to load AI action template '%s': %s",
+                    template_ref,
+                    exc,
+                )
+                return ""
+
+        return ""
+
+    def _resolve_ai_params(self, template_ref: str) -> tuple[int, float]:
+        """Resolve AI parameters (max_tokens, temperature) from a template.
+
+        Falls back to app settings defaults for built-in presets.
+
+        Args:
+            template_ref: Preset name or file path.
+
+        Returns:
+            Tuple of (max_tokens, temperature).
+        """
+        # For file-based templates, load the config
+        from pathlib import Path
+
+        template_path = Path(template_ref)
+        if not template_path.is_absolute():
+            template_path = DATA_DIR / "agents" / template_ref
+            if not template_path.suffix:
+                template_path = template_path.with_suffix(".json")
+
+        if template_path.is_file():
+            try:
+                from bits_whisperer.core.copilot_service import AgentConfig
+
+                config = AgentConfig.load(template_path)
+                return config.max_tokens, config.temperature
+            except Exception:
+                pass
+
+        # Default from settings or sensible fallbacks
+        if self._app_settings:
+            return (
+                self._app_settings.ai.max_tokens,
+                self._app_settings.ai.temperature,
+            )
+        return 4096, 0.3
+
+    def _build_attachments_text(self, template_ref: str, job: Job) -> str:
+        """Build formatted text from all attachments for the AI prompt.
+
+        Collects attachments from the AgentConfig template (if file-based)
+        and from per-job attachment overrides. Reads each file using
+        the document reader and formats it with per-attachment instructions.
+
+        Args:
+            template_ref: Preset name or file path.
+            job: The job being processed (may have per-job attachments).
+
+        Returns:
+            Formatted attachment text, or empty string if no attachments.
+        """
+        from bits_whisperer.core.copilot_service import Attachment
+        from bits_whisperer.core.document_reader import read_document_safe
+
+        attachments: list[Attachment] = []
+
+        # 1. Collect from template AgentConfig
+        template_path = Path(template_ref)
+        if not template_path.is_absolute():
+            template_path = DATA_DIR / "agents" / template_ref
+            if not template_path.suffix:
+                template_path = template_path.with_suffix(".json")
+        if template_path.is_file():
+            try:
+                from bits_whisperer.core.copilot_service import AgentConfig
+
+                config = AgentConfig.load(template_path)
+                attachments.extend(config.attachments)
+            except Exception as exc:
+                logger.warning(
+                    "Could not load attachments from template '%s': %s",
+                    template_ref,
+                    exc,
+                )
+
+        # 2. Collect from per-job attachments
+        for att_dict in getattr(job, "ai_action_attachments", []):
+            if isinstance(att_dict, dict):
+                data = cast("dict[str, Any]", att_dict)
+                attachments.append(Attachment.from_dict(data))
+            elif isinstance(att_dict, Attachment):
+                attachments.append(att_dict)
+
+        if not attachments:
+            return ""
+
+        # 3. Read and format each attachment
+        parts: list[str] = []
+        for att in attachments:
+            content = read_document_safe(att.file_path)
+            header = f"=== Document: {att.name} ==="
+            if att.instructions:
+                header += f"\nInstructions: {att.instructions}"
+            parts.append(f"{header}\n{content}\n=== End: {att.name} ===")
+            logger.info(
+                "Attached document '%s' (%d chars) for AI action",
+                att.name,
+                len(content),
+            )
+
+        return "\n\n".join(parts)
+
     def _check_batch_complete(self) -> None:
-        """Check if all queued jobs are done and fire batch-complete callback."""
+        """Check if all queued jobs are done and fire batch-complete callback.
+
+        Uses ``_batch_notified`` to ensure the callback fires only once
+        per batch, preventing repeated bell sounds and announcements.
+        """
+        jobs_snapshot: list[Job] | None = None
         with self._lock:
             if not self._all_jobs:
                 return
+            if self._batch_notified:
+                return
             all_done = all(
-                j.status in (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED)
+                j.status
+                in (
+                    JobStatus.COMPLETED,
+                    JobStatus.FAILED,
+                    JobStatus.CANCELLED,
+                )
                 for j in self._all_jobs
             )
             if (
                 all_done
-                and self._active_jobs == {}
+                and not self._active_jobs
                 and self._job_queue.empty()
                 and self._on_batch_complete
             ):
-                with contextlib.suppress(Exception):
-                    self._on_batch_complete(list(self._all_jobs))
+                self._batch_notified = True
+                jobs_snapshot = list(self._all_jobs)
+
+        # Fire callback outside the lock to avoid deadlock
+        if jobs_snapshot is not None and self._on_batch_complete:
+            with contextlib.suppress(Exception):
+                self._on_batch_complete(jobs_snapshot)

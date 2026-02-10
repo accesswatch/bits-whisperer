@@ -37,7 +37,7 @@ def _setup_logging() -> None:
 class BitsWhispererApp(wx.App):
     """Top-level wx application for BITS Whisperer."""
 
-    def OnInit(self) -> bool:  # noqa: N802 — wx convention
+    def OnInit(self) -> bool:
         """Called by wxPython on application startup."""
         _setup_logging()
         logger.info("Starting %s", APP_NAME)
@@ -77,7 +77,47 @@ class BitsWhispererApp(wx.App):
         self.SetTopWindow(frame)
         return True
 
-    def OnExit(self) -> int:  # noqa: N802
-        """Clean-up on shutdown."""
+    def OnExit(self) -> int:
+        """Clean-up on shutdown — release resources to avoid _MEI lock errors.
+
+        In frozen (PyInstaller) builds, lingering file handles or threads
+        can prevent the bootloader from removing its temporary directory,
+        causing a "Failed to remove temporary directory" warning.  We
+        aggressively close logging handlers and run garbage collection to
+        release as many resources as possible before the process exits.
+        """
         logger.info("Shutting down %s", APP_NAME)
+
+        import gc
+        import tempfile
+        import threading
+        from pathlib import Path
+
+        for t in threading.enumerate():
+            if t is not threading.main_thread() and t.daemon:
+                logger.debug("Daemon thread still alive at shutdown: %s", t.name)
+
+        # Remove any lingering bw_* temp files from THIS session
+        # (safety net in case service.stop() was not called)
+        tmp_dir = Path(tempfile.gettempdir())
+        for prefix in ("bw_transcode_", "bw_preprocess_"):
+            for p in tmp_dir.glob(f"{prefix}*"):
+                try:
+                    if p.is_file():
+                        p.unlink()
+                except Exception:
+                    pass
+
+        # Close all logging file handlers so _MEI files are not locked
+        root_logger = logging.getLogger()
+        for handler in list(root_logger.handlers):
+            try:
+                handler.close()
+                root_logger.removeHandler(handler)
+            except Exception:
+                pass
+
+        # Force garbage collection to release file handles / DLLs
+        gc.collect()
+
         return 0

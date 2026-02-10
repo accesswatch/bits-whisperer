@@ -17,6 +17,7 @@ from bits_whisperer.core.live_transcription import (
 )
 from bits_whisperer.core.settings import AppSettings
 from bits_whisperer.utils.accessibility import (
+    accessible_message_box,
     announce_status,
     safe_call_after,
     set_accessible_help,
@@ -193,7 +194,7 @@ class LiveTranscriptionDialog(wx.Dialog):
     def _populate_devices(self) -> None:
         """Populate the device choice with available input devices."""
         devices = LiveTranscriptionService.list_input_devices()
-        self._device_list = [None] + devices  # None = system default
+        self._device_list = [None, *devices]  # None = system default
         choices = ["System Default"]
         for dev in devices:
             choices.append(f"{dev['name']}")
@@ -235,7 +236,7 @@ class LiveTranscriptionDialog(wx.Dialog):
         try:
             self._service.start()
         except Exception as exc:
-            wx.MessageBox(
+            accessible_message_box(
                 f"Could not start live transcription:\n\n{exc}",
                 "Microphone Error",
                 wx.OK | wx.ICON_ERROR,

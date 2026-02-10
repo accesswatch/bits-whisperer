@@ -32,6 +32,9 @@ _KEY_NAMES: dict[str, str] = {
     "azure_openai_deployment": "Azure OpenAI Deployment Name",
     # GitHub Copilot
     "copilot_github_token": "GitHub Copilot Token (PAT)",
+    # BITS Whisperer Registration
+    "registration_key": "BITS Whisperer Registration Key",
+    "registration_status": "Membership Status (Verified Code)",
 }
 
 

@@ -18,6 +18,7 @@ from bits_whisperer.utils.constants import (
     COPILOT_AI_MODELS,
     COPILOT_TIERS,
     GEMINI_AI_MODELS,
+    OLLAMA_AI_MODELS,
     OPENAI_AI_MODELS,
     format_price_per_1k,
     get_ai_model_by_id,
@@ -53,11 +54,18 @@ class TestAIModelCatalog:
             + len(ANTHROPIC_AI_MODELS)
             + len(GEMINI_AI_MODELS)
             + len(COPILOT_AI_MODELS)
+            + len(OLLAMA_AI_MODELS)
         )
         assert len(ALL_AI_MODELS) == total
 
     def test_model_ids_unique_per_provider(self) -> None:
-        for models in [OPENAI_AI_MODELS, ANTHROPIC_AI_MODELS, GEMINI_AI_MODELS, COPILOT_AI_MODELS]:
+        for models in [
+            OPENAI_AI_MODELS,
+            ANTHROPIC_AI_MODELS,
+            GEMINI_AI_MODELS,
+            COPILOT_AI_MODELS,
+            OLLAMA_AI_MODELS,
+        ]:
             ids = [m.id for m in models]
             assert len(ids) == len(set(ids)), "Duplicate model IDs"
 
@@ -67,7 +75,7 @@ class TestAIModelCatalog:
 
     def test_all_models_have_provider(self) -> None:
         for m in ALL_AI_MODELS:
-            assert m.provider in ("openai", "anthropic", "gemini", "copilot")
+            assert m.provider in ("openai", "anthropic", "gemini", "copilot", "ollama")
 
     def test_all_models_have_context_window(self) -> None:
         for m in ALL_AI_MODELS:
@@ -184,7 +192,7 @@ class TestCopilotTiers:
             assert tier_info["description"], f"Tier {tier_key} has empty description"
 
     def test_all_tiers_have_name(self) -> None:
-        for _tier_key, tier_info in COPILOT_TIERS.items():
+        for tier_info in COPILOT_TIERS.values():
             assert "name" in tier_info
 
     def test_get_copilot_models_for_free_tier(self) -> None:
@@ -454,3 +462,161 @@ class TestStreamingSupport:
         provider = AssemblyAIProvider()
         caps = provider.get_capabilities()
         assert caps.supports_streaming is True
+
+
+# -----------------------------------------------------------------------
+# AIProvider chat_stream tests
+# -----------------------------------------------------------------------
+
+
+class TestAIProviderChatStream:
+    """AIProvider.chat_stream() method tests."""
+
+    def test_chat_stream_exists_on_abc(self) -> None:
+        from bits_whisperer.core.ai_service import AIProvider
+
+        assert hasattr(AIProvider, "chat_stream")
+
+    def test_chat_stream_signature(self) -> None:
+        import inspect
+
+        from bits_whisperer.core.ai_service import AIProvider
+
+        sig = inspect.signature(AIProvider.chat_stream)
+        params = list(sig.parameters.keys())
+        assert "messages" in params
+        assert "system_message" in params
+        assert "on_delta" in params
+
+    def test_openai_has_chat_stream(self) -> None:
+        from bits_whisperer.core.ai_service import OpenAIAIProvider
+
+        provider = OpenAIAIProvider(api_key="test", model="gpt-4o-mini")
+        assert hasattr(provider, "chat_stream")
+
+    def test_anthropic_has_chat_stream(self) -> None:
+        from bits_whisperer.core.ai_service import AnthropicAIProvider
+
+        provider = AnthropicAIProvider(api_key="test", model="claude-sonnet-4-20250514")
+        assert hasattr(provider, "chat_stream")
+
+    def test_gemini_has_chat_stream(self) -> None:
+        from bits_whisperer.core.ai_service import GeminiAIProvider
+
+        provider = GeminiAIProvider(api_key="test", model="gemini-2.0-flash")
+        assert hasattr(provider, "chat_stream")
+
+    def test_ollama_has_chat_stream(self) -> None:
+        from bits_whisperer.core.ai_service import OllamaAIProvider
+
+        provider = OllamaAIProvider(model="llama3.2")
+        assert hasattr(provider, "chat_stream")
+
+    def test_azure_has_chat_stream(self) -> None:
+        from bits_whisperer.core.ai_service import AzureOpenAIProvider
+
+        provider = AzureOpenAIProvider(
+            api_key="test", endpoint="https://test.openai.azure.com", deployment="gpt-4o"
+        )
+        assert hasattr(provider, "chat_stream")
+
+    def test_default_chat_stream_delegates_to_generate(self) -> None:
+        """The default chat_stream falls back to generate()."""
+        from bits_whisperer.core.ai_service import AIProvider, AIResponse
+
+        class FakeProvider(AIProvider):
+            def generate(self, prompt, *, max_tokens=4096, temperature=0.3):
+                return AIResponse(text="hello", provider="fake", model="test")
+
+            def validate_key(self, api_key):
+                return True
+
+        provider = FakeProvider()
+        messages = [{"role": "user", "content": "hi"}]
+        deltas = []
+        response = provider.chat_stream(messages, on_delta=lambda d: deltas.append(d))
+        assert response.text == "hello"
+        assert deltas == ["hello"]
+
+
+# -----------------------------------------------------------------------
+# AIService.chat() tests
+# -----------------------------------------------------------------------
+
+
+class TestAIServiceChat:
+    """AIService.chat() method tests."""
+
+    def test_chat_method_exists(self) -> None:
+        import inspect
+
+        from bits_whisperer.core.ai_service import AIService
+
+        assert hasattr(AIService, "chat")
+        sig = inspect.signature(AIService.chat)
+        params = list(sig.parameters.keys())
+        assert "messages" in params
+        assert "transcript_context" in params
+        assert "on_delta" in params
+        assert "on_complete" in params
+        assert "on_error" in params
+
+    def test_get_provider_display_name(self) -> None:
+        from bits_whisperer.core.ai_service import AIService
+
+        mock_keys = MagicMock()
+        settings = AISettings()
+        settings.selected_provider = "openai"
+        settings.openai_model = "gpt-4o-mini"
+
+        service = AIService(mock_keys, settings)
+        display = service.get_provider_display_name()
+        assert "OpenAI" in display
+        assert "gpt-4o-mini" in display
+
+    def test_get_provider_display_name_ollama(self) -> None:
+        from bits_whisperer.core.ai_service import AIService
+
+        mock_keys = MagicMock()
+        settings = AISettings()
+        settings.selected_provider = "ollama"
+        settings.ollama_model = "llama3.2"
+
+        service = AIService(mock_keys, settings)
+        display = service.get_provider_display_name()
+        assert "Ollama" in display
+        assert "llama3.2" in display
+
+    def test_get_provider_display_name_anthropic(self) -> None:
+        from bits_whisperer.core.ai_service import AIService
+
+        mock_keys = MagicMock()
+        settings = AISettings()
+        settings.selected_provider = "anthropic"
+
+        service = AIService(mock_keys, settings)
+        display = service.get_provider_display_name()
+        assert "Anthropic" in display
+
+    def test_chat_calls_on_error_when_no_provider(self) -> None:
+        import time
+
+        from bits_whisperer.core.ai_service import AIService
+
+        mock_keys = MagicMock()
+        mock_keys.get_key.return_value = None  # no keys configured
+        settings = AISettings()
+        settings.selected_provider = "openai"
+
+        service = AIService(mock_keys, settings)
+        errors = []
+
+        service.chat(
+            [{"role": "user", "content": "hello"}],
+            on_error=lambda e: errors.append(e),
+        )
+
+        # Wait for background thread
+        time.sleep(0.5)
+        assert len(errors) == 1
+        assert "No AI provider configured" in errors[0]

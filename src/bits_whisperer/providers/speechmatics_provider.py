@@ -190,7 +190,7 @@ class SpeechmaticsProvider(TranscriptionProvider):
                 status = job_data.get("status", "")
                 if status == "done":
                     break
-                elif status in ("rejected", "deleted"):
+                if status in ("rejected", "deleted"):
                     error = job_data.get("errors", [{}])
                     raise RuntimeError(f"Speechmatics job {status}: {error}")
 

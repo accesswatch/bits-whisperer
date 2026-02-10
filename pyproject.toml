@@ -9,7 +9,7 @@ description = "Consumer-grade audio transcription with cloud + on-device Whisper
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 authors = [{name = "Blind Information Technology Solutions (BITS)"}]
 
 dependencies = [
@@ -24,6 +24,8 @@ dependencies = [
     "platformdirs>=4.0.0",
     "httpx>=0.25.0",
     "packaging>=23.0",
+    "accessible_output2>=0.17",
+    "sounddevice>=0.4.6",
     "winsdk>=1.0.0b10; sys_platform == 'win32'",
     "comtypes>=1.2.0; sys_platform == 'win32'",
 ]
@@ -69,9 +71,12 @@ all-providers = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "pytest-mock>=3.10",
+    "pytest-asyncio>=0.23.0",
     "black>=23.0",
     "ruff>=0.1.0",
     "mypy>=1.0",
+    "pre-commit>=3.5.0",
 ]
 
 [project.scripts]
@@ -85,20 +90,85 @@ where = ["src"]
 
 [tool.black]
 line-length = 100
-target-version = ["py310"]
+target-version = ["py313"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py313"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "W",    # pycodestyle warnings
+    "I",    # isort (import sorting)
+    "UP",   # pyupgrade (modern Python syntax)
+    "B",    # flake8-bugbear (common bugs)
+    "SIM",  # flake8-simplify
+    "C4",   # flake8-comprehensions
+    "RET",  # flake8-return (return statement issues)
+    "TCH",  # flake8-type-checking (TYPE_CHECKING imports)
+    "PIE",  # flake8-pie (misc lints)
+    "PLC",  # pylint conventions
+    "PLE",  # pylint errors
+    "PLW",  # pylint warnings
+    "RUF",  # ruff-specific rules
+    "PERF", # perflint (performance anti-patterns)
+    "LOG",  # logging best practices
+    "S",    # flake8-bandit (security)
+    "T20",  # flake8-print (no stray print statements)
+    "PT",   # flake8-pytest-style (better test patterns)
+    "A",    # flake8-builtins (no builtin shadowing)
+    "ERA",  # eradicate (commented-out code)
+]
+ignore = [
+    "RET504",  # unnecessary assignment before return — often clearer
+    "RET505",  # superfluous else after return — explicit branches are clearer
+    "PLW0603", # global statement — needed in some patterns
+    "RUF012",  # mutable class variables — dataclass fields are fine
+    "UP007",   # use X | Y for union — keep Optional for readability when preferred
+    "PLC0415", # import-outside-top-level — SDKs are lazy-imported on demand by design
+    "RUF001",  # ambiguous unicode in strings — em-dashes and similar are intentional
+    "RUF002",  # ambiguous unicode in docstrings — em-dashes and similar are intentional
+    "RUF003",  # ambiguous unicode in comments — em-dashes and similar are intentional
+    "PLW2901", # redefined loop variable — sometimes intentional in transforms
+    "TC001",   # typing-only-first-party-import — large refactor, defer
+    "TC003",   # typing-only-standard-library-import — large refactor, defer
+    "RUF059",  # unused-unpacked-variable — common in tuple unpacking patterns
+    "PERF401", # manual-list-comprehension — sometimes loop is more readable
+    "S101",   # assert — used extensively; fine for desktop app + tests
+    "S603",   # subprocess-without-shell-check — we validate inputs
+    "S607",   # start-process-with-partial-path — ffmpeg etc. resolved at startup
+    "S110",   # try-except-pass — handled by SIM rules already
+    "S112",   # try-except-continue — sometimes intentional in batch loops
+    "S311",   # random — not used for cryptography
+    "S310",   # suspicious-url-open — our urllib calls target known API endpoints
+    "S606",   # start-process-with-no-shell — no-shell is the secure approach
+    "PT011",  # pytest-raises-too-broad — match= not always needed
+    "PT023",  # pytest-incorrect-mark-parentheses — @pytest.mark.slow() vs @pytest.mark.slow
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "B011",    # assert False is fine in tests
+    "PLW1641", # __hash__ not required in test classes
+    "T20",     # print() is fine in tests
+    "S",       # security rules relaxed in tests
+]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.13"
 warn_return_any = true
 warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+check_untyped_defs = true
+no_implicit_optional = true
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]

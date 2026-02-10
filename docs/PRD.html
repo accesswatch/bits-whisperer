@@ -4,120 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BITS Whisperer — Product Requirements Document</title>
-<style>
-  :root {
-    --bg: #ffffff;
-    --fg: #1a1a1a;
-    --accent: #0969da;
-    --border: #d0d7de;
-    --code-bg: #f6f8fa;
-    --table-alt: #f6f8fa;
-    --blockquote: #57606a;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0d1117;
-      --fg: #e6edf3;
-      --accent: #58a6ff;
-      --border: #30363d;
-      --code-bg: #161b22;
-      --table-alt: #161b22;
-      --blockquote: #8b949e;
-    }
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
-                 sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-    font-size: 16px;
-    line-height: 1.6;
-    color: var(--fg);
-    background: var(--bg);
-    max-width: 980px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem;
-  }
-  h1, h2, h3, h4, h5, h6 {
-    margin-top: 1.5em;
-    margin-bottom: 0.5em;
-    font-weight: 600;
-    line-height: 1.25;
-  }
-  h1 { font-size: 2em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
-  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
-  h3 { font-size: 1.25em; }
-  p { margin: 0.5em 0 1em; }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  code {
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-    font-size: 0.875em;
-    background: var(--code-bg);
-    padding: 0.2em 0.4em;
-    border-radius: 6px;
-  }
-  pre {
-    background: var(--code-bg);
-    padding: 1em;
-    border-radius: 6px;
-    overflow-x: auto;
-    margin: 1em 0;
-    line-height: 1.45;
-  }
-  pre code {
-    background: none;
-    padding: 0;
-    font-size: 0.85em;
-  }
-  table {
-    border-collapse: collapse;
-    width: 100%;
-    margin: 1em 0;
-  }
-  th, td {
-    border: 1px solid var(--border);
-    padding: 0.5em 0.75em;
-    text-align: left;
-  }
-  th {
-    background: var(--code-bg);
-    font-weight: 600;
-  }
-  tr:nth-child(even) { background: var(--table-alt); }
-  blockquote {
-    border-left: 4px solid var(--accent);
-    padding: 0.5em 1em;
-    margin: 1em 0;
-    color: var(--blockquote);
-  }
-  hr {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 2em 0;
-  }
-  ul, ol { margin: 0.5em 0 1em 1.5em; }
-  li { margin: 0.25em 0; }
-  img { max-width: 100%; height: auto; }
-  .toc {
-    background: var(--code-bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 1em 1.5em;
-    margin: 1em 0 2em;
-  }
-  .toc ul { list-style: none; margin: 0; padding: 0; }
-  .toc ul ul { padding-left: 1.5em; }
-  .toc li { margin: 0.25em 0; }
-  strong { font-weight: 600; }
-  .footer {
-    margin-top: 3em;
-    padding-top: 1em;
-    border-top: 1px solid var(--border);
-    font-size: 0.85em;
-    color: var(--blockquote);
-    text-align: center;
-  }
-</style>
+<link rel="stylesheet" href="docs.css">
 </head>
 <body>
 <nav class="toc"><strong>Table of Contents</strong>
@@ -143,12 +30,20 @@
 <li><a href="#multi-language-simultaneous-translation">Multi-Language Simultaneous Translation</a></li>
 <li><a href="#real-time-streaming-transcription">Real-Time Streaming Transcription</a></li>
 <li><a href="#github-copilot-sdk-integration">GitHub Copilot SDK Integration</a></li>
+<li><a href="#ai-actions-post-transcription-processing">AI Actions (Post-Transcription Processing)</a></li>
+<li><a href="#context-window-management">Context Window Management</a></li>
 <li><a href="#speaker-diarization">Speaker Diarization</a></li>
 </ul>
 </li>
 <li><a href="#5-audio-preprocessing-pipeline">5. Audio Preprocessing Pipeline</a></li>
 <li><a href="#6-audio-format-support">6. Audio Format Support</a></li>
-<li><a href="#7-batch-folder-processing">7. Batch &amp; Folder Processing</a></li>
+<li><a href="#7-batch-folder-processing">7. Batch &amp; Folder Processing</a><ul>
+<li><a href="#budget-limits">Budget Limits</a></li>
+<li><a href="#cost-estimation">Cost Estimation</a></li>
+<li><a href="#queue-panel-uiqueue_panelpy">Queue Panel (ui/queue_panel.py)</a></li>
+<li><a href="#custom-job-naming">Custom Job Naming</a></li>
+</ul>
+</li>
 <li><a href="#8-background-processing-system-tray">8. Background Processing &amp; System Tray</a><ul>
 <li><a href="#system-tray-icon-uitray_iconpy">System Tray Icon (ui/tray_icon.py)</a></li>
 <li><a href="#minimize-to-tray">Minimize to Tray</a></li>
@@ -163,7 +58,7 @@
 <li><a href="#10-user-interface">10. User Interface</a><ul>
 <li><a href="#layout">Layout</a></li>
 <li><a href="#menu-structure">Menu Structure</a></li>
-<li><a href="#settings-dialog-8-tabs">Settings Dialog (8 tabs)</a></li>
+<li><a href="#settings-dialog-9-tabs">Settings Dialog (9 tabs)</a></li>
 <li><a href="#simple-vs-advanced-mode">Simple vs Advanced Mode</a></li>
 <li><a href="#recent-files">Recent Files</a></li>
 </ul>
@@ -172,6 +67,7 @@
 <li><a href="#12-architecture">12. Architecture</a><ul>
 <li><a href="#file-tree">File Tree</a></li>
 <li><a href="#threading-model">Threading Model</a></li>
+<li><a href="#shutdown-temp-file-cleanup">Shutdown &amp; Temp File Cleanup</a></li>
 </ul>
 </li>
 <li><a href="#13-data-model">13. Data Model</a><ul>
@@ -195,15 +91,16 @@
 </nav>
 <h1 id="bits-whisperer-product-requirements-document">BITS Whisperer — Product Requirements Document</h1>
 <blockquote>
-<p><strong>Version:</strong> 1.0.0 - <strong>Updated:</strong> 2026-02-08 - <strong>Status:</strong> Implementation Complete</p>
+<p><strong>Version:</strong> 1.0.0 - <strong>Updated:</strong> 2026-02-08 - <strong>Status:</strong> Implementation
+Complete</p>
 <p>Developed by <strong>Blind Information Technology Solutions (BITS)</strong></p>
 </blockquote>
 <hr>
 <h2 id="1-purpose-vision">1. Purpose &amp; Vision</h2>
 <p><strong>BITS Whisperer</strong> is a consumer-grade WXPython desktop application for audio
-transcription. It targets Windows and macOS users who need reliable speech-to-text without
-technical expertise — journalists, students, researchers, accessibility
-advocates, and content creators.</p>
+transcription. It targets Windows and macOS users who need reliable
+speech-to-text without technical expertise — journalists, students, researchers,
+accessibility advocates, and content creators.</p>
 <h3 id="design-pillars">Design Pillars</h3>
 <table>
 <thead>
@@ -612,12 +509,13 @@ provider in Settings, Provider tab. API keys are stored and retrieved via
 <code>TranscriptionService</code> resolves keys automatically at runtime — including
 composite keys for AWS (access key + secret key + region).</p>
 <h3 id="cloud-provider-onboarding">Cloud Provider Onboarding</h3>
-<p>Cloud providers must be <strong>activated</strong> before they appear in Basic
-mode. The <code>AddProviderDialog</code> (Tools, then Add Provider) guides the user through
-a three-step workflow:</p>
+<p>Cloud providers must be <strong>activated</strong> before they appear in Basic mode. The
+<code>AddProviderDialog</code> (Tools, then Add Provider) guides the user through a
+three-step workflow:</p>
 <ol>
 <li><strong>Select</strong> a cloud provider from the 12 available options</li>
-<li><strong>Enter</strong> the required API key (and any auxiliary credentials like AWS region)</li>
+<li><strong>Enter</strong> the required API key (and any auxiliary credentials like AWS
+   region)</li>
 <li><strong>Validate</strong> the key with a live test API call</li>
 </ol>
 <p>On successful validation, the provider's key is stored in <code>KeyStore</code>, and its
@@ -806,9 +704,9 @@ speech recognition. BITS Whisperer integrates Auphonic both as:</p>
 </tbody>
 </table>
 <p>BITS Whisperer uses <strong>API Key authentication</strong>. The user generates a token at
-https://auphonic.com/accounts/settings/#api-key and stores it via the Providers
-&amp; Keys settings tab. The key is persisted in <code>KeyStore</code> (Windows Credential
-Manager) as <code>"auphonic"</code> to <code>"Auphonic API Token"</code>.</p>
+<a href="https://auphonic.com/accounts/settings/#api-key">https://auphonic.com/accounts/settings/#api-key</a> and stores it via the
+Providers &amp; Keys settings tab. The key is persisted in <code>KeyStore</code> (Windows
+Credential Manager) as <code>"auphonic"</code> to <code>"Auphonic API Token"</code>.</p>
 <h4 id="auphonic-pricing">Auphonic Pricing</h4>
 <table>
 <thead>
@@ -942,7 +840,8 @@ Manager) as <code>"auphonic"</code> to <code>"Auphonic API Token"</code>.</p>
 <h3 id="provider-specific-settings">Provider-Specific Settings</h3>
 <p>Each cloud provider exposes its unique configurable options during onboarding
 via the Add Provider dialog. Settings are stored in <code>ProviderDefaultSettings</code>
-and applied automatically via the <code>configure()</code> method before each transcription.</p>
+and applied automatically via the <code>configure()</code> method before each
+transcription.</p>
 <table>
 <thead>
 <tr>
@@ -1003,7 +902,7 @@ and applied automatically via the <code>configure()</code> method before each tr
 </table>
 <h3 id="ai-services-translation-summarization-chat">AI Services (Translation, Summarization &amp; Chat)</h3>
 <p>The <code>AIService</code> class (in <code>core/ai_service.py</code>) provides translation and
-summarization of transcripts via <strong>5 pluggable AI providers</strong>:</p>
+summarization of transcripts via <strong>6 pluggable AI providers</strong>:</p>
 <table>
 <thead>
 <tr>
@@ -1050,24 +949,48 @@ summarization of transcripts via <strong>5 pluggable AI providers</strong>:</p>
 <td>gpt-4o (via Copilot SDK)</td>
 <td>Interactive chat &amp; tool-augmented</td>
 </tr>
+<tr>
+<td>6</td>
+<td>Ollama</td>
+<td><code>OllamaAIProvider</code></td>
+<td>Any Ollama/GGUF model (Llama, Mistral, Gemma, Phi, etc.)</td>
+<td>Local, free, private — no API key required</td>
+</tr>
 </tbody>
 </table>
 <p>AI features are accessed via the <strong>AI</strong> menu:</p>
 <ul>
-<li><strong>Translate</strong> (Ctrl+T): Translates the transcript to the configured target language (or multiple languages simultaneously)</li>
-<li><strong>Summarize</strong> (Ctrl+Shift+S): Generates concise, detailed, or bullet-point summaries</li>
+<li><strong>Translate</strong> (Ctrl+T): Translates the transcript to the configured target
+  language (or multiple languages simultaneously)</li>
+<li><strong>Summarize</strong> (Ctrl+Shift+S): Generates concise, detailed, or bullet-point
+  summaries</li>
 <li><strong>Copilot Chat</strong> (Ctrl+Shift+C): Opens the interactive chat panel for Q&amp;A</li>
-<li><strong>Agent Builder</strong>: Configures a custom AI agent persona</li>
+<li><strong>AI Action Builder</strong>: Opens the template editor for creating
+  post-transcription AI processing templates</li>
+<li><strong>AI Provider Settings</strong>: Configures AI providers (6 providers including
+  Ollama)</li>
 </ul>
-<p>AI provider settings (<code>AISettings</code> dataclass) include:
-- <code>provider</code> (openai/anthropic/azure_openai/gemini/copilot)
-- <code>openai_model</code>, <code>anthropic_model</code>, <code>gemini_model</code>, <code>copilot_model</code>
-- <code>temperature</code>, <code>max_tokens</code>
-- <code>translation_language</code>, <code>summarization_style</code>
-- <code>multi_target_languages</code> — list of languages for simultaneous translation
-- <code>custom_vocabulary</code> — domain-specific terms for improved AI accuracy
-- <code>active_translation_template</code>, <code>active_summarization_template</code> — selected prompt template IDs
-- <code>custom_prompt_templates</code> — user-defined prompt templates</p>
+<p>AI provider settings (<code>AISettings</code> dataclass) include:</p>
+<ul>
+<li><code>selected_provider</code> (openai/anthropic/azure_openai/gemini/copilot/ollama)</li>
+<li><code>openai_model</code>, <code>anthropic_model</code>, <code>gemini_model</code>, <code>copilot_model</code>,
+  <code>ollama_model</code></li>
+<li><code>ollama_endpoint</code>, <code>ollama_custom_model</code></li>
+<li><code>temperature</code>, <code>max_tokens</code></li>
+<li><code>translation_language</code>, <code>summarization_style</code></li>
+<li><code>multi_target_languages</code> — list of languages for simultaneous translation</li>
+<li><code>custom_vocabulary</code> — domain-specific terms for improved AI accuracy</li>
+<li><code>active_translation_template</code>, <code>active_summarization_template</code> — selected
+  prompt template IDs</li>
+<li><code>custom_prompt_templates</code> — user-defined prompt templates</li>
+<li><code>context_strategy</code> — transcript fitting strategy
+  (smart/truncate/tail/head_tail)</li>
+<li><code>context_transcript_budget_pct</code> — fraction of context window for transcript
+  (default 0.70)</li>
+<li><code>context_response_reserve_tokens</code> — tokens reserved for AI response (default
+  4096)</li>
+<li><code>context_max_conversation_turns</code> — max conversation turns to keep (default 20)</li>
+</ul>
 <h3 id="ai-model-catalog">AI Model Catalog</h3>
 <p>The <code>constants.py</code> module defines a comprehensive AI model catalog with
 real-time pricing information via the <code>AIModelInfo</code> frozen dataclass:</p>
@@ -1209,9 +1132,9 @@ real-time pricing information via the <code>AIModelInfo</code> frozen dataclass:
 </tr>
 </tbody>
 </table>
-<p>The <code>CopilotSettings.subscription_tier</code> field (default: "pro") controls
-which models appear in the model selector. <code>get_copilot_models_for_tier()</code>
-returns only models at or below the user's tier level.</p>
+<p>The <code>CopilotSettings.subscription_tier</code> field (default: "pro") controls which
+models appear in the model selector. <code>get_copilot_models_for_tier()</code> returns
+only models at or below the user's tier level.</p>
 <h3 id="prompt-templates">Prompt Templates</h3>
 <p>10 built-in prompt templates (<code>BUILTIN_PROMPT_TEMPLATES</code>) via the
 <code>PromptTemplate</code> frozen dataclass:</p>
@@ -1283,20 +1206,20 @@ returns only models at or below the user's tier level.</p>
 </tr>
 </tbody>
 </table>
-<p>Active templates are tracked in <code>AISettings.active_translation_template</code>
-and <code>AISettings.active_summarization_template</code>. Users can also create
-custom templates stored in <code>AISettings.custom_prompt_templates</code>.</p>
+<p>Active templates are tracked in <code>AISettings.active_translation_template</code> and
+<code>AISettings.active_summarization_template</code>. Users can also create custom
+templates stored in <code>AISettings.custom_prompt_templates</code>.</p>
 <p>Helper functions: <code>get_prompt_template_by_id()</code>, <code>get_templates_by_category()</code>.</p>
 <h3 id="custom-vocabulary">Custom Vocabulary</h3>
-<p><code>AISettings.custom_vocabulary</code> stores a list of domain-specific terms
-(acronyms, proper nouns, technical jargon) that are injected into AI
-prompts to improve translation and summarization accuracy. The vocabulary
-is appended to the prompt context before sending to the AI provider.</p>
+<p><code>AISettings.custom_vocabulary</code> stores a list of domain-specific terms (acronyms,
+proper nouns, technical jargon) that are injected into AI prompts to improve
+translation and summarization accuracy. The vocabulary is appended to the prompt
+context before sending to the AI provider.</p>
 <h3 id="multi-language-simultaneous-translation">Multi-Language Simultaneous Translation</h3>
 <p><code>AISettings.multi_target_languages</code> stores a list of target language codes.
 <code>AIService.translate_multi()</code> iterates over each language and calls
-<code>translate()</code> independently, returning a dict mapping each language to
-its <code>AIResponse</code>. This enables one-click translation to multiple languages.</p>
+<code>translate()</code> independently, returning a dict mapping each language to its
+<code>AIResponse</code>. This enables one-click translation to multiple languages.</p>
 <h3 id="real-time-streaming-transcription">Real-Time Streaming Transcription</h3>
 <p>The <code>ProviderCapabilities.supports_streaming</code> field indicates whether a
 transcription provider supports real-time streaming:</p>
@@ -1304,27 +1227,27 @@ transcription provider supports real-time streaming:</p>
 <thead>
 <tr>
 <th>Provider</th>
-<th style="text-align: center;">Streaming</th>
+<th class="text-center">Streaming</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Deepgram</td>
-<td style="text-align: center;">Yes</td>
+<td class="text-center">Yes</td>
 </tr>
 <tr>
 <td>AssemblyAI</td>
-<td style="text-align: center;">Yes</td>
+<td class="text-center">Yes</td>
 </tr>
 <tr>
 <td>All others</td>
-<td style="text-align: center;">No</td>
+<td class="text-center">No</td>
 </tr>
 </tbody>
 </table>
 <h3 id="github-copilot-sdk-integration">GitHub Copilot SDK Integration</h3>
-<p>The <code>CopilotService</code> class (in <code>core/copilot_service.py</code>) integrates the
-GitHub Copilot SDK for interactive AI-powered transcript analysis:</p>
+<p>The <code>CopilotService</code> class (in <code>core/copilot_service.py</code>) integrates the GitHub
+Copilot SDK for interactive AI-powered transcript analysis:</p>
 <h4 id="copilotservice">CopilotService</h4>
 <ul>
 <li><strong>Async SDK client</strong> with process management for the Copilot CLI</li>
@@ -1341,19 +1264,48 @@ GitHub Copilot SDK for interactive AI-powered transcript analysis:</p>
 <li><strong>Streaming display</strong> — responses appear token-by-token</li>
 <li><strong>Quick actions</strong> — one-click buttons for common tasks (summarize, key points,
   speakers, action items)</li>
-<li><strong>Transcript context</strong> — automatically provides the current transcript to the agent</li>
+<li><strong>Transcript context</strong> — automatically provides the current transcript to the
+  agent</li>
 <li><strong>New conversation</strong> — clear history and start fresh</li>
+<li><strong>Slash commands</strong> — 28 built-in <code>/commands</code> for AI analysis (summarize,
+  translate, key-points, action-items, topics, speakers, search, ask, run, copy)
+  and app actions (help, clear, status, provider, export, open, start, pause,
+  cancel, clear-queue, retry, settings, live, models, agent, history,
+  open-folder, context)</li>
+<li><strong>Autocomplete</strong> — <code>wx.PopupTransientWindow</code> appears as the user types <code>/</code>,
+  with keyboard navigation (Up/Down/Tab/Enter/Escape)</li>
+</ul>
+<h4 id="slash-command-system-uislash_commandspy">Slash Command System (<code>ui/slash_commands.py</code>)</h4>
+<p>Extensible registry of chat commands with:</p>
+<ul>
+<li><strong><code>SlashCommand</code> dataclass</strong> — name, description, category, handler, aliases,
+  arg_hint, requires_transcript</li>
+<li><strong><code>SlashCommandRegistry</code></strong> — register/get/match (prefix + substring
+  autocomplete), categories, alias resolution</li>
+<li><strong><code>parse_slash_command()</code></strong> — regex parser for <code>/command args</code> input</li>
+<li><strong><code>build_default_registry()</code></strong> — factory returning 28 built-in commands in two
+  categories (AI, App)</li>
 </ul>
 <h4 id="copilot-setup-wizard-uicopilot_setup_dialogpy">Copilot Setup Wizard (<code>ui/copilot_setup_dialog.py</code>)</h4>
 <p>Four-step guided setup dialog:</p>
 <ol>
-<li><strong>CLI Install</strong> — Checks for GitHub Copilot CLI; offers WinGet install on Windows</li>
+<li><strong>CLI Install</strong> — Checks for GitHub Copilot CLI; offers WinGet install on
+   Windows</li>
 <li><strong>SDK Install</strong> — Installs the Copilot SDK Python package</li>
 <li><strong>Authentication</strong> — Authenticates with GitHub via CLI device flow</li>
 <li><strong>Test</strong> — Runs a connection test to verify everything works</li>
 </ol>
-<h4 id="agent-builder-uiagent_builder_dialogpy">Agent Builder (<code>ui/agent_builder_dialog.py</code>)</h4>
-<p>Four-tab guided dialog for configuring a custom AI agent:</p>
+<h4 id="document-reader-coredocument_readerpy">Document Reader (<code>core/document_reader.py</code>)</h4>
+<p>Utility module that extracts plain text from multiple file formats for use as AI
+context. Supports plain text (.txt, .md, .csv, .log, .json, .xml, .yaml), Word
+documents (.docx via python-docx), spreadsheets (.xlsx/.xls via openpyxl), PDF
+(.pdf via pypdf), and RTF (.rtf via striprtf). Enforces a 10 MB file size limit
+and provides graceful fallbacks when optional libraries are not installed.</p>
+<h4 id="ai-action-builder-uiagent_builder_dialogpy">AI Action Builder (<code>ui/agent_builder_dialog.py</code>)</h4>
+<p>Five-tab guided dialog for creating reusable post-transcription AI processing
+templates. Templates define system prompts, model parameters, processing goals,
+and document attachments that are automatically applied after transcription
+completes.</p>
 <table>
 <thead>
 <tr>
@@ -1364,11 +1316,11 @@ GitHub Copilot SDK for interactive AI-powered transcript analysis:</p>
 <tbody>
 <tr>
 <td><strong>Identity</strong></td>
-<td>Agent name, persona description</td>
+<td>Action name, description</td>
 </tr>
 <tr>
 <td><strong>Instructions</strong></td>
-<td>System prompt with built-in presets (Transcript Analyst, Meeting Notes, Research Assistant)</td>
+<td>System prompt with 8 built-in presets</td>
 </tr>
 <tr>
 <td><strong>Tools</strong></td>
@@ -1378,8 +1330,294 @@ GitHub Copilot SDK for interactive AI-powered transcript analysis:</p>
 <td><strong>Welcome</strong></td>
 <td>Set the greeting message for the chat panel</td>
 </tr>
+<tr>
+<td><strong>Attachments</strong></td>
+<td>Attach reference documents (glossaries, style guides, etc.) to provide additional context for AI processing</td>
+</tr>
 </tbody>
 </table>
+<p>8 built-in presets:</p>
+<table>
+<thead>
+<tr>
+<th>Preset</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Meeting Minutes</td>
+<td>Formal minutes with attendees, decisions, action items</td>
+</tr>
+<tr>
+<td>Action Items</td>
+<td>Extract to-do items, deadlines, and responsibilities</td>
+</tr>
+<tr>
+<td>Executive Summary</td>
+<td>Brief overview for leadership/stakeholders</td>
+</tr>
+<tr>
+<td>Interview Notes</td>
+<td>Key points, themes, and notable quotes</td>
+</tr>
+<tr>
+<td>Lecture Notes</td>
+<td>Educational content structured for study</td>
+</tr>
+<tr>
+<td>Q&amp;A Extraction</td>
+<td>Questions and answers identified and paired</td>
+</tr>
+<tr>
+<td>General Assistant</td>
+<td>General-purpose transcript analysis</td>
+</tr>
+<tr>
+<td>Custom</td>
+<td>Blank template for custom instructions</td>
+</tr>
+</tbody>
+</table>
+<p>Templates are saved as JSON files in <code>DATA_DIR/agents/</code> using the <code>AgentConfig</code>
+dataclass from <code>copilot_service.py</code>. The <code>AgentConfig</code> includes an
+<code>attachments: list[Attachment]</code> field for document attachments. Each
+<code>Attachment</code> has <code>file_path</code>, <code>instructions</code> (per-attachment guidance), and
+<code>display_name</code> fields with full serialization support.</p>
+<h3 id="ai-actions-post-transcription-processing">AI Actions (Post-Transcription Processing)</h3>
+<p>AI Actions allow automatic AI processing of transcripts immediately after
+transcription completes. The feature works with any configured AI provider
+(OpenAI, Anthropic, Azure OpenAI, Gemini, Copilot, or Ollama).</p>
+<h4 id="pipeline-integration">Pipeline Integration</h4>
+<p>After a job completes transcription (Step 5 in the pipeline), the service checks
+<code>job.ai_action_template</code>. If set, it:</p>
+<ol>
+<li>Sets <code>job.ai_action_status = "running"</code></li>
+<li>Resolves the template instructions (built-in preset or saved file)</li>
+<li>Reads document attachments via <code>_build_attachments_text()</code> using
+   <code>DocumentReader</code> (extracts text from DOCX, PDF, XLSX, RTF, TXT, and other
+   formats; 10 MB size limit)</li>
+<li>Fits the transcript to the model's context window using
+   <code>ContextWindowManager</code> (smart strategy auto-selects truncate or head+tail
+   based on overflow ratio; attachment tokens are accounted for in the budget,
+   reducing transcript space proportionally)</li>
+<li>Lazy-imports <code>AIService</code> and calls <code>provider.generate()</code></li>
+<li>Stores the result in <code>job.ai_action_result</code> or error in <code>job.ai_action_error</code></li>
+<li>Updates <code>job.ai_action_status</code> to "completed" or "failed"</li>
+</ol>
+<h4 id="job-model-fields">Job Model Fields</h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ai_action_template</code></td>
+<td>str</td>
+<td>Built-in preset name or path to AgentConfig JSON</td>
+</tr>
+<tr>
+<td><code>ai_action_result</code></td>
+<td>str</td>
+<td>Output text from AI processing</td>
+</tr>
+<tr>
+<td><code>ai_action_status</code></td>
+<td>str</td>
+<td>"", "running", "completed", "failed"</td>
+</tr>
+<tr>
+<td><code>ai_action_error</code></td>
+<td>str</td>
+<td>Error message if processing failed</td>
+</tr>
+<tr>
+<td><code>ai_action_attachments</code></td>
+<td>list[dict]</td>
+<td>Per-job attachment overrides (file_path, instructions, display_name)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="built-in-presets-6">Built-in Presets (6)</h4>
+<table>
+<thead>
+<tr>
+<th>Preset</th>
+<th>Instructions Summary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Meeting Minutes</td>
+<td>Formal meeting minutes with attendees and action items</td>
+</tr>
+<tr>
+<td>Action Items</td>
+<td>Extract tasks, deadlines, and assigned responsibilities</td>
+</tr>
+<tr>
+<td>Executive Summary</td>
+<td>Brief overview highlighting key points and decisions</td>
+</tr>
+<tr>
+<td>Interview Notes</td>
+<td>Key discussion points, themes, and notable quotes</td>
+</tr>
+<tr>
+<td>Lecture Notes</td>
+<td>Structured educational notes for study and review</td>
+</tr>
+<tr>
+<td>Q&amp;A Extraction</td>
+<td>Identify and pair all questions with their answers</td>
+</tr>
+</tbody>
+</table>
+<h4 id="user-interface">User Interface</h4>
+<ul>
+<li><strong>AddFileWizard</strong>: AI Action dropdown with "None (transcribe only)" + built-in
+  presets + saved templates (prefixed with ★)</li>
+<li><strong>Queue Panel</strong>: Status indicators — ⭐ (pending), ⏳ (running), ✓ (completed),
+  ✗ (failed)</li>
+<li><strong>Transcript Panel</strong>: AI Action result section below the transcript with
+  label, text area, and Copy button. Dynamically shown/hidden based on job
+  status.</li>
+<li><strong>Main Frame</strong>: AI action status announced to screen readers; transcript panel
+  auto-refreshes on completion</li>
+</ul>
+<h3 id="context-window-management">Context Window Management</h3>
+<p>The <code>ContextWindowManager</code> class (in <code>core/context_manager.py</code>) provides
+model-aware token budgeting for all AI interactions — chat, AI actions, and
+slash commands. It replaces the previous hardcoded 50,000-character truncation
+with intelligent, per-model context allocation.</p>
+<h4 id="token-estimation">Token Estimation</h4>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>estimate_tokens()</code></td>
+<td>Heuristic: <code>len(text) / chars_per_token</code> (default 4.0)</td>
+</tr>
+<tr>
+<td><code>estimate_tokens_precise()</code></td>
+<td>Exact: tiktoken encoding (OpenAI models only)</td>
+</tr>
+<tr>
+<td><code>count_tokens()</code></td>
+<td>Unified: tries tiktoken first, falls back to heuristic</td>
+</tr>
+</tbody>
+</table>
+<h4 id="model-context-window-lookup">Model Context Window Lookup</h4>
+<p><code>get_model_context_window(model, provider)</code> resolves context sizes:</p>
+<ol>
+<li>Exact match in <code>AIModelInfo</code> catalog (22+ models with known context windows)</li>
+<li>Heuristic fallback for unknown models (e.g., GPT-4 → 128K, Claude → 200K,
+   Gemini → 1M, Ollama → 8K)</li>
+<li>Ultimate fallback: 16,000 tokens</li>
+</ol>
+<h4 id="transcript-fitting-strategies">Transcript Fitting Strategies</h4>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>truncate</code></td>
+<td>Keep the beginning of the transcript (previous default)</td>
+</tr>
+<tr>
+<td><code>tail</code></td>
+<td>Keep the end — useful for recent context</td>
+</tr>
+<tr>
+<td><code>head_tail</code></td>
+<td>Keep beginning and end, elide middle with marker</td>
+</tr>
+<tr>
+<td><code>smart</code></td>
+<td>Auto-selects: truncate if overflow ≤1.3×, head_tail otherwise</td>
+</tr>
+</tbody>
+</table>
+<h4 id="context-budget-allocation">Context Budget Allocation</h4>
+<p><code>prepare_chat_context()</code> orchestrates the full budget:</p>
+<ol>
+<li>Looks up model context window</li>
+<li>Subtracts response reserve (default 4,096 tokens)</li>
+<li>Estimates system prompt token cost</li>
+<li>Allocates transcript budget (default 70% of remaining)</li>
+<li>Fits transcript using the configured strategy</li>
+<li>Trims conversation history (max turns + remaining token budget)</li>
+<li>Returns <code>PreparedContext</code> with budget breakdown</li>
+</ol>
+<p><code>prepare_action_context()</code> handles one-shot AI actions with the same budget
+logic but no conversation history. It accepts an optional <code>attachments_text</code>
+parameter; when provided, attachment tokens are subtracted from the available
+budget before fitting the transcript.</p>
+<h4 id="settings">Settings</h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>context_strategy</code></td>
+<td>str</td>
+<td>"smart"</td>
+<td>Fitting strategy</td>
+</tr>
+<tr>
+<td><code>context_transcript_budget_pct</code></td>
+<td>float</td>
+<td>0.70</td>
+<td>Fraction of window for transcript</td>
+</tr>
+<tr>
+<td><code>context_response_reserve_tokens</code></td>
+<td>int</td>
+<td>4096</td>
+<td>Tokens reserved for response</td>
+</tr>
+<tr>
+<td><code>context_max_conversation_turns</code></td>
+<td>int</td>
+<td>20</td>
+<td>Max conversation turns kept</td>
+</tr>
+</tbody>
+</table>
+<h4 id="integration-points">Integration Points</h4>
+<ul>
+<li><code>ai_service.py</code> <code>chat()</code> — uses <code>prepare_chat_context()</code> for multi-turn chat</li>
+<li><code>copilot_service.py</code> <code>_create_session()</code> — fits transcript for Copilot
+  sessions</li>
+<li><code>transcription_service.py</code> <code>_run_ai_action()</code> — fits transcript for
+  post-transcription actions; <code>_build_attachments_text()</code> reads document
+  attachments via <code>DocumentReader</code></li>
+<li><code>slash_commands.py</code> <code>/summarize</code> and <code>/run</code> — fits transcript for slash
+  command execution</li>
+<li><code>copilot_chat_panel.py</code> — displays context budget in status bar (e.g.,
+  "Context: 45K/128K tokens (35%)")</li>
+<li><code>/context</code> slash command — shows detailed budget breakdown in chat</li>
+</ul>
 <h4 id="copilotsettings-dataclass-11-fields">CopilotSettings Dataclass (11 fields)</h4>
 <table>
 <thead>
@@ -1448,9 +1686,11 @@ GitHub Copilot SDK for interactive AI-powered transcript analysis:</p>
 </tbody>
 </table>
 <h3 id="speaker-diarization">Speaker Diarization</h3>
-<p>Speaker diarization (identifying who spoke when) is supported through two mechanisms:</p>
+<p>Speaker diarization (identifying who spoke when) is supported through two
+mechanisms:</p>
 <h4 id="cloud-provider-diarization">Cloud Provider Diarization</h4>
-<p>10 cloud providers support built-in diarization when "Include speaker labels" is enabled:</p>
+<p>10 cloud providers support built-in diarization when "Include speaker labels" is
+enabled:</p>
 <table>
 <thead>
 <tr>
@@ -1516,18 +1756,22 @@ GitHub Copilot SDK for interactive AI-powered transcript analysis:</p>
 <p>Optional privacy-first speaker detection using <strong>pyannote.audio</strong>:</p>
 <ul>
 <li><strong><code>LocalDiarizer</code></strong> class wraps <code>pyannote.audio.Pipeline</code> with lazy loading</li>
-<li><strong><code>diarize(audio_path, min_speakers, max_speakers)</code></strong> returns <code>list[SpeakerTurn]</code></li>
+<li><strong><code>diarize(audio_path, min_speakers, max_speakers)</code></strong> returns
+  <code>list[SpeakerTurn]</code></li>
 <li><strong><code>apply_to_transcript(result, turns)</code></strong> merges diarization with transcription
   segments by temporal overlap</li>
-<li><strong><code>apply_speaker_map(result, speaker_map)</code></strong> renames speakers post-transcription</li>
+<li><strong><code>apply_speaker_map(result, speaker_map)</code></strong> renames speakers
+  post-transcription</li>
 <li>Requires HuggingFace auth token for gated models (stored in <code>KeyStore</code>)</li>
 <li>Works as post-processing on ANY provider's output</li>
 </ul>
-<p>Configuration via <code>DiarizationSettings</code>:
-- <code>enabled</code> (default True), <code>max_speakers</code> (10), <code>min_speakers</code> (2)
-- <code>use_local_diarization</code> (False), <code>local_engine</code> ("pyannote")
-- <code>pyannote_model</code> ("pyannote/speaker-diarization-3.1")
-- <code>speaker_map</code> (dict mapping internal IDs to display names)</p>
+<p>Configuration via <code>DiarizationSettings</code>:</p>
+<ul>
+<li><code>enabled</code> (default True), <code>max_speakers</code> (10), <code>min_speakers</code> (2)</li>
+<li><code>use_local_diarization</code> (False), <code>local_engine</code> ("pyannote")</li>
+<li><code>pyannote_model</code> ("pyannote/speaker-diarization-3.1")</li>
+<li><code>speaker_map</code> (dict mapping internal IDs to display names)</li>
+</ul>
 <h4 id="speaker-editing-post-transcription">Speaker Editing (Post-Transcription)</h4>
 <p>The transcript panel provides speaker management after transcription:</p>
 <ul>
@@ -1541,8 +1785,8 @@ GitHub Copilot SDK for interactive AI-powered transcript analysis:</p>
 </ul>
 <hr>
 <h2 id="5-audio-preprocessing-pipeline">5. Audio Preprocessing Pipeline</h2>
-<p>A 7-filter ffmpeg filter chain applied before transcoding to maximise
-speech recognition accuracy (<code>AudioPreprocessor</code> class):</p>
+<p>A 7-filter ffmpeg filter chain applied before transcoding to maximise speech
+recognition accuracy (<code>AudioPreprocessor</code> class):</p>
 <table>
 <thead>
 <tr>
@@ -1615,14 +1859,19 @@ the fallback path.</p>
 <div class="highlight"><pre><span></span><code>MP3, WAV, OGG, Opus, FLAC, M4A, AAC, WebM, WMA, AIFF, AMR, MP4
 </code></pre></div>
 
-<p>All files are transcoded to 16 kHz mono WAV (<code>pcm_s16le</code>) before being sent
-to the provider for consistent results across all engines.</p>
+<p>All files are transcoded to 16 kHz mono WAV (<code>pcm_s16le</code>) before being sent to
+the provider for consistent results across all engines.</p>
 <hr>
 <h2 id="7-batch-folder-processing">7. Batch &amp; Folder Processing</h2>
 <ul>
-<li><strong>File, Add Files</strong> (Ctrl+O): Multi-select file dialog with audio-type filter.</li>
-<li><strong>File, Add Folder</strong> (Ctrl+Shift+O): Recursively scans a folder for
-  supported audio files.</li>
+<li><strong>File, Add Files</strong> (Ctrl+O): Multi-select file dialog with audio-type filter.
+  Opens the <strong>AddFileWizard</strong> for per-file configuration (provider, model,
+  language, custom name, AI Action selection). The wizard includes an <strong>Audio
+  Preview</strong> tool for single-file imports, with pitch-preserving speed control
+  and optional clip-range selection.</li>
+<li><strong>File, Add Folder</strong> (Ctrl+Shift+O): Recursively scans a folder for supported
+  audio files. Shows cost estimation for cloud providers with a confirmation
+  dialog before processing begins.</li>
 <li><strong>Concurrent workers</strong>: Configurable (default: 2). Each worker picks from a
   shared <code>queue.Queue</code> and runs preprocess, transcode, then transcribe.</li>
 <li><strong>Limits</strong> (configurable in Advanced Settings):</li>
@@ -1634,6 +1883,92 @@ to the provider for consistent results across all engines.</p>
 <li><strong>Pause / Resume</strong> (F6): Pauses the queue; active jobs continue.</li>
 <li><strong>Cancel Selected</strong> (Delete): Cancels a single job.</li>
 <li><strong>Clear Queue</strong> (Ctrl+Shift+Del): Removes all unstarted jobs.</li>
+<li><strong>Clear Completed</strong>: Removes finished jobs from the queue (Queue menu or
+  toolbar).</li>
+<li><strong>Retry All Failed</strong>: Re-queues all failed jobs (Queue menu or toolbar).</li>
+<li><strong>Retry Selected</strong>: Re-queues a single failed or cancelled job (context menu).</li>
+<li><strong>Rename</strong> (F2): Rename the selected file or folder with a custom display
+  name.</li>
+</ul>
+<h3 id="budget-limits">Budget Limits</h3>
+<p><code>BudgetSettings</code> (in <code>core/settings.py</code>) provides per-provider and per-model
+spending limits for cloud transcription:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>bool</td>
+<td>True</td>
+<td>Enable budget tracking</td>
+</tr>
+<tr>
+<td><code>default_limit</code></td>
+<td>float</td>
+<td>0.0</td>
+<td>Default per-batch limit (0 = unlimited)</td>
+</tr>
+<tr>
+<td><code>provider_limits</code></td>
+<td>dict</td>
+<td>{}</td>
+<td>Per-provider or per-model limits</td>
+</tr>
+<tr>
+<td><code>always_confirm_paid</code></td>
+<td>bool</td>
+<td>True</td>
+<td>Show confirmation for paid providers</td>
+</tr>
+</tbody>
+</table>
+<p>Budget limits are checked before batch processing starts. If estimated cost
+exceeds the configured limit, a confirmation dialog is shown. Provider-specific
+and model-specific limits override the default.</p>
+<h3 id="cost-estimation">Cost Estimation</h3>
+<p>Cloud provider costs are estimated before transcription begins using per-minute
+rates from the provider table. The <code>AddFileWizard</code> and folder import dialog
+display estimated costs. Cost estimation uses audio duration (detected via
+pydub/ffprobe) with a file-size-based fallback for files that can't be probed.</p>
+<h3 id="queue-panel-uiqueue_panelpy">Queue Panel (<code>ui/queue_panel.py</code>)</h3>
+<p>The queue panel uses a <code>wx.TreeCtrl</code> with hierarchical folder grouping:</p>
+<ul>
+<li><strong>TreeView layout</strong>: Files are grouped under collapsible folder nodes when
+  added from directories. Root-level files appear at the top level.</li>
+<li><strong>Folder nodes</strong>: Show folder name, file count, and aggregated status summary
+  (e.g., "3 files — 2 completed, 1 pending")</li>
+<li><strong>Item display</strong>: Each file shows display name, provider, status, cost
+  estimate, progress percentage, and AI Action indicators</li>
+<li><strong>AI Action indicators</strong>: ⭐ (pending action), ⏳ (running), ✓ (completed), ✗
+  (failed)</li>
+<li><strong>Toolbar</strong>: Filter/search bar, Clear Completed button, Retry All Failed
+  button</li>
+<li><strong>Filter/search</strong>: Real-time text filter above the tree; matches file name,
+  custom name, provider, status, and folder name. Case-insensitive.</li>
+<li><strong>Context menus</strong>: Right-click files for Rename, Retry, Cancel, Remove, Change
+  Provider/Model/Language, AI Action, Properties; right-click folders for
+  Rename, Set AI Action for Pending, Remove Folder, Expand/Collapse</li>
+<li><strong>Drag and drop</strong>: Drop audio files directly onto the queue panel</li>
+<li><strong>Keyboard shortcuts</strong>: F2 (Rename), Delete (Cancel/Remove), F5 (Start)</li>
+</ul>
+<h3 id="custom-job-naming">Custom Job Naming</h3>
+<p>Jobs and folders support custom display names:</p>
+<ul>
+<li><code>Job.custom_name: str</code> — User-assigned name for a transcription job</li>
+<li><code>Job.display_name</code> property — Returns <code>custom_name</code> if set, else <code>file_name</code>,
+  else derived from <code>file_path</code></li>
+<li>Renamed via F2 keyboard shortcut, context menu, or inline during AddFileWizard</li>
+<li>Custom names appear in the queue panel, transcript panel, exports, and
+  Properties dialog</li>
+<li>Folder custom names are tracked separately in
+  <code>QueuePanel._folder_custom_names</code></li>
 </ul>
 <hr>
 <h2 id="8-background-processing-system-tray">8. Background Processing &amp; System Tray</h2>
@@ -1683,8 +2018,8 @@ to the provider for consistent results across all engines.</p>
 <li><strong>Balloon/toast</strong>: Job completion, batch completion, and error notifications
   appear via <code>ShowBalloon()</code> when the window is hidden.</li>
 <li>A <strong>system bell</strong> (<code>wx.Bell()</code>) sounds on batch completion.</li>
-<li>Notification settings (enable/disable, sound on/off) configurable in
-  Settings, General, Behaviour section.</li>
+<li>Notification settings (enable/disable, sound on/off) configurable in Settings,
+  General, Behaviour section.</li>
 </ul>
 <hr>
 <h2 id="9-output-export">9. Output &amp; Export</h2>
@@ -1752,9 +2087,9 @@ to the provider for consistent results across all engines.</p>
 </tbody>
 </table>
 <h3 id="auto-export-on-completion">Auto-Export on Completion</h3>
-<p>When enabled (<strong>View, Auto-Export on Completion</strong>), each completed transcript
-is automatically saved as a <code>.txt</code> file alongside the source audio file. If a
-file with the same name exists, a numeric suffix is appended (e.g.,
+<p>When enabled (<strong>View, Auto-Export on Completion</strong>), each completed transcript is
+automatically saved as a <code>.txt</code> file alongside the source audio file. If a file
+with the same name exists, a numeric suffix is appended (e.g.,
 <code>interview_1.txt</code>, <code>interview_2.txt</code>).</p>
 <hr>
 <h2 id="10-user-interface">10. User Interface</h2>
@@ -1767,40 +2102,53 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 </code></pre></div>
 
 <h3 id="menu-structure">Menu Structure</h3>
-<p><strong>File</strong>
-- Add Files… (Ctrl+O)
-- Add Folder… (Ctrl+Shift+O)
-- Recent Files (numbered list, Clear Recent Files)
-- Export Transcript… (Ctrl+E)
-- Exit (Alt+F4)</p>
-<p><strong>Queue</strong>
-- Start Transcription (F5)
-- Pause (F6)
-- Cancel Selected (Delete)
-- Clear Queue (Ctrl+Shift+Del)</p>
-<p><strong>View</strong>
-- Advanced Mode (Ctrl+Shift+A) — toggle check item
-- Minimize to System Tray — toggle check item (default: on)
-- Auto-Export on Completion — toggle check item (default: off)</p>
-<p><strong>Tools</strong>
-- Settings… (Ctrl+,)
-- Manage Models… (Ctrl+M)
-- Add Provider…
-- Copilot Setup…
-- Hardware Info…
-- View Log…</p>
-<p><strong>AI</strong>
-- Translate (Ctrl+T)
-- Summarize (Ctrl+Shift+S)
-- Copilot Chat (Ctrl+Shift+C)
-- Agent Builder…
-- AI Provider Settings…</p>
-<p><strong>Help</strong>
-- Setup Wizard…
-- Check for Updates…
-- Learn more about BITS
-- About… (F1)</p>
-<h3 id="settings-dialog-8-tabs">Settings Dialog (8 tabs)</h3>
+<h4 id="file">File</h4>
+<ul>
+<li>Add Files… (Ctrl+O)</li>
+<li>Add Folder… (Ctrl+Shift+O)</li>
+<li>Recent Files (numbered list, Clear Recent Files)</li>
+<li>Export Transcript… (Ctrl+E)</li>
+<li>Exit (Alt+F4)</li>
+</ul>
+<h4 id="queue">Queue</h4>
+<ul>
+<li>Start Transcription (F5)</li>
+<li>Pause (F6)</li>
+<li>Cancel Selected (Delete)</li>
+<li>Clear Queue (Ctrl+Shift+Del)</li>
+</ul>
+<h4 id="view">View</h4>
+<ul>
+<li>Advanced Mode (Ctrl+Shift+A) — toggle check item</li>
+<li>Minimize to System Tray — toggle check item (default: on)</li>
+<li>Auto-Export on Completion — toggle check item (default: off)</li>
+</ul>
+<h4 id="tools">Tools</h4>
+<ul>
+<li>Settings… (Ctrl+,)</li>
+<li>Manage Models… (Ctrl+M)</li>
+<li>Audio Preview… (Ctrl+Shift+P)</li>
+<li>Add Provider…</li>
+<li>Copilot Setup…</li>
+<li>Hardware Info…</li>
+<li>View Log…</li>
+</ul>
+<h4 id="ai">AI</h4>
+<ul>
+<li>Translate (Ctrl+T)</li>
+<li>Summarize (Ctrl+Shift+S)</li>
+<li>Copilot Chat (Ctrl+Shift+C)</li>
+<li>AI Action Builder…</li>
+<li>AI Provider Settings…</li>
+</ul>
+<h4 id="help">Help</h4>
+<ul>
+<li>Setup Wizard…</li>
+<li>Check for Updates…</li>
+<li>Learn more about BITS</li>
+<li>About… (F1)</li>
+</ul>
+<h3 id="settings-dialog-9-tabs">Settings Dialog (9 tabs)</h3>
 <table>
 <thead>
 <tr>
@@ -1824,6 +2172,11 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <td><strong>Output</strong></td>
 <td>Always</td>
 <td>Default export format, output directory, filename template, encoding</td>
+</tr>
+<tr>
+<td><strong>Playback</strong></td>
+<td>Always</td>
+<td>Audio preview speed range, step size, and jump timing</td>
 </tr>
 <tr>
 <td><strong>Providers &amp; Keys</strong></td>
@@ -1854,18 +2207,19 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 </table>
 <h3 id="simple-vs-advanced-mode">Simple vs Advanced Mode</h3>
 <ul>
-<li><strong>Basic Mode</strong> (default): Shows General, Transcription, Output, Providers &amp; Keys, Paths &amp; Storage, and AI Providers tabs.
-  Audio Processing and Advanced tabs are hidden. Only local providers and
-  <strong>activated</strong> cloud providers appear in the provider dropdown. Cloud providers
-  must be activated via the Add Provider wizard before they become available.
-  Sensible defaults are applied automatically.</li>
+<li><strong>Basic Mode</strong> (default): Shows General, Transcription, Output, Providers &amp;
+  Keys, Paths &amp; Storage, and AI Providers tabs. Audio Processing and Advanced
+  tabs are hidden. Only local providers and <strong>activated</strong> cloud providers appear
+  in the provider dropdown. Cloud providers must be activated via the Add
+  Provider wizard before they become available. Sensible defaults are applied
+  automatically.</li>
 <li><strong>Advanced Mode</strong> (Ctrl+Shift+A): Reveals all 8 settings tabs. All cloud
   providers appear in the provider dropdown regardless of activation status.
-  Full control over audio preprocessing, GPU settings, concurrency, and
-  chunking parameters.</li>
+  Full control over audio preprocessing, GPU settings, concurrency, and chunking
+  parameters.</li>
 <li><strong>Experience Mode Setting</strong>: Persisted in <code>settings.json</code> as
-  <code>general.experience_mode</code> ("basic" or "advanced"). Set during the Setup
-  Wizard or toggled via View, then Advanced Mode.</li>
+  <code>general.experience_mode</code> ("basic" or "advanced"). Set during the Setup Wizard
+  or toggled via View, then Advanced Mode.</li>
 </ul>
 <h3 id="recent-files">Recent Files</h3>
 <ul>
@@ -1878,8 +2232,8 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <h2 id="11-self-update-system">11. Self-Update System</h2>
 <p><code>core/updater.py</code> implements GitHub Releases-based update checking:</p>
 <ol>
-<li><strong>Startup check</strong>: Silent background check 3 seconds after launch. If a
-   newer version exists, the status bar shows a notification.</li>
+<li><strong>Startup check</strong>: Silent background check 3 seconds after launch. If a newer
+   version exists, the status bar shows a notification.</li>
 <li><strong>Manual check</strong>: Help, Check for Updates opens a dialog with version
    comparison and a link to the release page.</li>
 <li><strong>Version comparison</strong> uses <code>packaging.version.Version</code> for correct semver.</li>
@@ -1895,6 +2249,7 @@ file with the same name exists, a numeric suffix is appended (e.g.,
     transcription_service.py  # Job queue, workers, orchestration
     provider_manager.py       # Provider registry &amp; routing
     audio_preprocessor.py     # 7-filter ffmpeg preprocessing chain
+    audio_player.py           # Audio preview playback (ffmpeg + sounddevice)
     dependency_checker.py     # Startup dependency verification &amp; install
     device_probe.py           # Hardware detection (CPU/RAM/GPU/CUDA)
     diarization.py            # Cloud-free local speaker diarization (pyannote)
@@ -1909,6 +2264,8 @@ file with the same name exists, a numeric suffix is appended (e.g.,
     live_transcription.py     # Real-time microphone transcription
     plugin_manager.py         # Plugin discovery, loading &amp; lifecycle
     copilot_service.py        # GitHub Copilot SDK integration &amp; agent management
+    context_manager.py        # Context window management &amp; token budgeting
+    document_reader.py        # Document text extraction (DOCX/PDF/XLSX/RTF/TXT)
   providers/                    # 17 provider adapters (strategy pattern)
     base.py                   # TranscriptionProvider ABC + ProviderCapabilities
     local_whisper.py          # faster-whisper (local, free)
@@ -1939,7 +2296,7 @@ file with the same name exists, a numeric suffix is appended (e.g.,
     main_frame.py             # Menu bar, splitter, status bar, tray integration
     queue_panel.py            # File queue list
     transcript_panel.py       # Transcript viewer / editor with speaker management
-    settings_dialog.py        # Tabbed settings (7 tabs)
+    settings_dialog.py        # Tabbed settings (9 tabs)
     progress_dialog.py        # Batch progress display
     model_manager_dialog.py   # Model download &amp; management
     add_provider_dialog.py    # Cloud provider onboarding wizard
@@ -1949,7 +2306,8 @@ file with the same name exists, a numeric suffix is appended (e.g.,
     ai_settings_dialog.py     # AI provider configuration dialog (5 providers)
     copilot_setup_dialog.py   # Copilot CLI installation &amp; auth wizard
     copilot_chat_panel.py     # Interactive AI transcript chat panel
-    agent_builder_dialog.py   # Guided AI agent configuration builder
+    agent_builder_dialog.py   # AI Action Builder — post-transcription template editor
+    audio_player_dialog.py   # Audio preview dialog with clip selection
   utils/
     accessibility.py          # a11y helpers (announce, set_name, safe_call_after)
     constants.py              # App constants, model registry, path definitions
@@ -1965,6 +2323,30 @@ file with the same name exists, a numeric suffix is appended (e.g.,
   <code>safe_call_after()</code>. The service uses a <code>threading.Lock</code> for shared state.</li>
 <li><strong>Update checker</strong>: Runs in a separate daemon thread (startup + manual).</li>
 </ul>
+<h3 id="shutdown-temp-file-cleanup">Shutdown &amp; Temp File Cleanup</h3>
+<p>BITS Whisperer implements a robust ordered shutdown sequence to prevent resource
+leaks and orphaned temporary files:</p>
+<ol>
+<li><strong>Ordered shutdown</strong> (<code>MainFrame._on_close</code>): 5-step sequence — (1) stop
+   transcription service, (2) stop Copilot service, (3) save settings, (4)
+   cleanup tray icon, (5) remove stale temp files.</li>
+<li><strong>Worker thread joining</strong>: <code>TranscriptionService.stop()</code> joins worker threads
+   with a 5-second timeout instead of fire-and-forget sentinel values.</li>
+<li><strong>Per-job temp file tracking</strong>: <code>TranscriptionService</code> tracks all temp files
+   created by the preprocessor and transcoder during each job and cleans them up
+   on job completion and on service shutdown.</li>
+<li><strong>Identifiable temp file prefixes</strong>: Transcoder uses <code>bw_transcode_*</code>,
+   preprocessor uses <code>bw_preprocess_*</code>, and the updater uses <code>bw_update_*</code>
+   prefixes to enable targeted cleanup.</li>
+<li><strong>Stale temp file cleanup</strong>: <code>MainFrame._cleanup_stale_temp_files()</code> scans
+   the system temp directory on shutdown for files/directories older than 1 hour
+   matching <code>bw_transcode_*</code>, <code>bw_preprocess_*</code>, or <code>bw_update_*</code> prefixes.</li>
+<li><strong>Safety nets</strong>: <code>App.OnExit()</code> and an <code>atexit</code> handler in <code>__main__.py</code>
+   provide last-resort temp file cleanup if the normal shutdown path is
+   bypassed.</li>
+<li><strong>Secure temp file creation</strong>: Transcoder uses <code>tempfile.mkstemp()</code> instead
+   of the deprecated <code>tempfile.mktemp()</code> to avoid race conditions.</li>
+</ol>
 <hr>
 <h2 id="13-data-model">13. Data Model</h2>
 <h3 id="job-corejobpy">Job (<code>core/job.py</code>)</h3>
@@ -1980,6 +2362,13 @@ file with the same name exists, a numeric suffix is appended (e.g.,
   - transcript_path: str
   - error_message: str
   - include_timestamps, include_diarization: bool
+  - clip_start_seconds, clip_end_seconds: float | None (optional clip range)
+  - custom_name: str (user-defined display name)
+  - ai_action_template: str (built-in preset name or AgentConfig JSON path)
+  - ai_action_result: str (AI processing output)
+  - ai_action_status: str (&quot;&quot; | &quot;running&quot; | &quot;completed&quot; | &quot;failed&quot;)
+  - ai_action_error: str (error message if AI action failed)
+  - ai_action_attachments: list[dict] (per-job attachment overrides)
   - result: TranscriptionResult | None
 </code></pre></div>
 
@@ -2047,13 +2436,14 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <hr>
 <h2 id="14-privacy-security">14. Privacy &amp; Security</h2>
 <ul>
-<li><strong>Local by default</strong>: Transcripts stored in user data directory
-  (Windows: <code>%LOCALAPPDATA%/BITS Whisperer/</code>, macOS: <code>~/Library/Application Support/BITS Whisperer/</code>).</li>
+<li><strong>Local by default</strong>: Transcripts stored in user data directory (Windows:
+  <code>%LOCALAPPDATA%/BITS Whisperer/</code>, macOS:
+  <code>~/Library/Application Support/BITS Whisperer/</code>).</li>
 <li><strong>API keys</strong>: Stored in OS credential vault (Windows Credential Manager /
   macOS Keychain) via <code>keyring</code> — never logged, printed, or committed.</li>
 <li><strong>Key validation</strong>: Dry-run API call on save to verify keys are working.</li>
-<li><strong>No telemetry</strong>: The app sends no usage data. Update checks are opt-in
-  REST calls to the GitHub Releases API.</li>
+<li><strong>No telemetry</strong>: The app sends no usage data. Update checks are opt-in REST
+  calls to the GitHub Releases API.</li>
 <li><strong>Offline-capable</strong>: 5 local providers (Local Whisper, Windows SAPI5/WinRT,
   Azure Embedded Speech, Vosk, Parakeet) work without any internet connection.</li>
 </ul>
@@ -2192,6 +2582,16 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <td>Toggle Advanced Mode</td>
 <td>Ctrl+Shift+A</td>
 <td>Global</td>
+</tr>
+<tr>
+<td>Audio Preview</td>
+<td>Ctrl+Shift+P</td>
+<td>Global</td>
+</tr>
+<tr>
+<td>Preview Selected (Queue)</td>
+<td>Ctrl+Alt+P</td>
+<td>Queue</td>
 </tr>
 <tr>
 <td>Copilot Chat</td>
@@ -2348,6 +2748,10 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <td>Version comparison</td>
 </tr>
 <tr>
+<td>sounddevice ≥ 0.4.6</td>
+<td>Audio preview playback</td>
+</tr>
+<tr>
 <td>winsdk ≥ 1.0.0b10</td>
 <td>Windows Speech Runtime (Win)</td>
 </tr>
@@ -2377,7 +2781,8 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <li>[x] Provider-specific settings (per-provider configuration during onboarding)</li>
 <li>[x] Speaker diarization (10 cloud providers + cloud-free pyannote.audio)</li>
 <li>[x] Speaker editing UI (rename, reassign, create speakers post-transcription)</li>
-<li>[x] Full Auphonic API integration (all audio algorithms, speech services, output formats)</li>
+<li>[x] Full Auphonic API integration (all audio algorithms, speech services,
+  output formats)</li>
 <li>[x] SQLite database for job metadata</li>
 <li>[x] Batch processing with concurrent workers</li>
 <li>[x] Progress reporting (gauge + status bar + screen reader)</li>
@@ -2390,11 +2795,13 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <li>[x] Basic/Advanced mode toggle with persistent experience_mode setting</li>
 <li>[x] View Log (opens app.log)</li>
 <li>[x] Full accessibility (names, labels, keyboard, screen reader)</li>
-<li>[x] First-run setup wizard (8-page guided experience with mode selection and AI/Copilot setup)</li>
+<li>[x] First-run setup wizard (8-page guided experience with mode selection and
+  AI/Copilot setup)</li>
 <li>[x] Cross-platform support (Windows 10+ and macOS 12+)</li>
 <li>[x] Disk space pre-checks before model downloads</li>
 <li>[x] Comprehensive user guide (docs/USER_GUIDE.md)</li>
-<li>[x] Automatic ffmpeg dependency installation (winget on Windows, manual instructions fallback)</li>
+<li>[x] Automatic ffmpeg dependency installation (winget on Windows, manual
+  instructions fallback)</li>
 <li>[x] Persistent application settings (JSON-backed dataclass)</li>
 <li>[x] On-demand provider SDK installer (WheelInstaller + sdk_installer)</li>
 <li>[x] Pre-transcription SDK checks (ensure_sdk before job dispatch)</li>
@@ -2406,23 +2813,58 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <li>[x] Learn more about BITS link in Help menu</li>
 <li>[x] Add Provider menu item in Tools menu</li>
 <li>[x] Provider activation tracking (activated_providers in settings)</li>
-<li>[x] AI translation &amp; summarization (5 providers: OpenAI, Anthropic, Azure OpenAI, Gemini, Copilot)</li>
+<li>[x] AI translation &amp; summarization (5 providers: OpenAI, Anthropic, Azure
+  OpenAI, Gemini, Copilot)</li>
 <li>[x] Google Gemini AI provider (translation, summarization)</li>
-<li>[x] GitHub Copilot SDK integration (CopilotService, async client, streaming, custom tools)</li>
-<li>[x] Interactive AI Chat Panel (Ctrl+Shift+C, streaming, quick actions, transcript context)</li>
+<li>[x] GitHub Copilot SDK integration (CopilotService, async client, streaming,
+  custom tools)</li>
+<li>[x] Interactive AI Chat Panel (Ctrl+Shift+C, streaming, quick actions,
+  transcript context)</li>
 <li>[x] Copilot Setup Wizard (4-step: CLI install, SDK install, auth, test)</li>
-<li>[x] Agent Builder dialog (4-tab: Identity, Instructions with presets, Tools, Welcome Message)</li>
+<li>[x] Agent Builder dialog (4-tab: Identity, Instructions with presets, Tools,
+  Welcome Message)</li>
 <li>[x] CopilotSettings dataclass (11 fields) in AppSettings</li>
 <li>[x] Installer Copilot CLI install task (WinGet optional)</li>
 <li>[x] 191 tests with full coverage for Gemini and Copilot features</li>
 <li>[x] AI model catalog with real-time pricing (22 models across 4 providers)</li>
-<li>[x] Copilot subscription tier-based model selection (Free/Pro/Business/Enterprise)</li>
+<li>[x] Copilot subscription tier-based model selection
+  (Free/Pro/Business/Enterprise)</li>
 <li>[x] Google Gemma models (5 variants: 27B, 12B, 4B, 1B, 3n-E4B via Gemini API)</li>
 <li>[x] Custom vocabulary for AI translation/summarization accuracy</li>
 <li>[x] 10 built-in prompt templates (4 translation, 4 summarization, 2 analysis)</li>
 <li>[x] Multi-language simultaneous translation</li>
 <li>[x] Real-time streaming from cloud providers (Deepgram, AssemblyAI)</li>
 <li>[x] 255 tests with full coverage for all Phase 4 features</li>
+<li>[x] TreeView queue panel with folder grouping and collapsible nodes</li>
+<li>[x] Folder transcription with cost estimation and confirmation dialog</li>
+<li>[x] Conditional Chat tab visibility based on AI provider configuration</li>
+<li>[x] Queue panel toolbar with filter/search, Clear Completed, Retry All Failed</li>
+<li>[x] Budget limits per provider and per model with confirmation dialogs</li>
+<li>[x] Setup Wizard budget configuration page (9 pages total)</li>
+<li>[x] Custom job naming (F2 rename, context menu, AddFileWizard)</li>
+<li>[x] Job properties dialog (file details, status, cost, timestamps)</li>
+<li>[x] Queue context menus (file: Rename/Retry/Cancel/Remove/Properties; folder:
+  Rename/Remove/Expand)</li>
+<li>[x] Batch operations (Clear Completed, Retry All Failed, Retry Selected)</li>
+<li>[x] Real-time queue filter/search bar</li>
+<li>[x] Ollama local AI provider (local LLM inference via OpenAI-compatible API)</li>
+<li>[x] AI Actions — automatic post-transcription AI processing</li>
+<li>[x] 6 built-in AI Action presets (Meeting Minutes, Action Items, Executive
+  Summary, Interview Notes, Lecture Notes, Q&amp;A Extraction)</li>
+<li>[x] AI Action Builder dialog (8 presets, 4-tab template editor)</li>
+<li>[x] AI Action selection in AddFileWizard</li>
+<li>[x] AI Action result display in Transcript Panel</li>
+<li>[x] AI Action status indicators in Queue Panel (⭐/⏳/✓/✗)</li>
+<li>[x] 501 tests with full coverage for all features</li>
+<li>[x] Slash command system (28 commands, autocomplete, 2 categories)</li>
+<li>[x] Context window management (model-aware token budgeting, 4 strategies,
+  conversation trimming)</li>
+<li>[x] 674 tests with full coverage for all features</li>
+<li>[x] Robust shutdown procedures (ordered shutdown, worker thread joining, temp
+  file cleanup, safety nets)</li>
+<li>[x] Document attachments for AI Actions (attach reference documents — DOCX,
+  PDF, XLSX, RTF, TXT — to provide additional context for AI processing)</li>
+<li>[x] Audio preview with pitch-preserving speed control and clip selection</li>
 </ul>
 <hr>
 <h2 id="20-success-metrics">20. Success Metrics</h2>
@@ -2557,6 +2999,26 @@ file with the same name exists, a numeric suffix is appended (e.g.,
 <tr>
 <td>CopilotSettings as nested dataclass</td>
 <td>Clean separation from AI settings; many Copilot-specific fields</td>
+</tr>
+<tr>
+<td>TreeView for queue panel</td>
+<td>Hierarchical folder grouping; native accessibility; collapsible nodes</td>
+</tr>
+<tr>
+<td>Budget limits per provider+model</td>
+<td>Granular cost control without blocking free/local providers</td>
+</tr>
+<tr>
+<td>AI Actions via existing AgentConfig</td>
+<td>Reuse existing template infrastructure; provider-agnostic design</td>
+</tr>
+<tr>
+<td>Ollama via OpenAI-compatible API</td>
+<td>No new SDK needed; uses existing openai package for API calls</td>
+</tr>
+<tr>
+<td>Built-in presets for AI Actions</td>
+<td>Common use cases work out of the box; no configuration required</td>
 </tr>
 </tbody>
 </table>

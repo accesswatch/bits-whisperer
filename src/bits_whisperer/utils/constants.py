@@ -18,8 +18,16 @@ APP_VERSION: Final[str] = "1.0.0"
 # ---------------------------------------------------------------------------
 # GitHub updater
 # ---------------------------------------------------------------------------
-GITHUB_REPO_OWNER: Final[str] = "BITSWhisperer"
+GITHUB_REPO_OWNER: Final[str] = "accesswatch"
 GITHUB_REPO_NAME: Final[str] = "bits-whisperer"
+
+# ---------------------------------------------------------------------------
+# GitHub OAuth (Device Flow) — for browser-based Copilot authentication
+# Register an OAuth App at https://github.com/settings/applications/new
+# with Device Flow enabled. The client_id is PUBLIC (not secret).
+# Set callback URL to https://github.com/login/device/success
+# ---------------------------------------------------------------------------
+GITHUB_OAUTH_CLIENT_ID: Final[str] = "Ov23liMBlil3hz9Z7Mvf"
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -865,6 +873,70 @@ COPILOT_AI_MODELS: Final[list[AIModelInfo]] = [
     ),
 ]
 
+# --- Ollama models (local, from Hugging Face GGUF or Ollama library) ---
+OLLAMA_AI_MODELS: Final[list[AIModelInfo]] = [
+    AIModelInfo(
+        id="llama3.2",
+        name="Llama 3.2 3B",
+        provider="ollama",
+        description="Meta's compact Llama 3.2. Good balance of speed and quality for local use.",
+        input_price_per_1m=0.0,
+        output_price_per_1m=0.0,
+        context_window=128_000,
+        max_output_tokens=4_096,
+    ),
+    AIModelInfo(
+        id="llama3.1:8b",
+        name="Llama 3.1 8B",
+        provider="ollama",
+        description="Meta's Llama 3.1 8B. Strong general-purpose local model.",
+        input_price_per_1m=0.0,
+        output_price_per_1m=0.0,
+        context_window=128_000,
+        max_output_tokens=4_096,
+    ),
+    AIModelInfo(
+        id="mistral",
+        name="Mistral 7B",
+        provider="ollama",
+        description="Mistral AI's 7B model. Fast and capable for translation and summarization.",
+        input_price_per_1m=0.0,
+        output_price_per_1m=0.0,
+        context_window=32_768,
+        max_output_tokens=4_096,
+    ),
+    AIModelInfo(
+        id="gemma2:9b",
+        name="Gemma 2 9B",
+        provider="ollama",
+        description="Google's Gemma 2 9B via Ollama. Good quality, moderate resource use.",
+        input_price_per_1m=0.0,
+        output_price_per_1m=0.0,
+        context_window=8_192,
+        max_output_tokens=4_096,
+    ),
+    AIModelInfo(
+        id="phi3:mini",
+        name="Phi-3 Mini",
+        provider="ollama",
+        description="Microsoft's Phi-3 Mini. Very efficient for lightweight tasks.",
+        input_price_per_1m=0.0,
+        output_price_per_1m=0.0,
+        context_window=128_000,
+        max_output_tokens=4_096,
+    ),
+    AIModelInfo(
+        id="qwen2.5:7b",
+        name="Qwen 2.5 7B",
+        provider="ollama",
+        description="Alibaba's Qwen 2.5. Strong multilingual support for translation.",
+        input_price_per_1m=0.0,
+        output_price_per_1m=0.0,
+        context_window=32_768,
+        max_output_tokens=4_096,
+    ),
+]
+
 # Copilot subscription tiers
 COPILOT_TIERS: Final[dict[str, dict[str, str]]] = {
     "free": {
@@ -891,7 +963,7 @@ COPILOT_TIERS: Final[dict[str, dict[str, str]]] = {
 
 # All AI models combined for lookups
 ALL_AI_MODELS: Final[list[AIModelInfo]] = (
-    OPENAI_AI_MODELS + ANTHROPIC_AI_MODELS + GEMINI_AI_MODELS + COPILOT_AI_MODELS
+    OPENAI_AI_MODELS + ANTHROPIC_AI_MODELS + GEMINI_AI_MODELS + COPILOT_AI_MODELS + OLLAMA_AI_MODELS
 )
 
 
@@ -928,6 +1000,8 @@ def get_models_for_provider(provider: str) -> list[AIModelInfo]:
         return list(GEMINI_AI_MODELS)
     elif provider == "copilot":
         return list(COPILOT_AI_MODELS)
+    elif provider == "ollama":
+        return list(OLLAMA_AI_MODELS)
     return []
 
 

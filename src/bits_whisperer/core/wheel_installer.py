@@ -198,7 +198,7 @@ def _fallback_tags() -> set[str]:
         "py3",
     ]
     abi_tags = [f"cp{vi.major}{vi.minor}", "abi3", "none"]
-    plat_tags = _platform_tags() + ["any"]
+    plat_tags = [*_platform_tags(), "any"]
 
     result: set[str] = set()
     for py in py_tags:

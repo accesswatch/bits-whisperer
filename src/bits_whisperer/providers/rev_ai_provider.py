@@ -140,7 +140,7 @@ class RevAIProvider(TranscriptionProvider):
 
             if status.lower() == "transcribed":
                 break
-            elif status.lower() == "failed":
+            if status.lower() == "failed":
                 failure = getattr(details, "failure", "Unknown error")
                 raise RuntimeError(f"Rev.ai transcription failed: {failure}")
 

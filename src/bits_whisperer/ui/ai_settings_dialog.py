@@ -16,7 +16,9 @@ import wx
 
 from bits_whisperer.core.settings import AppSettings
 from bits_whisperer.utils.accessibility import (
+    accessible_message_box,
     announce_status,
+    announce_to_screen_reader,
     make_panel_accessible,
     safe_call_after,
     set_accessible_help,
@@ -28,6 +30,7 @@ from bits_whisperer.utils.constants import (
     COPILOT_AI_MODELS,
     COPILOT_TIERS,
     GEMINI_AI_MODELS,
+    OLLAMA_AI_MODELS,
     OPENAI_AI_MODELS,
     format_price_per_1k,
     get_ai_model_by_id,
@@ -128,6 +131,34 @@ _AI_PROVIDERS = [
         ],
         "models": _build_model_list(COPILOT_AI_MODELS),
         "models_list": COPILOT_AI_MODELS,
+    },
+    {
+        "id": "ollama",
+        "name": "Ollama (Local)",
+        "description": (
+            "Run AI models locally with Ollama. No API key or cloud account needed. "
+            "Supports models from Hugging Face and the Ollama library. "
+            "Requires Ollama to be installed and running (ollama.com)."
+        ),
+        "key_id": "ollama",
+        "fields": [
+            {
+                "id": "endpoint",
+                "label": "Ollama Endpoint",
+                "key_name": "",
+                "password": False,
+                "default": "http://localhost:11434",
+            },
+            {
+                "id": "custom_model",
+                "label": "Custom Model (HuggingFace or Ollama)",
+                "key_name": "",
+                "password": False,
+                "placeholder": "e.g. hf.co/user/model or custom-model:tag",
+            },
+        ],
+        "models": _build_model_list(OLLAMA_AI_MODELS),
+        "models_list": OLLAMA_AI_MODELS,
     },
 ]
 
@@ -369,6 +400,42 @@ class AISettingsDialog(wx.Dialog):
                     box_sizer.Add(tier_desc, 0, wx.LEFT | wx.BOTTOM, 10)
 
                     self._copilot_tier_choice.Bind(wx.EVT_CHOICE, self._on_copilot_tier_changed)
+
+                # Ollama-specific controls
+                if provider["id"] == "ollama":
+                    ollama_btn_row = wx.BoxSizer(wx.HORIZONTAL)
+
+                    test_btn = wx.Button(parent, label="Test Connection")
+                    set_accessible_name(test_btn, "Test Ollama connection")
+                    test_btn.Bind(wx.EVT_BUTTON, self._on_ollama_test)
+                    ollama_btn_row.Add(test_btn, 0, wx.RIGHT, 8)
+
+                    refresh_btn = wx.Button(parent, label="Refresh Models")
+                    set_accessible_name(refresh_btn, "Refresh available Ollama models")
+                    set_accessible_help(
+                        refresh_btn,
+                        "Query the Ollama server for locally installed models",
+                    )
+                    refresh_btn.Bind(wx.EVT_BUTTON, self._on_ollama_refresh)
+                    ollama_btn_row.Add(refresh_btn, 0, wx.RIGHT, 8)
+
+                    pull_btn = wx.Button(parent, label="Pull Model")
+                    set_accessible_name(pull_btn, "Pull a model into Ollama")
+                    set_accessible_help(
+                        pull_btn,
+                        "Download a model from the Ollama library or Hugging Face. "
+                        "Enter a model name in the Custom Model field first, "
+                        "e.g. hf.co/user/model for Hugging Face GGUF models.",
+                    )
+                    pull_btn.Bind(wx.EVT_BUTTON, self._on_ollama_pull)
+                    ollama_btn_row.Add(pull_btn, 0)
+
+                    box_sizer.Add(ollama_btn_row, 0, wx.ALL, 5)
+
+                    # Status label for ollama operations
+                    self._ollama_status = wx.StaticText(parent, label="")
+                    set_accessible_name(self._ollama_status, "Ollama status")
+                    box_sizer.Add(self._ollama_status, 0, wx.LEFT | wx.BOTTOM, 10)
 
             sizer.Add(box_sizer, 0, wx.ALL | wx.EXPAND, 5)
 
@@ -744,10 +811,13 @@ class AISettingsDialog(wx.Dialog):
         # API keys from key store
         for provider in _AI_PROVIDERS:
             for field_def in provider["fields"]:
+                key_name = field_def.get("key_name", "")
+                if not key_name:
+                    continue  # Ollama fields loaded separately
                 field_id = f"{provider['id']}_{field_def['id']}"
                 txt = self._fields.get(field_id)
                 if txt and isinstance(txt, wx.TextCtrl):
-                    key = self._key_store.get_key(field_def["key_name"])
+                    key = self._key_store.get_key(key_name)
                     if key:
                         txt.SetValue(key)
 
@@ -763,6 +833,8 @@ class AISettingsDialog(wx.Dialog):
                     model_name = ai.gemini_model
                 elif provider["id"] == "copilot":
                     model_name = ai.copilot_model
+                elif provider["id"] == "ollama":
+                    model_name = ai.ollama_model
                 else:
                     continue
                 idx = model_ctrl.FindString(model_name)
@@ -817,6 +889,14 @@ class AISettingsDialog(wx.Dialog):
             if idx != wx.NOT_FOUND:
                 self._multi_lang_list.Check(idx, True)
 
+        # Ollama endpoint and custom model (stored in settings, not key store)
+        endpoint_field = self._fields.get("ollama_endpoint")
+        if endpoint_field and isinstance(endpoint_field, wx.TextCtrl):
+            endpoint_field.SetValue(ai.ollama_endpoint or "http://localhost:11434")
+        custom_model_field = self._fields.get("ollama_custom_model")
+        if custom_model_field and isinstance(custom_model_field, wx.TextCtrl):
+            custom_model_field.SetValue(ai.ollama_custom_model or "")
+
     def _on_ok(self, _event: wx.CommandEvent) -> None:
         """Save settings and close."""
         ai = self._settings.ai
@@ -829,14 +909,17 @@ class AISettingsDialog(wx.Dialog):
         # Save API keys
         for provider in _AI_PROVIDERS:
             for field_def in provider["fields"]:
+                key_name = field_def.get("key_name", "")
+                if not key_name:
+                    continue  # Ollama fields are saved separately
                 field_id = f"{provider['id']}_{field_def['id']}"
                 txt = self._fields.get(field_id)
                 if txt and isinstance(txt, wx.TextCtrl):
                     val = txt.GetValue().strip()
                     if val:
-                        self._key_store.store_key(field_def["key_name"], val)
+                        self._key_store.store_key(key_name, val)
                     else:
-                        self._key_store.delete_key(field_def["key_name"])
+                        self._key_store.delete_key(key_name)
 
             # Model selection
             model_field_id = f"{provider['id']}_model"
@@ -853,6 +936,8 @@ class AISettingsDialog(wx.Dialog):
                         ai.gemini_model = model_name
                     elif provider["id"] == "copilot":
                         ai.copilot_model = model_name
+                    elif provider["id"] == "ollama":
+                        ai.ollama_model = model_name
 
         # Translation
         lang_idx = self._lang_choice.GetSelection()
@@ -901,6 +986,15 @@ class AISettingsDialog(wx.Dialog):
                 selected_langs.append(self._multi_lang_list.GetString(i))
         ai.multi_target_languages = selected_langs
 
+        # Ollama settings (stored in settings, not key store)
+        endpoint_field = self._fields.get("ollama_endpoint")
+        if endpoint_field and isinstance(endpoint_field, wx.TextCtrl):
+            val = endpoint_field.GetValue().strip()
+            ai.ollama_endpoint = val or "http://localhost:11434"
+        custom_model_field = self._fields.get("ollama_custom_model")
+        if custom_model_field and isinstance(custom_model_field, wx.TextCtrl):
+            ai.ollama_custom_model = custom_model_field.GetValue().strip()
+
         # Persist
         self._settings.save()
         announce_status(self._main_frame, "AI settings saved")
@@ -919,7 +1013,7 @@ class AISettingsDialog(wx.Dialog):
             return
         api_key = api_key_field.GetValue().strip()
         if not api_key:
-            wx.MessageBox(
+            accessible_message_box(
                 "Please enter an API key first.",
                 "No API Key",
                 wx.OK | wx.ICON_INFORMATION,
@@ -960,14 +1054,16 @@ class AISettingsDialog(wx.Dialog):
                 elif provider_id == "copilot":
                     from bits_whisperer.core.ai_service import CopilotAIProvider
 
-                    provider = CopilotAIProvider(api_key)
+                    provider = CopilotAIProvider(
+                        github_token=api_key,
+                    )
                     valid = provider.validate_key(api_key)
             except Exception as exc:
                 logger.warning("API key validation failed: %s", exc)
 
             def _show_result() -> None:
                 if valid:
-                    wx.MessageBox(
+                    accessible_message_box(
                         f"{provider_id.title()} API key is valid!",
                         "Key Valid",
                         wx.OK | wx.ICON_INFORMATION,
@@ -975,7 +1071,7 @@ class AISettingsDialog(wx.Dialog):
                     )
                     announce_status(self._main_frame, f"{provider_id} key validated")
                 else:
-                    wx.MessageBox(
+                    accessible_message_box(
                         f"Could not validate {provider_id} API key.\n"
                         "Check that the key is correct and the service is reachable.",
                         "Validation Failed",
@@ -986,3 +1082,165 @@ class AISettingsDialog(wx.Dialog):
             safe_call_after(_show_result)
 
         threading.Thread(target=_validate, daemon=True).start()
+
+    # ------------------------------------------------------------------ #
+    # Ollama-specific handlers                                             #
+    # ------------------------------------------------------------------ #
+
+    def _get_ollama_endpoint(self) -> str:
+        """Read the current Ollama endpoint from the dialog field."""
+        endpoint_field = self._fields.get("ollama_endpoint")
+        if endpoint_field and isinstance(endpoint_field, wx.TextCtrl):
+            return endpoint_field.GetValue().strip() or "http://localhost:11434"
+        return "http://localhost:11434"
+
+    def _on_ollama_test(self, _event: wx.CommandEvent) -> None:
+        """Test connectivity to the Ollama server."""
+        endpoint = self._get_ollama_endpoint()
+        self._ollama_status.SetLabel("Testing connection...")
+        announce_status(self._main_frame, "Testing Ollama connection...")
+
+        def _test() -> None:
+            from bits_whisperer.core.ai_service import OllamaAIProvider
+
+            provider = OllamaAIProvider(endpoint=endpoint)
+            reachable = provider.validate_key("")
+
+            def _show() -> None:
+                if reachable:
+                    models = provider.list_models()
+                    count = len(models)
+                    self._ollama_status.SetLabel(
+                        f"Connected — {count} model{'s' if count != 1 else ''} available"
+                    )
+                    accessible_message_box(
+                        f"Ollama is reachable at {endpoint}.\n"
+                        f"{count} model{'s' if count != 1 else ''} installed locally.",
+                        "Connection Successful",
+                        wx.OK | wx.ICON_INFORMATION,
+                        self,
+                    )
+                    announce_status(self._main_frame, "Ollama connection successful")
+                else:
+                    self._ollama_status.SetLabel("Connection failed")
+                    accessible_message_box(
+                        f"Could not connect to Ollama at {endpoint}.\n\n"
+                        "Make sure Ollama is installed and running.\n"
+                        "Download from: https://ollama.com",
+                        "Connection Failed",
+                        wx.OK | wx.ICON_WARNING,
+                        self,
+                    )
+
+            safe_call_after(_show)
+
+        threading.Thread(target=_test, daemon=True).start()
+
+    def _on_ollama_refresh(self, _event: wx.CommandEvent) -> None:
+        """Refresh the Ollama model list from the local server."""
+        endpoint = self._get_ollama_endpoint()
+        self._ollama_status.SetLabel("Fetching models...")
+        announce_status(self._main_frame, "Fetching Ollama models...")
+
+        def _fetch() -> None:
+            from bits_whisperer.core.ai_service import OllamaAIProvider
+
+            provider = OllamaAIProvider(endpoint=endpoint)
+            models = provider.list_models()
+
+            def _update() -> None:
+                model_ctrl = self._fields.get("ollama_model")
+                if not model_ctrl or not isinstance(model_ctrl, wx.Choice):
+                    return
+
+                if not models:
+                    self._ollama_status.SetLabel("No models found — pull a model first")
+                    announce_to_screen_reader(
+                        "No models found on Ollama server. " "Use Pull Model to download one."
+                    )
+                    return
+
+                # Remember current selection
+                current = model_ctrl.GetStringSelection()
+                model_ctrl.Clear()
+                for m in models:
+                    model_ctrl.Append(m)
+
+                # Restore selection or select first
+                idx = model_ctrl.FindString(current)
+                if idx != wx.NOT_FOUND:
+                    model_ctrl.SetSelection(idx)
+                elif model_ctrl.GetCount() > 0:
+                    model_ctrl.SetSelection(0)
+
+                count = len(models)
+                self._ollama_status.SetLabel(f"{count} model{'s' if count != 1 else ''} available")
+                announce_status(
+                    self._main_frame,
+                    f"Found {count} Ollama model{'s' if count != 1 else ''}",
+                )
+
+            safe_call_after(_update)
+
+        threading.Thread(target=_fetch, daemon=True).start()
+
+    def _on_ollama_pull(self, _event: wx.CommandEvent) -> None:
+        """Pull a model into Ollama from the library or Hugging Face."""
+        custom_field = self._fields.get("ollama_custom_model")
+        model_name = ""
+        if custom_field and isinstance(custom_field, wx.TextCtrl):
+            model_name = custom_field.GetValue().strip()
+
+        if not model_name:
+            accessible_message_box(
+                "Enter a model name in the 'Custom Model' field first.\n\n"
+                "Examples:\n"
+                "  • llama3.2 (from Ollama library)\n"
+                "  • hf.co/bartowski/Llama-3.2-3B-Instruct-GGUF (from Hugging Face)\n"
+                "  • mistral:7b-instruct",
+                "No Model Specified",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            return
+
+        endpoint = self._get_ollama_endpoint()
+        self._ollama_status.SetLabel(f"Pulling {model_name}... (this may take a while)")
+        announce_status(
+            self._main_frame,
+            f"Pulling model {model_name}. This may take several minutes.",
+        )
+
+        def _pull() -> None:
+            from bits_whisperer.core.ai_service import OllamaAIProvider
+
+            provider = OllamaAIProvider(endpoint=endpoint)
+            success = provider.pull_model(model_name)
+
+            def _show() -> None:
+                if success:
+                    self._ollama_status.SetLabel(f"Successfully pulled {model_name}")
+                    accessible_message_box(
+                        f"Model '{model_name}' has been pulled successfully.\n"
+                        "Click 'Refresh Models' to update the model list.",
+                        "Model Pulled",
+                        wx.OK | wx.ICON_INFORMATION,
+                        self,
+                    )
+                    announce_status(self._main_frame, f"Model {model_name} pulled successfully")
+                else:
+                    self._ollama_status.SetLabel("Pull failed")
+                    accessible_message_box(
+                        f"Failed to pull model '{model_name}'.\n\n"
+                        "Check that:\n"
+                        "  • Ollama is running\n"
+                        "  • The model name is correct\n"
+                        "  • You have enough disk space",
+                        "Pull Failed",
+                        wx.OK | wx.ICON_WARNING,
+                        self,
+                    )
+
+            safe_call_after(_show)
+
+        threading.Thread(target=_pull, daemon=True).start()

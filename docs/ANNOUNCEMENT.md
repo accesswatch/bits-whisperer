@@ -1,351 +1,238 @@
-# BITS Whisperer — Your Audio, Your Words, Your Way
+# BITS Whisperer 1.0
 
-**The free, privacy-first desktop app that turns audio into text — fast, accurate, and fully accessible.**
+**Professional Audio Transcription for Everyone — Free, Private, and Fully
+Accessible**
 
----
+From Blind Information Technology Solutions (BITS)
 
-## What Is BITS Whisperer?
+______________________________________________________________________
 
-*BITS Whisperer is a powerful yet easy-to-use desktop application for Windows and macOS that converts speech to text. Whether you're a journalist, podcaster, student, researcher, content creator, or anyone who works with audio — BITS Whisperer gives you professional-quality transcription, translation, and summarization right from your desktop.
+BITS Whisperer is a desktop application that transforms spoken audio into
+accurate, editable text. It runs on Windows and macOS, supports 17 transcription
+engines, and was built from the ground up to be accessible to every user —
+including those who rely on screen readers and keyboard-only navigation.
 
-No subscriptions. No cloud lock-in. No data harvesting. Just drag, drop, and transcribe.
+Whether you're transcribing a board meeting, a research interview, a podcast
+episode, or a university lecture, BITS Whisperer gives you the tools to do it
+your way.
 
----
+______________________________________________________________________
 
-## Key Features
+## One App, 17 Engines
 
-### 17 Transcription Engines — One App
+BITS Whisperer puts the world's best speech recognition at your fingertips —
+local and cloud, free and paid, general-purpose and specialized.
 
-Choose the best tool for the job:
+**On-device transcription** keeps your audio entirely on your computer. Choose
+from 14 OpenAI Whisper model sizes powered by faster-whisper, lightweight Vosk
+models for low-end hardware, or NVIDIA Parakeet for state-of-the-art English
+accuracy. No internet connection required.
 
-- **On-device AI** — Whisper models from OpenAI run locally on your own hardware — your audio never leaves your computer. Choose from 14 model sizes (Tiny to Large v3 Turbo) matched to your hardware.
-- **Cloud providers** — When you need maximum accuracy or speed, connect to OpenAI, Google Cloud Speech, Azure Speech, Deepgram, AssemblyAI, AWS Transcribe, Groq, Gemini, Rev.ai, Speechmatics, ElevenLabs, Auphonic, and more.
-- **Auphonic integration** — Professional audio post-production (leveling, loudness normalization, noise & hum reduction, filtering, silence/filler/cough cutting) with configurable speech recognition (Whisper, Google, Amazon, Speechmatics). Provider-specific settings let you configure loudness targets, output formats, and which audio algorithms to apply.
-- **Windows built-in** — Use the Windows Speech Recognizer (no setup required) or Azure Embedded Speech for offline cloud-quality results.
-- **Vosk offline** — Lightweight, Kaldi-based speech recognition with 20+ language models (40-50 MB). Runs on the lowest-end hardware where even Whisper Tiny is too heavy.
-- **NVIDIA Parakeet** — State-of-the-art English ASR via NeMo. 600M and 1.1B parameter models with CTC and TDT decoders for excellent accuracy and timestamp precision.
-- **Smart routing** — BITS Whisperer automatically recommends the best model for your hardware and workload.
+**Cloud transcription** connects you to OpenAI, Google Cloud Speech, Microsoft
+Azure, Deepgram, AssemblyAI, Amazon Transcribe, Groq, Google Gemini, Rev.ai,
+Speechmatics, ElevenLabs, and Auphonic. Each provider brings its own strengths —
+real-time streaming, industry-specific vocabularies, noise-resilient models, and
+more.
 
-### Cloud Provider Onboarding
+**Windows built-in speech recognition** works with zero setup using SAPI5 or the
+modern WinRT recognizer, plus Azure Embedded Speech for offline cloud-quality
+results.
 
-BITS Whisperer makes it easy to add cloud transcription services:
+BITS Whisperer recommends the best engine for your hardware automatically. You
+can always override the recommendation and choose exactly the provider, model,
+and language you want.
 
-- **Add Provider wizard** — Go to Tools, then Add Provider to walk through a guided setup for any of the 12 cloud providers
-- **Live API validation** — Your credentials are tested with a real API call before activation — no guessing whether your key works
-- **One-click activation** — Once validated, the provider appears in your settings and is ready for transcription
-- **Secure storage** — API keys stored in your OS credential vault (Windows Credential Manager / macOS Keychain)
+______________________________________________________________________
 
-### Deeply Configurable Transcription
+## AI That Works With Your Transcripts
 
-Fine-tune every detail of your output:
+Transcription is just the beginning. BITS Whisperer integrates six AI providers
+— OpenAI, Anthropic Claude, Microsoft Azure OpenAI, Google Gemini, Ollama
+(local), and GitHub Copilot — to help you do more with your text.
 
-- **Timestamps** — Toggle timestamps on/off, choose between `hh:mm:ss`, `mm:ss`, or seconds format
-- **Speaker labels** — Identify who's speaking (diarization) via 10 cloud providers or cloud-free local pyannote.audio. Post-transcription speaker editing lets you rename speakers and reassign segments with a right-click
-- **Confidence scores** — See how certain the model is about each segment
-- **Word-level timing** — Get precise start/end times for every single word
-- **Language detection** — Auto-detect from 99+ languages, or lock to a specific language
-- **Paragraph segmentation** — Automatically group sentences into readable paragraphs
-- **Segment merging** — Merge short fragments for cleaner output
-- **VAD filtering** — Voice Activity Detection removes silence before transcription for faster, cleaner results
-- **Model tuning** — Control temperature, beam size, compute type, and initial prompts for exact control over inference
+**Translate** your transcript into 15+ languages with a single keystroke.
+**Summarize** it as a concise paragraph, a detailed narrative, or clean bullet
+points. The AI understands your transcript's context, speakers, and structure.
 
-### 7 Export Formats
+**AI Actions** take this further. When you add files for transcription, you can
+attach an AI action — a template that tells the AI what to do with the finished
+transcript. Choose from six built-in presets (Meeting Minutes, Action Items,
+Executive Summary, Interview Notes, Lecture Notes, Q&A Extraction) or create
+your own in the AI Action Builder. The action runs automatically the moment
+transcription completes, and the results appear alongside your transcript.
 
-Save your transcripts exactly how you need them:
+**Document Attachments** let you enrich AI actions with reference materials.
+Attach Word documents, PDFs, spreadsheets, or text files — glossaries, style
+guides, meeting agendas — and give each attachment its own instructions ("use as
+glossary", "cross-reference with transcript"). The AI reads your attachments
+alongside the transcript for more informed, context-aware results.
 
-- **Plain Text** (.txt) — Simple and universal
-- **Markdown** (.md) — Formatted for blogs, wikis, and documentation
-- **HTML** (.html) — Ready for the web
-- **Microsoft Word** (.docx) — Professional documents with formatting
-- **SubRip** (.srt) — Industry-standard subtitles
-- **WebVTT** (.vtt) — Web-native captions
-- **JSON** (.json) — Structured data for developers and integrations
+**Interactive Chat** lets you have a conversation with your transcript through
+the Copilot Chat Panel. Ask questions, request analysis, explore themes — with
+full streaming responses and quick-action buttons for common tasks. Type `/` to
+access 28 built-in slash commands for instant AI analysis (`/summarize`,
+`/translate`, `/key-points`, `/action-items`), app control (`/start`, `/export`,
+`/status`), context management (`/context`), and template execution
+(`/run Meeting Minutes`) — all with real-time autocomplete.
 
-### Audio Preprocessing Pipeline
+BITS Whisperer automatically manages context windows for every AI model — from
+8K-token local models to 1M-token Gemini. Transcripts are intelligently fitted
+to each model's capacity using configurable strategies (smart, truncate,
+head+tail), with token budgets reserved for responses and conversation history.
+Type `/context` in chat to see your current budget breakdown.
 
-Noisy recording? Uneven volume? BITS Whisperer cleans it up before transcription:
+For users who run Ollama locally, BITS Whisperer connects to any model in the
+Ollama library — including thousands of models from HuggingFace — all without an
+API key or cloud dependency.
 
-- **High-pass filter** — Removes low rumble and wind noise
-- **Low-pass filter** — Cuts ultrasonic interference
-- **Noise gate** — Silences background hiss
-- **De-esser** — Tames harsh sibilance
-- **Compressor** — Evens out volume differences between speakers
-- **Loudness normalization** — EBU R128 broadcast-standard leveling
-- **Silence trimming** — Removes dead air
+______________________________________________________________________
 
-Each filter is independently configurable — enable what you need, skip what you don't.
+## Know Who's Speaking
 
-### Batch Processing
+Speaker diarization identifies and labels individual voices in your recordings.
+BITS Whisperer supports diarization through 10 cloud providers and also offers
+fully local, cloud-free diarization via pyannote.audio.
 
-- Drag and drop entire folders of audio files
-- Process up to 100 files per batch
-- Multiple concurrent transcription jobs
-- **Background processing** — Minimize to the system tray and let BITS Whisperer work while you do other things
-- **Auto-export** — Finished transcripts are automatically saved in your chosen format
-- **Notifications** — Balloon/toast notifications when jobs complete (even when minimized)
-- **Progress tracking** — Real-time progress in the status bar and system tray tooltip
+After transcription, you can rename speakers and reassign segments with a
+right-click — turning "Speaker 1" and "Speaker 2" into real names throughout the
+entire transcript.
 
-### Accessibility First
+______________________________________________________________________
 
-BITS Whisperer is built from the ground up to be usable by everyone:
+## Professional Audio Cleanup
 
-- **Full keyboard navigation** — Every feature is reachable without a mouse
-- **Screen reader friendly** — Tested with NVDA; all controls are labeled and announced
-- **Menu bar primary interface** — All actions have keyboard mnemonics and accelerators
-- **High contrast support** — Uses system colors; works with any Windows theme
-- **Accessible settings dialog** — Tab, Shift+Tab, Ctrl+Tab, and Ctrl+Shift+Tab all work as expected
+A seven-stage audio preprocessing pipeline cleans your recordings before
+transcription: high-pass filter, low-pass filter, noise gate, de-esser,
+compressor, loudness normalization, and silence trimming. Each filter is
+independently configurable.
 
-### Privacy & Security
+For users who need broadcast-grade processing, Auphonic integration provides
+cloud-based leveling, loudness normalization, noise and hum reduction,
+filtering, and silence/filler/cough cutting — with configurable speech
+recognition included.
 
-- **Local storage** — Transcripts stay on your computer by default
-- **Secure credential storage** — API keys are stored in your OS credential vault (Windows Credential Manager / macOS Keychain) — never in plain text
-- **No telemetry** — We don't track you, period
-- **Open source** — Inspect every line of code
+______________________________________________________________________
 
-### Modern Desktop Experience
+## Audio Preview and Clip Selection
 
-- **First-run setup wizard** — Guided 8-page wizard that scans your hardware, lets you choose Basic or Advanced experience mode, recommends models, offers downloads, configures AI and Copilot, and sets everything up in one magical experience
-- **Basic & Advanced modes** — Start with a clean, simple interface (Basic) or unlock full control with all settings tabs, audio processing, and every provider (Advanced). Choose during setup or toggle anytime from the View menu (Ctrl+Shift+A)
-- **Automatic dependency setup** — Detects missing ffmpeg at startup and offers one-click install via winget (Windows), with manual instructions fallback
-- **On-demand SDK installer** — Provider SDKs are not bundled in the installer, keeping it small (~40 MB). When you first use a provider, the required SDK is downloaded and installed automatically — no system Python or pip needed
-- **System tray** — Minimize and keep working; restore with a click
-- **Recent files** — Quick access to your last 10 audio files
-- **Hardware detection** — Automatically identifies your CPU, RAM, and GPU to recommend compatible models
-- **Disk space checks** — Pre-flight validation before every model download; friendly warnings when space is low
-- **Auto-update** — Checks GitHub for new releases on startup
-- **Cross-platform** — Runs on Windows 10+ and macOS 12+ with GPU acceleration (CUDA / Apple Silicon Metal)
-- **Settings persistence** — All your preferences are saved between sessions
-- **Comprehensive user guide** — Built-in documentation covering every feature, shortcut, and troubleshooting step
-- **Professional Windows installer** — Inno Setup-based installer with Start Menu shortcuts, optional desktop shortcut, and clean uninstaller
-- **Setup Wizard in Help menu** — Re-run the setup wizard anytime from Help, then Setup Wizard
-- **Learn more about BITS** — Quick link to the BITS website from the Help menu
+Listen to your recording before you transcribe it. BITS Whisperer now includes
+an audio preview tool with pitch-preserving speed control (slow or very fast
+without chipmunk voices) and a simple clip-range selector. Set a start and end
+time to transcribe only the section you want — perfect for trimming dead air or
+isolating key segments before sending them to a provider.
 
----
+Playback jump timing is configurable via sliders in Settings, so you can choose
+quick 1–60 second jumps that match your review workflow.
 
-## System Requirements
+______________________________________________________________________
 
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| OS | Windows 10 / macOS 12+ | Windows 11 / macOS 14+ |
-| Python | 3.10+ | 3.11+ |
-| RAM | 4 GB | 16 GB |
-| GPU | Not required | NVIDIA with 4+ GB VRAM |
-| Disk | 500 MB | 5 GB (for large models) |
-| ffmpeg | Required | Auto-installed on first launch |
+## A Queue That Keeps Up With You
 
----
+The transcription queue is built as a tree view that organizes files
+intelligently. Drop a folder of recordings and see them grouped as an expandable
+branch with live status summaries. Rename any file or folder with F2 — custom
+names follow the job everywhere without touching the original files.
 
-## Getting Started
+A filter bar lets you search the queue by name, provider, or status. Rich
+context menus give you per-job control — change the provider, model, or
+language; toggle diarization; retry failed jobs; view detailed properties — all
+without leaving the keyboard.
 
-### Install from Source
+Budget limits keep cloud spending in check. Set a default spending cap or
+per-provider limits, enable cost confirmations for paid transcriptions, and
+watch estimated costs appear next to each job in the queue.
 
-```bash
-git clone https://github.com/accesswatch/bits-whisperer.git
-cd bits-whisperer
-pip install -e ".[dev]"
-bits-whisperer
-```
+______________________________________________________________________
 
-### Install from Requirements
+## Seven Export Formats
 
-```bash
-pip install -r requirements.txt
-python -m bits_whisperer
-```
+Save your transcripts as Plain Text, Markdown, HTML, Microsoft Word, SubRip
+subtitles, WebVTT captions, or structured JSON. Timestamps, speaker labels, and
+confidence scores are preserved in each format where applicable.
 
-### Build a Standalone Executable
+______________________________________________________________________
 
-```bash
-pip install pyinstaller
-python build_installer.py --lean
-```
+## Live Microphone Transcription
 
-The built application will be in `dist/BITS Whisperer/`.
+Press Ctrl+L to start transcribing from your microphone in real time. BITS
+Whisperer uses faster-whisper with energy-based voice activity detection to
+deliver live results as you speak. Pause, resume, copy, or clear at any time.
 
-### Build a Windows Installer
+______________________________________________________________________
 
-```bash
-# Requires Inno Setup 6+ (https://jrsoftware.org/isinfo.php)
-iscc installer.iss
-```
+## Extensible by Design
 
-Output: `dist/BITS_Whisperer_Setup.exe`
+A plugin system lets you add custom transcription providers by dropping a Python
+file into the plugins directory. Plugins are discovered automatically, appear in
+the provider list, and can be enabled or disabled from the Tools menu.
 
----
+______________________________________________________________________
 
-## Who Is This For?
+## Accessible to Everyone
 
-- **Journalists** — Interview transcription without expensive subscriptions
-- **Students** — Record and transcribe lectures automatically
-- **Podcasters** — Generate show notes and transcripts for accessibility
-- **Content creators** — Subtitle your videos in multiple formats
-- **Researchers** — Transcribe interviews and focus groups with confidence scores
-- **Accessibility advocates** — Make audio content available to everyone
-- **Privacy-conscious professionals** — Keep sensitive recordings off the cloud
-- **Power users** — Maximum control over every aspect of transcription
+BITS Whisperer was created by Blind Information Technology Solutions — an
+organization founded by and for people who are blind or visually impaired.
+Accessibility is not a feature we added later. It is the foundation.
 
----
+Every control has an accessible name. Every action is reachable by keyboard. The
+menu bar is the primary interface, with mnemonics and accelerator keys on every
+item. Progress is reported through gauges and status bar text that screen
+readers announce automatically. The application respects system high-contrast
+settings and never hard-codes colors.
 
-## New in v1.0: AI-Powered Features
+The first-run setup wizard walks you through everything in eight accessible
+pages — hardware scanning, model recommendations, provider configuration, AI
+setup, and experience mode selection. All of it is fully navigable with a screen
+reader.
 
-### Live Microphone Transcription
+Tested with NVDA. Designed for everyone.
 
-Transcribe speech from your microphone in real time:
+______________________________________________________________________
 
-- **Press Ctrl+L** or go to **Tools, then Live Transcription** to open the live transcription dialog
-- Choose your microphone and Whisper model, then press Start
-- Speech is transcribed in real-time using faster-whisper with energy-based voice activity detection
-- Pause, resume, copy, or clear the transcript at any time
-- Settings: model size, language, sample rate, silence threshold, and VAD filter
+## Private by Default
 
-### AI Translation & Summarization
+Transcripts are stored locally on your computer. API keys live in your operating
+system's secure credential vault — Windows Credential Manager or macOS Keychain
+— never in plain text, never in config files. BITS Whisperer collects no
+telemetry, phones home to no servers, and includes no tracking of any kind.
 
-Leverage AI to work with your transcripts:
+When you use on-device transcription, your audio never leaves your machine. When
+you choose a cloud provider, that's your decision — and BITS Whisperer does
+nothing beyond what you explicitly ask for.
 
-- **Translate** — Press Ctrl+T or go to AI, then Translate to convert your transcript into 15+ languages using OpenAI GPT-4o, Anthropic Claude, Azure OpenAI, or Google Gemini
-- **Summarize** — Press Ctrl+Shift+S or go to AI, then Summarize to generate concise, detailed, or bullet-point summaries
-- Configure AI providers in **Tools, then AI Provider Settings** — add API keys for OpenAI, Anthropic, Azure OpenAI, Google Gemini, or connect GitHub Copilot
-- Translate and Summarize buttons are also available directly in the transcript panel toolbar
+______________________________________________________________________
 
-### Plugin System
+## Cross-Platform
 
-Extend BITS Whisperer with custom transcription providers:
+BITS Whisperer runs on Windows 10 and later and macOS 12 and later. GPU
+acceleration is supported via NVIDIA CUDA on Windows and Apple Silicon Metal on
+macOS. The application detects your hardware at startup and recommends
+compatible models automatically.
 
-- Drop `.py` plugin files into the plugins directory (configurable in Settings)
-- Plugins are discovered automatically and loaded on startup
-- Each plugin implements a `register(manager)` function to add new providers
-- Enable or disable individual plugins from **Tools, then Plugins**
-- Plugin metadata (name, version, author, description) is displayed in the management dialog
+______________________________________________________________________
 
----
+## Built With Care
 
-## New in v1.0: Gemini AI & GitHub Copilot SDK
+674 automated tests. 17 providers. 6 AI integrations. 7 export formats. 8
+built-in AI action presets. A seven-stage audio pipeline. Intelligent context
+window management. Full keyboard navigation. Screen reader support. System tray
+background processing. Speaker diarization with post-editing. Live microphone
+transcription. A plugin system. An eight-page setup wizard. Custom job naming.
+Budget limits with cost estimation. A tree-view queue with drag-and-drop,
+filtering, context menus, and batch operations.
 
-### Google Gemini AI Provider
+A robust ordered shutdown sequence with worker thread joining, per-job temp file
+tracking, stale file cleanup, and safety-net handlers — so nothing is left
+behind when you close the app.
 
-Google Gemini is now available as an AI provider for translation and summarization:
+All of it free. All of it open source. All of it accessible.
 
-- **Fast and affordable** — Gemini 2.0 Flash delivers excellent quality at a fraction of the cost of other providers
-- **Configure** in **Tools, then AI Provider Settings** — add your Gemini API key and choose from Gemini 2.0 Flash, 1.5 Flash, or 1.5 Pro models
-- Supports translation to 15+ languages and all summarization styles (concise, detailed, bullet points)
-
-### GitHub Copilot SDK Integration
-
-Chat with your transcripts using GitHub Copilot, right inside BITS Whisperer:
-
-- **Interactive AI Chat Panel** — Press **Ctrl+Shift+C** or go to **AI, then Copilot Chat** to open the chat panel alongside your transcript. Ask questions about the content, request analysis, get key points, or explore topics in a streaming conversation.
-- **Quick Actions** — One-click buttons for common tasks: summarize, extract key points, identify speakers, list action items, and more.
-- **Copilot Setup Wizard** — Go to **Tools, then Copilot Setup** to walk through a 4-step guided setup: install the GitHub Copilot CLI, install the SDK, authenticate with your GitHub account, and run a connection test.
-- **Agent Builder** — Go to **AI, then Agent Builder** to configure a custom AI assistant with 4 guided tabs:
-  - **Identity** — Name your agent and set its persona
-  - **Instructions** — Write custom system prompts or use built-in presets (Transcript Analyst, Meeting Notes, Research Assistant)
-  - **Tools** — Enable transcript-aware tools so the agent can access and analyze your transcripts
-  - **Welcome** — Set the greeting message users see when opening the chat panel
-- **Streaming responses** — Copilot replies stream in real-time for natural conversation flow
-- **Session management** — Conversation history is maintained per session, with the ability to start fresh at any time
-- **5 AI providers** — OpenAI, Anthropic Claude, Azure OpenAI, Google Gemini, and GitHub Copilot are all available for translation and summarization
-
-### Additional Improvements
-
-- **8-page Setup Wizard** — A new AI & Copilot configuration page guides you through provider setup during first launch
-- **Windows installer** — Optionally install the GitHub Copilot CLI via WinGet during application setup
-- **191 tests** — Comprehensive test coverage for all new features
-
----
-
-## New in v1.0: Phase 4 — AI Intelligence & Streaming
-
-### AI Model Catalog with Real-Time Pricing
-
-BITS Whisperer now includes a comprehensive AI model catalog with real-time pricing information for all providers:
-
-| Provider | Models | Price Range (per 1M input tokens) |
-|----------|--------|-----------------------------------|
-| **OpenAI** | GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo | $0.15 – $10.00 |
-| **Anthropic** | Claude Sonnet 4, Claude Haiku 4, Claude 3.5 Sonnet | $0.80 – $3.00 |
-| **Google Gemini** | Gemini 2.0 Flash, 2.5 Pro, 2.5 Flash + 5 Gemma variants | $0.02 – $1.25 |
-| **GitHub Copilot** | 7 models (GPT-4o Mini, GPT-4o, GPT-4 Turbo, Claude Sonnet 4, Claude Haiku 4, o3-mini, Gemini 2.0 Flash) | Included in subscription |
-
-All 22 models include context window size, max output tokens, and per-token pricing so you can make informed choices.
-
-### Copilot Subscription Tier-Based Model Selection
-
-Copilot models are now filtered by your subscription tier:
-
-| Tier | Price | Available Models |
-|------|-------|------------------|
-| **Free** | $0 | GPT-4o Mini |
-| **Pro** | $10/month | All 7 models including premium (Claude, o3-mini, Gemini) |
-| **Business** | $19/user/month | All Pro models + admin controls |
-| **Enterprise** | $39/user/month | All models + knowledge bases, fine-tuning, compliance |
-
-Set your subscription tier in **Tools, then Settings** — the model picker automatically shows only the models available for your plan.
-
-### Google Gemma Models
-
-All 5 Gemma open-weight models are now available via the Gemini API:
-
-| Model | Parameters | Input Price | Best For |
-|-------|-----------|-------------|----------|
-| **Gemma 3 27B** | 27B | $0.10/1M | High quality, open-weight analysis |
-| **Gemma 3 12B** | 12B | $0.08/1M | Good balance of quality and speed |
-| **Gemma 3 4B** | 4B | $0.05/1M | Fast, efficient for simple tasks |
-| **Gemma 3 1B** | 1B | $0.02/1M | Very fast, basic translation |
-| **Gemma 3n E4B** | Edge-optimized | $0.02/1M | Ultra-efficient, lightweight tasks |
-
-### Custom Vocabulary
-
-Improve AI accuracy with domain-specific terminology:
-
-- Go to **Tools, then AI Provider Settings** and add custom terms, acronyms, and proper nouns
-- The vocabulary is injected into translation and summarization prompts
-- Ensures consistent handling of technical jargon, company names, and specialized terms
-- Ideal for medical, legal, technical, and industry-specific transcripts
-
-### 10 Built-In Prompt Templates
-
-Pre-configured prompt templates for common AI tasks:
-
-- **Translation** (4 templates): Standard, Informal, Technical, Legal
-- **Summarization** (4 templates): Concise Summary, Detailed Summary, Bullet Points, Meeting Minutes
-- **Analysis** (2 templates): Sentiment Analysis, Extract Questions
-
-Select a template before translating or summarizing, or create your own custom templates. Templates use `{text}` and `{language}` placeholders for automatic transcript and language injection.
-
-### Multi-Language Simultaneous Translation
-
-Translate a transcript into multiple languages at once:
-
-- Configure target languages in **Tools, then AI Provider Settings**
-- Press **Ctrl+T** and select **Multi-Language** to translate into all configured languages in a single operation
-- Each language translation is performed independently for best quality
-- Results are returned as separate translations per language
-
-### Real-Time Streaming from Cloud Providers
-
-Deepgram and AssemblyAI now support real-time streaming transcription:
-
-- **Deepgram** — Live WebSocket streaming with smart formatting and punctuation
-- **AssemblyAI** — Real-time streaming with automatic speaker detection
-- Streaming is indicated in each provider's capabilities so the app can use the optimal transport
-- Additional cloud providers may add streaming support in future releases
-
-### Phase 4 Test Coverage
-
-- **255 tests** — Full coverage for AI model catalog, Copilot tiers, prompt templates, multi-language translation, custom vocabulary, and streaming capabilities
-
----
-
-## What's Next
-
-- Plugin marketplace
-- Additional streaming providers
-- Custom model fine-tuning integration
-
----
+______________________________________________________________________
 
 **BITS Whisperer** — because your words matter.
 
-*Free. Open source. Accessible. Private.*
+*BITS Whisperer 1.0 — Developed by Blind Information Technology Solutions
+(BITS)*
 
-*BITS Whisperer v1.0.0 — Developed by **Blind Information Technology Solutions (BITS)**.*
+*Free and open source.
+[github.com/accesswatch/bits-whisperer](https://github.com/accesswatch/bits-whisperer)*

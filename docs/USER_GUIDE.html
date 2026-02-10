@@ -4,120 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BITS Whisperer — User Guide</title>
-<style>
-  :root {
-    --bg: #ffffff;
-    --fg: #1a1a1a;
-    --accent: #0969da;
-    --border: #d0d7de;
-    --code-bg: #f6f8fa;
-    --table-alt: #f6f8fa;
-    --blockquote: #57606a;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0d1117;
-      --fg: #e6edf3;
-      --accent: #58a6ff;
-      --border: #30363d;
-      --code-bg: #161b22;
-      --table-alt: #161b22;
-      --blockquote: #8b949e;
-    }
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
-                 sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-    font-size: 16px;
-    line-height: 1.6;
-    color: var(--fg);
-    background: var(--bg);
-    max-width: 980px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem;
-  }
-  h1, h2, h3, h4, h5, h6 {
-    margin-top: 1.5em;
-    margin-bottom: 0.5em;
-    font-weight: 600;
-    line-height: 1.25;
-  }
-  h1 { font-size: 2em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
-  h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
-  h3 { font-size: 1.25em; }
-  p { margin: 0.5em 0 1em; }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  code {
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-    font-size: 0.875em;
-    background: var(--code-bg);
-    padding: 0.2em 0.4em;
-    border-radius: 6px;
-  }
-  pre {
-    background: var(--code-bg);
-    padding: 1em;
-    border-radius: 6px;
-    overflow-x: auto;
-    margin: 1em 0;
-    line-height: 1.45;
-  }
-  pre code {
-    background: none;
-    padding: 0;
-    font-size: 0.85em;
-  }
-  table {
-    border-collapse: collapse;
-    width: 100%;
-    margin: 1em 0;
-  }
-  th, td {
-    border: 1px solid var(--border);
-    padding: 0.5em 0.75em;
-    text-align: left;
-  }
-  th {
-    background: var(--code-bg);
-    font-weight: 600;
-  }
-  tr:nth-child(even) { background: var(--table-alt); }
-  blockquote {
-    border-left: 4px solid var(--accent);
-    padding: 0.5em 1em;
-    margin: 1em 0;
-    color: var(--blockquote);
-  }
-  hr {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 2em 0;
-  }
-  ul, ol { margin: 0.5em 0 1em 1.5em; }
-  li { margin: 0.25em 0; }
-  img { max-width: 100%; height: auto; }
-  .toc {
-    background: var(--code-bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 1em 1.5em;
-    margin: 1em 0 2em;
-  }
-  .toc ul { list-style: none; margin: 0; padding: 0; }
-  .toc ul ul { padding-left: 1.5em; }
-  .toc li { margin: 0.25em 0; }
-  strong { font-weight: 600; }
-  .footer {
-    margin-top: 3em;
-    padding-top: 1em;
-    border-top: 1px solid var(--border);
-    font-size: 0.85em;
-    color: var(--blockquote);
-    text-align: center;
-  }
-</style>
+<link rel="stylesheet" href="docs.css">
 </head>
 <body>
 <nav class="toc"><strong>Table of Contents</strong>
@@ -140,7 +27,7 @@
 <li><a href="#step-5-preferences">Step 5: Preferences</a></li>
 <li><a href="#step-6-ai-copilot-configuration">Step 6: AI &amp; Copilot Configuration</a></li>
 <li><a href="#step-7-summary">Step 7: Summary</a></li>
-<li><a href="#step-8-ready">Step 8: Ready!</a></li>
+<li><a href="#step-8-ready">Step 8: Ready</a></li>
 </ul>
 </li>
 <li><a href="#main-window">Main Window</a><ul>
@@ -149,6 +36,9 @@
 </li>
 <li><a href="#adding-files">Adding Files</a><ul>
 <li><a href="#methods">Methods</a></li>
+<li><a href="#add-file-wizard">Add File Wizard</a></li>
+<li><a href="#adding-folders">Adding Folders</a></li>
+<li><a href="#custom-names">Custom Names</a></li>
 <li><a href="#supported-formats">Supported Formats</a></li>
 <li><a href="#limits-configurable-in-advanced-settings">Limits (configurable in Advanced Settings)</a></li>
 </ul>
@@ -174,7 +64,7 @@
 <li><a href="#live-microphone-transcription">Live Microphone Transcription</a><ul>
 <li><a href="#opening">Opening</a></li>
 <li><a href="#using-the-dialog">Using the Dialog</a></li>
-<li><a href="#how-it-works">How It Works</a></li>
+<li><a href="#ai-actions-how-it-works">AI Actions: How It Works</a></li>
 <li><a href="#settings">Settings</a></li>
 </ul>
 </li>
@@ -191,10 +81,19 @@
 <li><a href="#real-time-streaming-transcription">Real-Time Streaming Transcription</a></li>
 </ul>
 </li>
+<li><a href="#ai-actions">AI Actions</a><ul>
+<li><a href="#how-it-works">How It Works</a></li>
+<li><a href="#built-in-presets">Built-in Presets</a></li>
+<li><a href="#creating-custom-ai-actions">Creating Custom AI Actions</a></li>
+<li><a href="#attaching-reference-documents">Attaching Reference Documents</a></li>
+<li><a href="#viewing-ai-action-results">Viewing AI Action Results</a></li>
+<li><a href="#ai-action-providers">AI Action Providers</a></li>
+</ul>
+</li>
 <li><a href="#github-copilot-integration">GitHub Copilot Integration</a><ul>
 <li><a href="#copilot-setup-wizard">Copilot Setup Wizard</a></li>
 <li><a href="#interactive-ai-chat-panel">Interactive AI Chat Panel</a></li>
-<li><a href="#agent-builder">Agent Builder</a></li>
+<li><a href="#ai-action-builder">AI Action Builder</a></li>
 <li><a href="#copilot-settings">Copilot Settings</a></li>
 </ul>
 </li>
@@ -205,7 +104,7 @@
 <li><a href="#plugin-metadata">Plugin Metadata</a></li>
 </ul>
 </li>
-<li><a href="#providers_1">Providers</a><ul>
+<li><a href="#transcription-providers">Transcription Providers</a><ul>
 <li><a href="#local-free-offline">Local (Free, Offline)</a></li>
 <li><a href="#cloud-paid-online">Cloud (Paid, Online)</a></li>
 <li><a href="#cloud-audio-processing">Cloud + Audio Processing</a></li>
@@ -219,12 +118,23 @@
 <li><a href="#disk-space">Disk Space</a></li>
 </ul>
 </li>
-<li><a href="#settings_1">Settings</a><ul>
+<li><a href="#settings-overview">Settings Overview</a><ul>
 <li><a href="#tabs-overview">Tabs Overview</a></li>
 <li><a href="#basic-vs-advanced-mode">Basic vs. Advanced Mode</a></li>
 </ul>
 </li>
 <li><a href="#audio-preprocessing">Audio Preprocessing</a></li>
+<li><a href="#queue-management">Queue Management</a><ul>
+<li><a href="#queue-layout">Queue Layout</a></li>
+<li><a href="#toolbar">Toolbar</a></li>
+<li><a href="#filter-bar">Filter Bar</a></li>
+<li><a href="#context-menus">Context Menus</a></li>
+<li><a href="#queue-custom-names">Queue Custom Names</a></li>
+<li><a href="#drag-and-drop">Drag and Drop</a></li>
+<li><a href="#status-indicators">Status Indicators</a></li>
+<li><a href="#budget-limits">Budget Limits</a></li>
+</ul>
+</li>
 <li><a href="#system-tray">System Tray</a></li>
 <li><a href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
 <li><a href="#accessibility">Accessibility</a><ul>
@@ -243,6 +153,7 @@
 <li><a href="#slow-transcription">"Slow transcription"</a></li>
 <li><a href="#sdk-installation-failed">"SDK installation failed"</a></li>
 <li><a href="#provider-not-available-after-sdk-install">"Provider not available after SDK install"</a></li>
+<li><a href="#leftover-temporary-files">Leftover Temporary Files</a></li>
 <li><a href="#resetting-the-app">Resetting the App</a></li>
 </ul>
 </li>
@@ -253,7 +164,8 @@
 </div>
 </nav>
 <h1 id="bits-whisperer-user-guide">BITS Whisperer — User Guide</h1>
-<p>Welcome to <strong>BITS Whisperer</strong>, your desktop audio transcription companion. This guide walks you through every feature so you can get the most out of the app.</p>
+<p>Welcome to <strong>BITS Whisperer</strong>, your desktop audio transcription companion. This
+guide walks you through every feature so you can get the most out of the app.</p>
 <hr>
 <h2 id="table-of-contents">Table of Contents</h2>
 <ol>
@@ -266,12 +178,14 @@
 <li><a href="#exporting">Exporting</a></li>
 <li><a href="#live-microphone-transcription">Live Microphone Transcription</a></li>
 <li><a href="#ai-translation--summarization">AI Translation &amp; Summarization</a></li>
+<li><a href="#ai-actions">AI Actions</a></li>
 <li><a href="#github-copilot-integration">GitHub Copilot Integration</a></li>
 <li><a href="#plugins">Plugins</a></li>
 <li><a href="#providers">Providers</a></li>
 <li><a href="#ai-models">AI Models</a></li>
 <li><a href="#settings">Settings</a></li>
 <li><a href="#audio-preprocessing">Audio Preprocessing</a></li>
+<li><a href="#queue-management">Queue Management</a></li>
 <li><a href="#system-tray">System Tray</a></li>
 <li><a href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
 <li><a href="#accessibility">Accessibility</a></li>
@@ -319,69 +233,100 @@
 </table>
 <h3 id="installation">Installation</h3>
 <ol>
-<li>Download the latest installer from <a href="https://github.com/accesswatch/bits-whisperer/releases">GitHub Releases</a>.</li>
+<li>Download the latest installer from
+   <a href="https://github.com/accesswatch/bits-whisperer/releases">GitHub Releases</a>.</li>
 <li>Run the installer and follow the on-screen instructions.</li>
-<li>Launch BITS Whisperer from your Start Menu (Windows) or Applications folder (macOS).</li>
+<li>Launch BITS Whisperer from your Start Menu (Windows) or Applications folder
+   (macOS).</li>
 </ol>
 <h3 id="first-launch">First Launch</h3>
-<p>On first launch, the <strong>Setup Wizard</strong> guides you through initial configuration. You can skip it and configure everything later from the <strong>Tools</strong> menu.</p>
-<p>After the wizard, BITS Whisperer checks for required external tools (like <strong>ffmpeg</strong>). If ffmpeg is missing, the app will offer to install it automatically using the Windows Package Manager (winget). If winget is unavailable, you'll see step-by-step manual installation instructions. ffmpeg is needed for audio preprocessing and format conversion.</p>
+<p>On first launch, the <strong>Setup Wizard</strong> guides you through initial configuration.
+You can skip it and configure everything later from the <strong>Tools</strong> menu.</p>
+<p>After the wizard, BITS Whisperer checks for required external tools (like
+<strong>ffmpeg</strong>). If ffmpeg is missing, the app will offer to install it
+automatically using the Windows Package Manager (winget). If winget is
+unavailable, you'll see step-by-step manual installation instructions. ffmpeg is
+needed for audio preprocessing and format conversion.</p>
 <h3 id="on-demand-sdk-installation">On-Demand SDK Installation</h3>
-<p>BITS Whisperer uses a lightweight installer — provider SDKs (such as the OpenAI client, Google Cloud libraries, or the faster-whisper AI engine) are <strong>not bundled</strong> with the application. Instead, they are downloaded and installed automatically the first time you use a provider.</p>
+<p>BITS Whisperer uses a lightweight installer — provider SDKs (such as the OpenAI
+client, Google Cloud libraries, or the faster-whisper AI engine) are <strong>not
+bundled</strong> with the application. Instead, they are downloaded and installed
+automatically the first time you use a provider.</p>
 <p>When you start a transcription or download a local model, the app will:</p>
 <ol>
 <li>Check if the required SDK is already installed.</li>
-<li>If not, show a dialog explaining what will be downloaded and the approximate size.</li>
-<li>Download the packages from PyPI and install them in a local folder managed by BITS Whisperer.</li>
+<li>If not, show a dialog explaining what will be downloaded and the approximate
+   size.</li>
+<li>Download the packages from PyPI and install them in a local folder managed by
+   BITS Whisperer.</li>
 <li>This only happens once per provider — subsequent uses are instant.</li>
 </ol>
 <p><strong>No system Python or pip is required.</strong> The app handles everything internally.</p>
-<p>SDKs are stored in: <code>%LOCALAPPDATA%\BITS Whisperer\BITSWhisperer\site-packages\</code> (Windows) or <code>~/Library/Application Support/BITS Whisperer/site-packages/</code> (macOS).</p>
+<p>SDKs are stored in: <code>%LOCALAPPDATA%\BITS Whisperer\BITSWhisperer\site-packages\</code>
+(Windows) or <code>~/Library/Application Support/BITS Whisperer/site-packages/</code>
+(macOS).</p>
 <hr>
 <h2 id="setup-wizard">Setup Wizard</h2>
-<p>The setup wizard appears automatically on your first launch and walks you through eight steps:</p>
+<p>The setup wizard appears automatically on your first launch and walks you
+through eight steps:</p>
 <h3 id="step-1-welcome">Step 1: Welcome</h3>
 <p>A brief overview of what BITS Whisperer does and what the wizard will configure.</p>
 <h3 id="step-2-hardware-detection">Step 2: Hardware Detection</h3>
-<p>The app scans your computer and shows:
-- <strong>Processor, RAM, GPU</strong> — what you're working with
-- <strong>Free disk space</strong> — how much room for AI models
-- <strong>Recommendation</strong> — which models fit your hardware best</p>
+<p>The app scans your computer and shows:</p>
+<ul>
+<li><strong>Processor, RAM, GPU</strong> — what you're working with</li>
+<li><strong>Free disk space</strong> — how much room for AI models</li>
+<li><strong>Recommendation</strong> — which models fit your hardware best</li>
+</ul>
 <h3 id="step-3-model-selection">Step 3: Model Selection</h3>
-<p>Choose which AI models to download for offline transcription:
-- A <strong>star</strong> marks the recommended model for your hardware
-- Check the boxes for models you want
-- Total download size and disk space are shown
-- Click <strong>Download Selected Models Now</strong> to start
-- Downloads happen in the background — you'll get a notification when each model is ready</p>
+<p>Choose which AI models to download for offline transcription:</p>
+<ul>
+<li>A <strong>star</strong> marks the recommended model for your hardware</li>
+<li>Check the boxes for models you want</li>
+<li>Total download size and disk space are shown</li>
+<li>Click <strong>Download Selected Models Now</strong> to start</li>
+<li>Downloads happen in the background — you'll get a notification when each model
+  is ready</li>
+</ul>
 <h3 id="step-4-cloud-services-optional">Step 4: Cloud Services (Optional)</h3>
-<p>Enter API keys for any cloud transcription service you use:
-- Keys are stored in your operating system's secure credential vault
-- Each service shows pricing and a direct link to get a key
-- Skip this step if you only want local (offline) transcription</p>
+<p>Enter API keys for any cloud transcription service you use:</p>
+<ul>
+<li>Keys are stored in your operating system's secure credential vault</li>
+<li>Each service shows pricing and a direct link to get a key</li>
+<li>Skip this step if you only want local (offline) transcription</li>
+</ul>
 <h3 id="step-5-preferences">Step 5: Preferences</h3>
-<p>Set your basics:
-- <strong>Language</strong> — your primary transcription language
-- <strong>Export format</strong> — default output format (Text, Markdown, Word, SRT)
-- <strong>Auto-export</strong> — automatically save transcripts when done
-- <strong>Timestamps</strong> — include time markers in transcripts
-- <strong>Minimize to tray</strong> — keep running in the background
-- <strong>Notifications</strong> — get alerts when transcription completes
-- <strong>Update checks</strong> — automatically check for new versions</p>
+<p>Set your basics:</p>
+<ul>
+<li><strong>Language</strong> — your primary transcription language</li>
+<li><strong>Export format</strong> — default output format (Text, Markdown, Word, SRT)</li>
+<li><strong>Auto-export</strong> — automatically save transcripts when done</li>
+<li><strong>Timestamps</strong> — include time markers in transcripts</li>
+<li><strong>Minimize to tray</strong> — keep running in the background</li>
+<li><strong>Notifications</strong> — get alerts when transcription completes</li>
+<li><strong>Update checks</strong> — automatically check for new versions</li>
+</ul>
 <h3 id="step-6-ai-copilot-configuration">Step 6: AI &amp; Copilot Configuration</h3>
-<p>Set up AI-powered features:
-- <strong>AI Provider</strong> — Choose your preferred AI provider for translation and summarization (OpenAI, Anthropic, Azure OpenAI, Google Gemini, or GitHub Copilot)
-- <strong>API Keys</strong> — Enter API keys for your chosen AI providers
-- <strong>GitHub Copilot</strong> — Optionally install and configure GitHub Copilot CLI for interactive transcript chat
-- <strong>Models</strong> — Select default AI models (GPT-4o, Claude, Gemini Flash)</p>
+<p>Set up AI-powered features:</p>
+<ul>
+<li><strong>AI Provider</strong> — Choose your preferred AI provider for translation and
+  summarization (OpenAI, Anthropic, Azure OpenAI, Google Gemini, or GitHub
+  Copilot)</li>
+<li><strong>API Keys</strong> — Enter API keys for your chosen AI providers</li>
+<li><strong>GitHub Copilot</strong> — Optionally install and configure GitHub Copilot CLI for
+  interactive transcript chat</li>
+<li><strong>Models</strong> — Select default AI models (GPT-4o, Claude, Gemini Flash)</li>
+</ul>
 <blockquote>
-<p><strong>Tip</strong>: You can skip this step and configure AI providers later from <strong>Tools, then AI Provider Settings</strong>.</p>
+<p><strong>Tip</strong>: You can skip this step and configure AI providers later from <strong>Tools,
+then AI Provider Settings</strong>.</p>
 </blockquote>
 <h3 id="step-7-summary">Step 7: Summary</h3>
 <p>Review your choices and click <strong>Finish</strong> to start using the app.</p>
-<h3 id="step-8-ready">Step 8: Ready!</h3>
+<h3 id="step-8-ready">Step 8: Ready</h3>
 <blockquote>
-<p><strong>Tip</strong>: You can always re-configure everything from <strong>Tools, then Settings</strong> (Ctrl+,) or <strong>Tools, then Manage Models</strong> (Ctrl+M).</p>
+<p><strong>Tip</strong>: You can always re-configure everything from <strong>Tools, then Settings</strong>
+(Ctrl+,) or <strong>Tools, then Manage Models</strong> (Ctrl+M).</p>
 </blockquote>
 <hr>
 <h2 id="main-window">Main Window</h2>
@@ -413,15 +358,55 @@
 </tbody>
 </table>
 <h3 id="splitter">Splitter</h3>
-<p>A movable divider separates the queue and transcript panels. Drag it to resize, or use <strong>View, then Focus Queue / Focus Transcript</strong> from the menu.</p>
+<p>A movable divider separates the queue and transcript panels. Drag it to resize,
+or use <strong>View, then Focus Queue / Focus Transcript</strong> from the menu.</p>
 <hr>
 <h2 id="adding-files">Adding Files</h2>
 <h3 id="methods">Methods</h3>
 <ul>
 <li><strong>Drag &amp; Drop</strong> — drag audio files onto the window</li>
-<li><strong>File, then Add Files</strong> (Ctrl+O) — browse and select files</li>
-<li><strong>File, then Add Folder</strong> — add all audio files in a folder</li>
+<li><strong>File, then Add Files</strong> (Ctrl+O) — opens the Add File Wizard for per-file
+  configuration</li>
+<li><strong>File, then Add Folder</strong> (Ctrl+Shift+O) — add all audio files in a folder
+  with cost estimation</li>
 <li><strong>Recent Files</strong> — re-open files from <strong>File, then Recent Files</strong></li>
+</ul>
+<h3 id="add-file-wizard">Add File Wizard</h3>
+<p>When you add files, the Add File Wizard lets you configure each job:</p>
+<ol>
+<li><strong>Provider &amp; Model</strong> — Choose the transcription provider and model</li>
+<li><strong>Language</strong> — Select the transcription language or auto-detect</li>
+<li><strong>Custom Name</strong> — Optionally give the job a display name (appears in queue
+   and exports)</li>
+<li><strong>AI Action</strong> — Choose an AI Action to run automatically after transcription
+   (see <a href="#ai-actions">AI Actions</a>)</li>
+<li><strong>Audio Preview (single file)</strong> — Listen with pitch-preserving speed control
+   with configurable jump timing and optionally select a time range to transcribe</li>
+</ol>
+<p>For multiple files, the custom name is automatically numbered (e.g., "Interview
+(1)", "Interview (2)").</p>
+<p>You can also open the audio preview tool from <strong>Tools, then Audio Preview</strong>
+(Ctrl+Shift+P) to listen before adding files.</p>
+<h3 id="adding-folders">Adding Folders</h3>
+<p>When adding a folder, BITS Whisperer:</p>
+<ol>
+<li>Recursively scans for supported audio files</li>
+<li>Opens the Add File Wizard — configure provider, model, language, custom name,
+   and <strong>AI Action</strong> for the entire batch</li>
+<li>Estimates total cost for cloud providers with a confirmation dialog</li>
+<li>Groups files under a collapsible folder node in the queue</li>
+</ol>
+<p>The AI Action you select in the wizard applies to every file in the folder. You
+can also change AI actions per-file or per-folder after import via right-click &gt;
+<strong>AI Action</strong>.</p>
+<h3 id="custom-names">Custom Names</h3>
+<p>Give files and folders meaningful names:</p>
+<ul>
+<li><strong>During import</strong> — Enter a custom name in the Add File Wizard</li>
+<li><strong>After import</strong> — Press <strong>F2</strong> or right-click &gt; <strong>Rename</strong> to rename any file
+  or folder</li>
+<li>Custom names appear in the queue, transcript panel, and exports</li>
+<li>Clear a custom name to revert to the original filename</li>
 </ul>
 <h3 id="supported-formats">Supported Formats</h3>
 <p>MP3, WAV, OGG, Opus, FLAC, M4A, AAC, WebM, WMA, AIFF, AMR, MP4</p>
@@ -440,14 +425,18 @@
 <li>Watch progress in the queue panel and status bar.</li>
 </ol>
 <h3 id="providers">Providers</h3>
-<p>By default, BITS Whisperer uses the <strong>Local Whisper</strong> provider (free, offline). Change your default provider in <strong>Tools, then Settings, then General</strong>.</p>
+<p>By default, BITS Whisperer uses the <strong>Local Whisper</strong> provider (free, offline).
+Change your default provider in <strong>Tools, then Settings, then General</strong>.</p>
 <h3 id="batch-processing">Batch Processing</h3>
-<p>Add multiple files and they'll be processed sequentially (or in parallel if configured). The status bar shows overall progress.</p>
+<p>Add multiple files and they'll be processed sequentially (or in parallel if
+configured). The status bar shows overall progress.</p>
 <h3 id="background-processing">Background Processing</h3>
-<p>If you minimize to the system tray, transcription continues in the background. You'll get a desktop notification when each file finishes.</p>
+<p>If you minimize to the system tray, transcription continues in the background.
+You'll get a desktop notification when each file finishes.</p>
 <hr>
 <h2 id="viewing-editing-transcripts">Viewing &amp; Editing Transcripts</h2>
-<p>After transcription completes, click a file in the queue to see its transcript in the right panel.</p>
+<p>After transcription completes, click a file in the queue to see its transcript
+in the right panel.</p>
 <ul>
 <li><strong>Edit</strong> — make corrections directly in the transcript viewer</li>
 <li><strong>Find</strong> — use Ctrl+F to search within the transcript; F3 for Find Next</li>
@@ -455,7 +444,8 @@
 <li><strong>Speakers</strong> — speaker labels appear if the provider supports diarization</li>
 </ul>
 <h3 id="speaker-management">Speaker Management</h3>
-<p>When speakers are detected, a <strong>Speakers</strong> bar appears above the transcript showing all identified speakers.</p>
+<p>When speakers are detected, a <strong>Speakers</strong> bar appears above the transcript
+showing all identified speakers.</p>
 <h4 id="renaming-speakers">Renaming Speakers</h4>
 <ol>
 <li>Click <strong>Manage Speakers...</strong> to open the rename dialog.</li>
@@ -475,11 +465,15 @@
 </code></pre></div>
 
 <h4 id="cloud-free-local-diarization">Cloud-Free Local Diarization</h4>
-<p>If your transcription provider doesn't support speaker detection, enable <strong>local diarization</strong> in Settings:
-1. Install pyannote.audio: <code>pip install pyannote.audio</code>
-2. Set up a HuggingFace auth token (some models are gated)
-3. Enable: Settings &gt; Diarization &gt; Use local diarization
-4. Local diarization runs automatically as post-processing on any provider's output</p>
+<p>If your transcription provider doesn't support speaker detection, enable <strong>local
+diarization</strong> in Settings:</p>
+<ol>
+<li>Install pyannote.audio: <code>pip install pyannote.audio</code></li>
+<li>Set up a HuggingFace auth token (some models are gated)</li>
+<li>Enable: Settings &gt; Diarization &gt; Use local diarization</li>
+<li>Local diarization runs automatically as post-processing on any provider's
+   output</li>
+</ol>
 <hr>
 <h2 id="exporting">Exporting</h2>
 <h3 id="manual-export">Manual Export</h3>
@@ -489,7 +483,8 @@
 <li>Choose format and location.</li>
 </ol>
 <h3 id="auto-export">Auto-Export</h3>
-<p>Enable in <strong>Settings, then General, then Auto-export</strong>. Transcripts are saved automatically when done, in your chosen format and location.</p>
+<p>Enable in <strong>Settings, then General, then Auto-export</strong>. Transcripts are saved
+automatically when done, in your chosen format and location.</p>
 <h3 id="export-formats">Export Formats</h3>
 <table>
 <thead>
@@ -555,22 +550,26 @@
 <h3 id="using-the-dialog">Using the Dialog</h3>
 <ol>
 <li><strong>Select your microphone</strong> — Choose from the available input devices dropdown</li>
-<li><strong>Select a Whisper model</strong> — Smaller models (Tiny, Base) are faster; larger models are more accurate</li>
-<li><strong>Press Start</strong> — Speech will be transcribed in real-time and displayed in the text area</li>
+<li><strong>Select a Whisper model</strong> — Smaller models (Tiny, Base) are faster; larger
+   models are more accurate</li>
+<li><strong>Press Start</strong> — Speech will be transcribed in real-time and displayed in
+   the text area</li>
 <li><strong>Pause / Resume</strong> — Temporarily halt transcription without losing context</li>
 <li><strong>Copy All</strong> — Copy the full transcript to the clipboard</li>
 <li><strong>Clear</strong> — Clear the transcript display and start fresh</li>
 <li><strong>Stop</strong> — End the transcription session</li>
 </ol>
-<h3 id="how-it-works">How It Works</h3>
+<h3 id="ai-actions-how-it-works">AI Actions: How It Works</h3>
 <ul>
 <li>Audio is captured at 16 kHz mono using sounddevice</li>
 <li>Energy-based voice activity detection (VAD) identifies speech segments</li>
-<li>When silence exceeds the configured threshold, the buffered audio is sent to faster-whisper for transcription</li>
+<li>When silence exceeds the configured threshold, the buffered audio is sent to
+  faster-whisper for transcription</li>
 <li>Results are displayed in the text area via thread-safe UI callbacks</li>
 </ul>
 <h3 id="settings">Settings</h3>
-<p>Configure live transcription in <strong>Settings, then Live Transcription</strong> or from the dialog:</p>
+<p>Configure live transcription in <strong>Settings, then Live Transcription</strong> or from
+the dialog:</p>
 <table>
 <thead>
 <tr>
@@ -619,31 +618,39 @@
 </table>
 <hr>
 <h2 id="ai-translation-summarization">AI Translation &amp; Summarization</h2>
-<p>Use AI to translate and summarize your transcripts using OpenAI, Anthropic Claude, Azure OpenAI, Google Gemini, or GitHub Copilot.</p>
+<p>Use AI to translate and summarize your transcripts using OpenAI, Anthropic
+Claude, Azure OpenAI, Google Gemini, GitHub Copilot, or Ollama (local).</p>
 <h3 id="setup">Setup</h3>
 <ol>
 <li>Go to <strong>Tools, then AI Provider Settings</strong></li>
 <li>In the <strong>Providers</strong> tab, enter your API key for at least one provider:</li>
-<li><strong>OpenAI</strong> — Get a key from https://platform.openai.com/api-keys</li>
-<li><strong>Anthropic</strong> — Get a key from https://console.anthropic.com/</li>
-<li><strong>Azure OpenAI</strong> — Enter your endpoint URL, deployment name, and API key from the Azure portal</li>
-<li><strong>Google Gemini</strong> — Get a key from https://aistudio.google.com/apikey</li>
-<li><strong>GitHub Copilot</strong> — See <a href="#github-copilot-integration">GitHub Copilot Integration</a> for setup</li>
+<li><strong>OpenAI</strong> — Get a key from <a href="https://platform.openai.com/api-keys">https://platform.openai.com/api-keys</a></li>
+<li><strong>Anthropic</strong> — Get a key from <a href="https://console.anthropic.com/">https://console.anthropic.com/</a></li>
+<li><strong>Azure OpenAI</strong> — Enter your endpoint URL, deployment name, and API key
+     from the Azure portal</li>
+<li><strong>Google Gemini</strong> — Get a key from <a href="https://aistudio.google.com/apikey">https://aistudio.google.com/apikey</a></li>
+<li><strong>GitHub Copilot</strong> — See
+     <a href="#github-copilot-integration">GitHub Copilot Integration</a> for setup</li>
+<li><strong>Ollama</strong> — No API key needed! Install Ollama from <a href="https://ollama.com">https://ollama.com</a>,
+     pull a model (e.g., <code>ollama pull llama3.2</code>), and it works automatically</li>
 <li>Click <strong>Validate</strong> to test your key</li>
 <li>Choose your preferred default provider</li>
-<li>Set preferences in the <strong>Preferences</strong> tab (language, summarization style, temperature, max tokens)</li>
+<li>Set preferences in the <strong>Preferences</strong> tab (language, summarization style,
+   temperature, max tokens)</li>
 </ol>
 <h3 id="translating-a-transcript">Translating a Transcript</h3>
 <ol>
 <li>Open or transcribe an audio file</li>
-<li>Press <strong>Ctrl+T</strong> or go to <strong>AI, then Translate</strong> (or click the <strong>Translate</strong> button in the transcript toolbar)</li>
+<li>Press <strong>Ctrl+T</strong> or go to <strong>AI, then Translate</strong> (or click the <strong>Translate</strong>
+   button in the transcript toolbar)</li>
 <li>The transcript will be translated to your configured target language</li>
 <li>A dialog shows the result with a <strong>Copy</strong> button</li>
 </ol>
 <h3 id="summarizing-a-transcript">Summarizing a Transcript</h3>
 <ol>
 <li>Open or transcribe an audio file</li>
-<li>Press <strong>Ctrl+Shift+S</strong> or go to <strong>AI, then Summarize</strong> (or click the <strong>Summarize</strong> button in the transcript toolbar)</li>
+<li>Press <strong>Ctrl+Shift+S</strong> or go to <strong>AI, then Summarize</strong> (or click the
+   <strong>Summarize</strong> button in the transcript toolbar)</li>
 <li>Choose a summarization style in AI Provider Settings:</li>
 <li><strong>Concise</strong> — Brief overview (default)</li>
 <li><strong>Detailed</strong> — Comprehensive summary</li>
@@ -685,10 +692,17 @@
 <td>7 models (GPT-4o Mini, GPT-4o, GPT-4 Turbo, Claude Sonnet 4, Claude Haiku 4, o3-mini, Gemini 2.0 Flash)</td>
 <td>Subscription-based, interactive chat</td>
 </tr>
+<tr>
+<td>Ollama</td>
+<td>Any model from Ollama library or HuggingFace GGUF (Llama, Mistral, Gemma, Phi, etc.)</td>
+<td>Free, private, runs entirely on your computer</td>
+</tr>
 </tbody>
 </table>
 <h3 id="ai-model-catalog">AI Model Catalog</h3>
-<p>BITS Whisperer includes a comprehensive AI model catalog with real-time pricing for informed model selection. Access it via <strong>Tools, then AI Provider Settings</strong>.</p>
+<p>BITS Whisperer includes a comprehensive AI model catalog with real-time pricing
+for informed model selection. Access it via <strong>Tools, then AI Provider
+Settings</strong>.</p>
 <h4 id="openai-models-4">OpenAI Models (4)</h4>
 <table>
 <thead>
@@ -875,7 +889,9 @@
 </tbody>
 </table>
 <h3 id="copilot-subscription-tiers">Copilot Subscription Tiers</h3>
-<p>Copilot model availability depends on your GitHub Copilot subscription tier. Set your tier in <strong>Tools, then Settings</strong> to see only the models available for your plan.</p>
+<p>Copilot model availability depends on your GitHub Copilot subscription tier. Set
+your tier in <strong>Tools, then Settings</strong> to see only the models available for your
+plan.</p>
 <table>
 <thead>
 <tr>
@@ -912,13 +928,17 @@
 <ol>
 <li>Go to <strong>Tools, then AI Provider Settings</strong></li>
 <li>In the <strong>Preferences</strong> tab, find the <strong>Custom Vocabulary</strong> section</li>
-<li>Add technical terms, acronyms, proper nouns, and specialized jargon — one per line</li>
-<li>The vocabulary is automatically injected into AI prompts when translating or summarizing</li>
+<li>Add technical terms, acronyms, proper nouns, and specialized jargon — one per
+   line</li>
+<li>The vocabulary is automatically injected into AI prompts when translating or
+   summarizing</li>
 </ol>
-<p><strong>Examples:</strong>
-- Medical: "HIPAA", "myocardial infarction", "CBC panel"
-- Legal: "habeas corpus", "voir dire", "amicus curiae"
-- Technical: "Kubernetes", "WebSocket", "OAuth 2.0"</p>
+<p><strong>Examples:</strong></p>
+<ul>
+<li>Medical: "HIPAA", "myocardial infarction", "CBC panel"</li>
+<li>Legal: "habeas corpus", "voir dire", "amicus curiae"</li>
+<li>Technical: "Kubernetes", "WebSocket", "OAuth 2.0"</li>
+</ul>
 <h3 id="prompt-templates">Prompt Templates</h3>
 <p>BITS Whisperer includes 10 built-in prompt templates for common AI tasks:</p>
 <h4 id="translation-templates-4">Translation Templates (4)</h4>
@@ -994,16 +1014,19 @@
 </tr>
 </tbody>
 </table>
-<p>Select a template before translating or summarizing in <strong>Tools, then AI Provider Settings</strong>. You can also create custom templates.</p>
+<p>Select a template before translating or summarizing in <strong>Tools, then AI Provider
+Settings</strong>. You can also create custom templates.</p>
 <h3 id="multi-language-simultaneous-translation">Multi-Language Simultaneous Translation</h3>
 <p>Translate a transcript into multiple languages at once:</p>
 <ol>
 <li>Go to <strong>Tools, then AI Provider Settings</strong></li>
 <li>In the <strong>Preferences</strong> tab, configure multiple target languages</li>
-<li>Press <strong>Ctrl+T</strong> to translate — each target language is translated independently</li>
+<li>Press <strong>Ctrl+T</strong> to translate — each target language is translated
+   independently</li>
 <li>Results are returned as separate translations per language</li>
 </ol>
-<p>This is ideal for creating multilingual documentation, subtitles, or distributing transcripts to international teams.</p>
+<p>This is ideal for creating multilingual documentation, subtitles, or
+distributing transcripts to international teams.</p>
 <h3 id="real-time-streaming-transcription">Real-Time Streaming Transcription</h3>
 <p>Some cloud providers support real-time streaming for faster results:</p>
 <table>
@@ -1033,8 +1056,127 @@
 </tbody>
 </table>
 <hr>
+<h2 id="ai-actions">AI Actions</h2>
+<p>AI Actions automatically process your transcript through AI after transcription
+completes — no manual step required. Choose an AI Action when adding files, and
+the result appears alongside your transcript.</p>
+<h3 id="how-it-works">How It Works</h3>
+<ol>
+<li><strong>Add files</strong> via File &gt; Add Files (Ctrl+O) or File &gt; Add Folder
+   (Ctrl+Shift+O)</li>
+<li><strong>Select an AI Action</strong> from the dropdown in the Add File Wizard</li>
+<li><strong>Start transcription</strong> — the file is transcribed normally</li>
+<li><strong>AI processes automatically</strong> — after transcription, AI analyzes the
+   transcript using your chosen template</li>
+<li><strong>View results</strong> — the AI Action result appears below the transcript in the
+   transcript panel</li>
+</ol>
+<h3 id="built-in-presets">Built-in Presets</h3>
+<p>BITS Whisperer includes 6 ready-to-use AI Action presets:</p>
+<table>
+<thead>
+<tr>
+<th>Preset</th>
+<th>What It Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Meeting Minutes</strong></td>
+<td>Generates formal meeting minutes with attendees, decisions, and action items</td>
+</tr>
+<tr>
+<td><strong>Action Items</strong></td>
+<td>Extracts to-do items, deadlines, and assigned responsibilities</td>
+</tr>
+<tr>
+<td><strong>Executive Summary</strong></td>
+<td>Creates a brief executive overview highlighting key points and decisions</td>
+</tr>
+<tr>
+<td><strong>Interview Notes</strong></td>
+<td>Identifies key discussion points, recurring themes, and notable quotes</td>
+</tr>
+<tr>
+<td><strong>Lecture Notes</strong></td>
+<td>Structures educational content into organized notes for study and review</td>
+</tr>
+<tr>
+<td><strong>Q&amp;A Extraction</strong></td>
+<td>Identifies and pairs all questions with their answers</td>
+</tr>
+</tbody>
+</table>
+<h3 id="creating-custom-ai-actions">Creating Custom AI Actions</h3>
+<p>Use the AI Action Builder to create your own templates:</p>
+<ol>
+<li>Go to <strong>AI, then AI Action Builder</strong></li>
+<li>Configure across 5 tabs:</li>
+<li><strong>Identity</strong> — Name your action and add a description</li>
+<li><strong>Instructions</strong> — Write custom processing instructions or start from a
+     preset</li>
+<li><strong>Tools</strong> — Enable transcript-aware tools</li>
+<li><strong>Welcome</strong> — Set a greeting message</li>
+<li><strong>Attachments</strong> — Attach reference documents to provide extra context for
+     AI processing</li>
+<li>Click <strong>Save</strong> to store the template</li>
+<li>Your custom action appears in the Add File Wizard dropdown (marked with ★)</li>
+</ol>
+<h3 id="attaching-reference-documents">Attaching Reference Documents</h3>
+<p>The <strong>Attachments</strong> tab lets you attach external documents — glossaries, style
+guides, meeting agendas, or any reference material — that the AI will consider
+alongside your transcript.</p>
+<ol>
+<li>In the AI Action Builder, switch to the <strong>Attachments</strong> tab</li>
+<li>Click <strong>Add File...</strong> to browse for documents (multi-select supported)</li>
+<li>Supported formats: Word (.docx), PDF (.pdf), Excel (.xlsx/.xls), RTF (.rtf),
+   and plain text (.txt, .md, .csv, .log, .json, .xml, .yaml)</li>
+<li>When you add a file, you'll be prompted for optional per-attachment
+   instructions — for example:</li>
+<li>"Use this as a glossary of technical terms"</li>
+<li>"Cross-reference dates and names with this agenda"</li>
+<li>"Follow the formatting rules in this style guide"</li>
+<li>Use <strong>Edit Instructions...</strong> to update instructions for any attachment later</li>
+<li>Use <strong>Remove</strong> to delete an attachment from the template</li>
+<li>File size limit: 10 MB per attachment</li>
+</ol>
+<p>Attachments are saved with the template and automatically read when the AI
+action runs. The extracted text is injected between the system instructions and
+the transcript in the AI prompt, with per-file headers and instructions
+preserved.</p>
+<blockquote>
+<p><strong>Tip</strong>: Attachments work with any AI provider. For best results, keep
+attachments concise — the AI's context window must fit the instructions,
+attachments, and transcript together. BITS Whisperer automatically adjusts the
+transcript budget to accommodate attachment content.</p>
+</blockquote>
+<h3 id="viewing-ai-action-results">Viewing AI Action Results</h3>
+<p>After transcription and AI processing complete:</p>
+<ul>
+<li><strong>Transcript Panel</strong> — An "AI Action Result" section appears below the
+  transcript text with the full AI output and a <strong>Copy</strong> button</li>
+<li><strong>Queue Panel</strong> — Status indicators show progress:</li>
+<li>⭐ Action pending (transcription not yet started)</li>
+<li>⏳ AI Action running</li>
+<li>✓ AI Action completed</li>
+<li>✗ AI Action failed</li>
+</ul>
+<h3 id="ai-action-providers">AI Action Providers</h3>
+<p>AI Actions work with <strong>any configured AI provider</strong> — OpenAI, Anthropic, Azure
+OpenAI, Google Gemini, GitHub Copilot, or Ollama. The action uses whichever
+provider is set as your default in AI Provider Settings.</p>
+<blockquote>
+<p><strong>Tip</strong>: For best results with Meeting Minutes and Action Items, use a model
+with a large context window (GPT-4o, Claude, or Gemini Flash) to handle long
+transcripts. BITS Whisperer automatically fits transcripts to each model's
+context window — larger windows mean less content is omitted from very long
+recordings.</p>
+</blockquote>
+<hr>
 <h2 id="github-copilot-integration">GitHub Copilot Integration</h2>
-<p>BITS Whisperer integrates the GitHub Copilot SDK for interactive, AI-powered transcript analysis. Chat with your transcripts, ask questions, get insights, and configure custom AI agents — all without leaving the app.</p>
+<p>BITS Whisperer integrates the GitHub Copilot SDK for interactive, AI-powered
+transcript analysis. Chat with your transcripts, ask questions, get insights,
+and configure custom AI agents — all without leaving the app.</p>
 <h3 id="copilot-setup-wizard">Copilot Setup Wizard</h3>
 <p>Before using Copilot features, complete the guided setup:</p>
 <ol>
@@ -1068,7 +1210,8 @@
 </tbody>
 </table>
 <blockquote>
-<p><strong>Tip</strong>: The Windows installer can optionally install the GitHub Copilot CLI via WinGet during application installation.</p>
+<p><strong>Tip</strong>: The Windows installer can optionally install the GitHub Copilot CLI
+via WinGet during application installation.</p>
 </blockquote>
 <h3 id="interactive-ai-chat-panel">Interactive AI Chat Panel</h3>
 <p>The chat panel lets you have a conversation with AI about your transcript:</p>
@@ -1080,10 +1223,12 @@
 </ul>
 <h4 id="using-the-chat-panel">Using the Chat Panel</h4>
 <ol>
-<li><strong>Type a question</strong> in the input field at the bottom (e.g., "What are the main topics discussed?")</li>
+<li><strong>Type a question</strong> in the input field at the bottom (e.g., "What are the
+   main topics discussed?")</li>
 <li><strong>Press Enter</strong> or click <strong>Send</strong> to submit your question</li>
 <li><strong>Watch the response stream</strong> in real time — Copilot replies token by token</li>
-<li><strong>Continue the conversation</strong> — ask follow-up questions; context is maintained</li>
+<li><strong>Continue the conversation</strong> — ask follow-up questions; context is
+   maintained</li>
 <li><strong>Start fresh</strong> — click <strong>New Conversation</strong> to clear history and begin again</li>
 </ol>
 <h4 id="quick-actions">Quick Actions</h4>
@@ -1119,12 +1264,253 @@
 </tbody>
 </table>
 <h4 id="transcript-context">Transcript Context</h4>
-<p>The chat panel automatically provides your current transcript as context to the AI agent. When you switch transcripts, the agent is updated with the new content. No need to copy and paste — the agent always knows what transcript you’re working with.</p>
-<h3 id="agent-builder">Agent Builder</h3>
-<p>Customize the AI agent’s behavior to match your workflow:</p>
+<p>The chat panel automatically provides your current transcript as context to the
+AI agent. When you switch transcripts, the agent is updated with the new
+content. No need to copy and paste — the agent always knows what transcript
+you’re working with.</p>
+<p>BITS Whisperer automatically manages context windows for every AI model.
+Transcripts are intelligently fitted to each model’s token limit using
+configurable strategies:</p>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Smart</strong> (default)</td>
+<td>Automatically chooses truncate or head+tail based on how much the transcript exceeds the budget</td>
+</tr>
+<tr>
+<td><strong>Truncate</strong></td>
+<td>Keeps the beginning of the transcript</td>
+</tr>
+<tr>
+<td><strong>Tail</strong></td>
+<td>Keeps the end of the transcript (useful for recent context)</td>
+</tr>
+<tr>
+<td><strong>Head + Tail</strong></td>
+<td>Keeps the beginning and end, omitting the middle with a marker</td>
+</tr>
+</tbody>
+</table>
+<p>The status bar shows your current context budget (e.g., “Context: 45K/128K
+tokens (35%)”). Use the <code>/context</code> slash command to see a detailed budget
+breakdown including model, strategy, transcript tokens, and headroom.</p>
+<p>Context window settings can be adjusted in <strong>AI Provider Settings</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Strategy</strong></td>
+<td>Smart</td>
+<td>How transcripts are fitted to the context window</td>
+</tr>
+<tr>
+<td><strong>Transcript budget</strong></td>
+<td>70%</td>
+<td>Percentage of the context window allocated to transcript text</td>
+</tr>
+<tr>
+<td><strong>Response reserve</strong></td>
+<td>4,096 tokens</td>
+<td>Tokens reserved for the AI’s response</td>
+</tr>
+<tr>
+<td><strong>Max conversation turns</strong></td>
+<td>20</td>
+<td>Maximum chat turns kept in history</td>
+</tr>
+</tbody>
+</table>
+<h4 id="slash-commands">Slash Commands</h4>
+<p>Type <code>/</code> in the chat input to access powerful slash commands — shortcuts for AI
+analysis, app actions, and template execution. An autocomplete popup appears as
+you type, with keyboard navigation (Up/Down to select, Tab/Enter to accept,
+Escape to dismiss).</p>
+<p><strong>AI Commands</strong> (require a loaded transcript unless noted):</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Aliases</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/summarize [style]</code></td>
+<td><code>/sum</code>, <code>/summary</code></td>
+<td>Summarize the transcript (styles: concise, detailed, bullets)</td>
+</tr>
+<tr>
+<td><code>/translate [language]</code></td>
+<td><code>/trans</code>, <code>/tr</code></td>
+<td>Translate the transcript to a target language</td>
+</tr>
+<tr>
+<td><code>/key-points</code></td>
+<td><code>/kp</code>, <code>/keypoints</code></td>
+<td>Extract key points and takeaways</td>
+</tr>
+<tr>
+<td><code>/action-items</code></td>
+<td><code>/ai</code>, <code>/actions</code>, <code>/todos</code></td>
+<td>Extract action items, tasks, and follow-ups</td>
+</tr>
+<tr>
+<td><code>/topics</code></td>
+<td></td>
+<td>Identify the main topics discussed</td>
+</tr>
+<tr>
+<td><code>/speakers</code></td>
+<td></td>
+<td>Identify and describe each speaker</td>
+</tr>
+<tr>
+<td><code>/search &lt;query&gt;</code></td>
+<td></td>
+<td>Search the transcript for specific content</td>
+</tr>
+<tr>
+<td><code>/ask &lt;question&gt;</code></td>
+<td></td>
+<td>Ask a freeform question (no transcript required)</td>
+</tr>
+<tr>
+<td><code>/run [template]</code></td>
+<td></td>
+<td>Run an AI action template (lists available if no arg)</td>
+</tr>
+<tr>
+<td><code>/copy</code></td>
+<td></td>
+<td>Copy the last AI response to the clipboard</td>
+</tr>
+</tbody>
+</table>
+<p><strong>App Commands:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Aliases</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/help</code></td>
+<td><code>/?</code>, <code>/commands</code></td>
+<td>Show all available slash commands</td>
+</tr>
+<tr>
+<td><code>/clear</code></td>
+<td></td>
+<td>Clear the conversation history</td>
+</tr>
+<tr>
+<td><code>/status</code></td>
+<td></td>
+<td>Show queue status and current provider info</td>
+</tr>
+<tr>
+<td><code>/provider [id]</code></td>
+<td></td>
+<td>Switch AI provider or show current one</td>
+</tr>
+<tr>
+<td><code>/export [format]</code></td>
+<td></td>
+<td>Export transcript (txt, md, html, docx, srt, vtt, json)</td>
+</tr>
+<tr>
+<td><code>/open</code></td>
+<td><code>/add</code></td>
+<td>Open file picker to add audio files</td>
+</tr>
+<tr>
+<td><code>/open-folder</code></td>
+<td><code>/folder</code></td>
+<td>Open folder picker to add a folder</td>
+</tr>
+<tr>
+<td><code>/start</code></td>
+<td><code>/go</code>, <code>/transcribe</code></td>
+<td>Start transcription of pending jobs</td>
+</tr>
+<tr>
+<td><code>/pause</code></td>
+<td><code>/resume</code></td>
+<td>Pause or resume transcription</td>
+</tr>
+<tr>
+<td><code>/cancel</code></td>
+<td><code>/stop</code></td>
+<td>Cancel the current transcription job</td>
+</tr>
+<tr>
+<td><code>/clear-queue</code></td>
+<td></td>
+<td>Remove all jobs from the queue</td>
+</tr>
+<tr>
+<td><code>/retry</code></td>
+<td></td>
+<td>Retry all failed jobs</td>
+</tr>
+<tr>
+<td><code>/settings</code></td>
+<td><code>/config</code>, <code>/prefs</code></td>
+<td>Open AI provider settings</td>
+</tr>
+<tr>
+<td><code>/live</code></td>
+<td><code>/mic</code></td>
+<td>Open live microphone transcription</td>
+</tr>
+<tr>
+<td><code>/models</code></td>
+<td></td>
+<td>Open the Whisper model manager</td>
+</tr>
+<tr>
+<td><code>/agent</code></td>
+<td><code>/builder</code></td>
+<td>Open the AI Action Builder</td>
+</tr>
+<tr>
+<td><code>/history</code></td>
+<td></td>
+<td>Show conversation statistics</td>
+</tr>
+<tr>
+<td><code>/context</code></td>
+<td><code>/ctx</code>, <code>/budget</code></td>
+<td>Show context window budget and transcript fit info</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Tip</strong>: Type <code>/help</code> at any time to see the full command list with
+descriptions.</p>
+</blockquote>
+<h3 id="ai-action-builder">AI Action Builder</h3>
+<p>Customize AI behavior and create reusable post-transcription processing
+templates:</p>
 <ol>
-<li>Go to <strong>AI, then Agent Builder</strong></li>
-<li>Configure the agent across 4 tabs:</li>
+<li>Go to <strong>AI, then AI Action Builder</strong></li>
+<li>Configure across 4 tabs:</li>
 </ol>
 <table>
 <thead>
@@ -1136,39 +1522,30 @@
 <tbody>
 <tr>
 <td><strong>Identity</strong></td>
-<td>Agent name (e.g., "Meeting Analyst") and a brief persona description</td>
+<td>Action name (e.g., "Meeting Analyst") and a brief description</td>
 </tr>
 <tr>
 <td><strong>Instructions</strong></td>
-<td>System prompt that guides the agent’s behavior. Choose from built-in presets or write your own:</td>
-</tr>
-<tr>
-<td></td>
-<td>• <strong>Transcript Analyst</strong> — General-purpose transcript analysis</td>
-</tr>
-<tr>
-<td></td>
-<td>• <strong>Meeting Notes</strong> — Specialized for meeting recordings</td>
-</tr>
-<tr>
-<td></td>
-<td>• <strong>Research Assistant</strong> — Focused on research interviews and data</td>
+<td>System prompt with 8 built-in presets (Meeting Minutes, Action Items, Executive Summary, Interview Notes, Lecture Notes, Q&amp;A Extraction, General Assistant, Custom) or write your own</td>
 </tr>
 <tr>
 <td><strong>Tools</strong></td>
-<td>Enable or disable transcript-aware tools. When enabled, the agent can directly access and analyze transcript text, segments, and speaker information.</td>
+<td>Enable or disable transcript-aware tools for direct transcript access</td>
 </tr>
 <tr>
 <td><strong>Welcome</strong></td>
-<td>Set the greeting message that appears when a user first opens the chat panel.</td>
+<td>Set the greeting message for the chat panel</td>
 </tr>
 </tbody>
 </table>
 <ol>
-<li>Click <strong>Save</strong> to apply your configuration. The agent will use these settings for all future conversations.</li>
+<li>Click <strong>Save</strong> to apply your configuration. Saved templates appear in the AI
+   Action dropdown when adding files (marked with ★) and persist between
+   sessions.</li>
 </ol>
 <blockquote>
-<p><strong>Tip</strong>: Agent configurations are saved in your app settings and persist between sessions.</p>
+<p><strong>Tip</strong>: Templates are saved as JSON files in your app data folder and can be
+shared with colleagues.</p>
 </blockquote>
 <h3 id="copilot-settings">Copilot Settings</h3>
 <p>Fine-tune Copilot behavior in <strong>Tools, then Settings</strong>:</p>
@@ -1275,7 +1652,7 @@
 </tbody>
 </table>
 <hr>
-<h2 id="providers_1">Providers</h2>
+<h2 id="transcription-providers">Transcription Providers</h2>
 <p>BITS Whisperer supports <strong>17 transcription engines</strong> across three categories:</p>
 <h3 id="local-free-offline">Local (Free, Offline)</h3>
 <table>
@@ -1283,34 +1660,34 @@
 <tr>
 <th>Provider</th>
 <th>Description</th>
-<th style="text-align: center;">Key Required</th>
+<th class="text-center">Key Required</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><strong>Local Whisper</strong></td>
 <td>On-device AI (faster-whisper). Free, private, no internet needed.</td>
-<td style="text-align: center;">No</td>
+<td class="text-center">No</td>
 </tr>
 <tr>
 <td><strong>Windows Speech</strong></td>
 <td>Built-in Windows SAPI5/WinRT recognition.</td>
-<td style="text-align: center;">No</td>
+<td class="text-center">No</td>
 </tr>
 <tr>
 <td><strong>Azure Embedded</strong></td>
 <td>Microsoft offline speech engine.</td>
-<td style="text-align: center;">No</td>
+<td class="text-center">No</td>
 </tr>
 <tr>
 <td><strong>Vosk</strong></td>
 <td>Lightweight offline ASR (Kaldi). 20+ languages, 40-50 MB models.</td>
-<td style="text-align: center;">No</td>
+<td class="text-center">No</td>
 </tr>
 <tr>
 <td><strong>Parakeet</strong></td>
 <td>NVIDIA NeMo high-accuracy English ASR. 600M–1.1B param models.</td>
-<td style="text-align: center;">No</td>
+<td class="text-center">No</td>
 </tr>
 </tbody>
 </table>
@@ -1322,7 +1699,7 @@
 <th>Speed</th>
 <th>Price/min</th>
 <th>Free Tier</th>
-<th style="text-align: center;">Key Required</th>
+<th class="text-center">Key Required</th>
 </tr>
 </thead>
 <tbody>
@@ -1331,77 +1708,77 @@
 <td>Fast</td>
 <td>$0.006</td>
 <td>—</td>
-<td style="text-align: center;">Yes</td>
+<td class="text-center">Yes</td>
 </tr>
 <tr>
 <td><strong>Google Speech</strong></td>
 <td>Fast</td>
 <td>$0.016</td>
 <td>60 min/mo</td>
-<td style="text-align: center;">Yes</td>
+<td class="text-center">Yes</td>
 </tr>
 <tr>
 <td><strong>Google Gemini</strong></td>
 <td>Fast</td>
 <td>$0.0002</td>
 <td>Generous</td>
-<td style="text-align: center;">Yes</td>
+<td class="text-center">Yes</td>
 </tr>
 <tr>
 <td><strong>Azure Speech</strong></td>
 <td>Fast</td>
 <td>$0.017</td>
 <td>5 hrs/mo</td>
-<td style="text-align: center;">Yes</td>
+<td class="text-center">Yes</td>
 </tr>
 <tr>
 <td><strong>Deepgram Nova-2</strong></td>
 <td>Very fast</td>
 <td>$0.013</td>
 <td>$200 credit</td>
-<td style="text-align: center;">Yes</td>
+<td class="text-center">Yes</td>
 </tr>
 <tr>
 <td><strong>AssemblyAI</strong></td>
 <td>Fast</td>
 <td>$0.011</td>
 <td>—</td>
-<td style="text-align: center;">Yes</td>
+<td class="text-center">Yes</td>
 </tr>
 <tr>
 <td><strong>AWS Transcribe</strong></td>
 <td>Fast</td>
 <td>$0.024</td>
 <td>60 min/mo</td>
-<td style="text-align: center;">Yes</td>
+<td class="text-center">Yes</td>
 </tr>
 <tr>
 <td><strong>Groq Whisper</strong></td>
 <td>188x real-time</td>
 <td>$0.003</td>
 <td>—</td>
-<td style="text-align: center;">Yes</td>
+<td class="text-center">Yes</td>
 </tr>
 <tr>
 <td><strong>Rev.ai</strong></td>
 <td>Fast</td>
 <td>$0.020</td>
 <td>—</td>
-<td style="text-align: center;">Yes</td>
+<td class="text-center">Yes</td>
 </tr>
 <tr>
 <td><strong>Speechmatics</strong></td>
 <td>Fast</td>
 <td>$0.016</td>
 <td>—</td>
-<td style="text-align: center;">Yes</td>
+<td class="text-center">Yes</td>
 </tr>
 <tr>
 <td><strong>ElevenLabs Scribe</strong></td>
 <td>Fast</td>
 <td>$0.005</td>
 <td>—</td>
-<td style="text-align: center;">Yes</td>
+<td class="text-center">Yes</td>
 </tr>
 </tbody>
 </table>
@@ -1412,7 +1789,7 @@
 <th>Provider</th>
 <th>Description</th>
 <th>Free Tier</th>
-<th style="text-align: center;">Key Required</th>
+<th class="text-center">Key Required</th>
 </tr>
 </thead>
 <tbody>
@@ -1420,7 +1797,7 @@
 <td><strong>Auphonic</strong></td>
 <td>Audio post-production (noise reduction, leveling, loudness) + Whisper transcription</td>
 <td>2 hrs/mo</td>
-<td style="text-align: center;">Yes</td>
+<td class="text-center">Yes</td>
 </tr>
 </tbody>
 </table>
@@ -1435,24 +1812,32 @@
 <li>Click <strong>Validate &amp; Activate</strong> — the app tests your key with a real API call.</li>
 <li>On success, the provider is activated and ready for transcription.</li>
 </ol>
-<p>The Add Provider wizard validates every credential with a live API call before activation. This catches typos, expired keys, and configuration issues immediately.</p>
+<p>The Add Provider wizard validates every credential with a live API call before
+activation. This catches typos, expired keys, and configuration issues
+immediately.</p>
 <h4 id="method-2-settings-dialog">Method 2: Settings Dialog</h4>
 <ol>
-<li>Go to <strong>Tools, then Settings, then Providers and Keys</strong> (or during the Setup Wizard).</li>
+<li>Go to <strong>Tools, then Settings, then Providers and Keys</strong> (or during the Setup
+   Wizard).</li>
 <li>Enter your API key for the desired service.</li>
 <li>Click the <strong>Test</strong> button to validate the key.</li>
-<li>Keys are stored in your OS credential vault (Windows Credential Manager / macOS Keychain).</li>
+<li>Keys are stored in your OS credential vault (Windows Credential Manager /
+   macOS Keychain).</li>
 </ol>
 <blockquote>
-<p><strong>Note</strong>: In Basic mode, only activated cloud providers appear in the provider dropdown. Use Add Provider to activate them, or switch to Advanced mode to see all providers.</p>
+<p><strong>Note</strong>: In Basic mode, only activated cloud providers appear in the provider
+dropdown. Use Add Provider to activate them, or switch to Advanced mode to see
+all providers.</p>
 </blockquote>
 <h3 id="choosing-a-provider">Choosing a Provider</h3>
 <ul>
 <li><strong>Privacy first</strong>: Local Whisper (your audio never leaves your computer)</li>
-<li><strong>Best English accuracy</strong>: Parakeet TDT 1.1B (local) or Large v3 (local) or OpenAI Whisper (cloud)</li>
+<li><strong>Best English accuracy</strong>: Parakeet TDT 1.1B (local) or Large v3 (local) or
+  OpenAI Whisper (cloud)</li>
 <li><strong>Cheapest cloud</strong>: Gemini ($0.0002/min) or Groq ($0.003/min)</li>
 <li><strong>Fastest cloud</strong>: Groq (188x real-time) or Deepgram</li>
-<li><strong>Speaker labels</strong>: Azure, Google, Deepgram, AssemblyAI, ElevenLabs, Rev.ai, Speechmatics, Amazon, Gemini (10 providers) or local pyannote.audio</li>
+<li><strong>Speaker labels</strong>: Azure, Google, Deepgram, AssemblyAI, ElevenLabs, Rev.ai,
+  Speechmatics, Amazon, Gemini (10 providers) or local pyannote.audio</li>
 <li><strong>Audio cleanup</strong>: Auphonic (noise/hum removal + transcription)</li>
 </ul>
 <hr>
@@ -1585,21 +1970,26 @@
 </tbody>
 </table>
 <h3 id="managing-models">Managing Models</h3>
-<p>Open <strong>Tools, then Manage Models</strong> (Ctrl+M) to:
-- See which models are downloaded
-- Download new models
-- Delete models to free disk space
-- Check hardware compatibility
-- See disk space usage</p>
+<p>Open <strong>Tools, then Manage Models</strong> (Ctrl+M) to:</p>
+<ul>
+<li>See which models are downloaded</li>
+<li>Download new models</li>
+<li>Delete models to free disk space</li>
+<li>Check hardware compatibility</li>
+<li>See disk space usage</li>
+</ul>
 <h3 id="hardware-requirements">Hardware Requirements</h3>
-<p>The app automatically checks your hardware and classifies each model as:
-- <strong>Ready</strong> — runs comfortably on your machine
-- <strong>Slow</strong> — will work but may be slower than ideal
-- <strong>Too big</strong> — won’t run (not enough RAM/GPU memory)</p>
+<p>The app automatically checks your hardware and classifies each model as:</p>
+<ul>
+<li><strong>Ready</strong> — runs comfortably on your machine</li>
+<li><strong>Slow</strong> — will work but may be slower than ideal</li>
+<li><strong>Too big</strong> — won’t run (not enough RAM/GPU memory)</li>
+</ul>
 <h3 id="disk-space">Disk Space</h3>
-<p>Before each download, the app checks you have enough free disk space (with 10% headroom). If you're low on space, you'll get a warning.</p>
+<p>Before each download, the app checks you have enough free disk space (with 10%
+headroom). If you're low on space, you'll get a warning.</p>
 <hr>
-<h2 id="settings_1">Settings</h2>
+<h2 id="settings-overview">Settings Overview</h2>
 <p>Open <strong>Tools, then Settings</strong> (Ctrl+,) for all configuration options.</p>
 <h3 id="tabs-overview">Tabs Overview</h3>
 <table>
@@ -1624,6 +2014,11 @@
 <tr>
 <td><strong>Output</strong></td>
 <td>Default format, directory, filename template, encoding</td>
+<td>Always</td>
+</tr>
+<tr>
+<td><strong>Playback</strong></td>
+<td>Audio preview speed range, step size, and jump timing</td>
 <td>Always</td>
 </tr>
 <tr>
@@ -1654,70 +2049,222 @@
 </tbody>
 </table>
 <h3 id="basic-vs-advanced-mode">Basic vs. Advanced Mode</h3>
-<p><strong>Basic Mode</strong> (default):
-- Shows 6 tabs: General, Transcription, Output, Providers &amp; Keys, Paths &amp; Storage, AI Providers
-- Only local providers and <strong>activated</strong> cloud providers appear in the provider dropdown
-- Use <strong>Tools, then Add Provider</strong> to activate cloud providers
-- Recommended for everyday use</p>
-<p><strong>Advanced Mode</strong>:
-- Shows all 8 tabs including Audio Processing and Advanced
-- All cloud providers visible in the provider dropdown (activation not required)
-- Full control over audio preprocessing, GPU settings, concurrency, and chunking
-- Toggle via <strong>View, then Advanced Mode</strong> (Ctrl+Shift+A)</p>
-<p>Your mode preference is saved between sessions. You can also set it in the Setup Wizard.</p>
+<p><strong>Basic Mode</strong> (default):</p>
+<ul>
+<li>Shows 7 tabs: General, Transcription, Output, Providers &amp; Keys, Paths &amp;
+   Storage, Playback, AI Providers</li>
+<li>Only local providers and <strong>activated</strong> cloud providers appear in the provider
+  dropdown</li>
+<li>Use <strong>Tools, then Add Provider</strong> to activate cloud providers</li>
+<li>Recommended for everyday use</li>
+</ul>
+<p><strong>Advanced Mode</strong>:</p>
+<ul>
+<li>Shows all 9 tabs including Audio Processing and Advanced</li>
+<li>All cloud providers visible in the provider dropdown (activation not required)</li>
+<li>Full control over audio preprocessing, GPU settings, concurrency, and chunking</li>
+<li>Toggle via <strong>View, then Advanced Mode</strong> (Ctrl+Shift+A)</li>
+</ul>
+<p>Your mode preference is saved between sessions. You can also set it in the Setup
+Wizard.</p>
 <hr>
 <h2 id="audio-preprocessing">Audio Preprocessing</h2>
-<p>BITS Whisperer applies a 7-filter audio cleanup chain before transcription to improve accuracy:</p>
+<p>BITS Whisperer applies a 7-filter audio cleanup chain before transcription to
+improve accuracy:</p>
 <table>
 <thead>
 <tr>
 <th>Filter</th>
-<th style="text-align: center;">Default</th>
+<th class="text-center">Default</th>
 <th>What It Does</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>High-pass</td>
-<td style="text-align: center;">80 Hz</td>
+<td class="text-center">80 Hz</td>
 <td>Removes rumble and low-frequency noise</td>
 </tr>
 <tr>
 <td>Low-pass</td>
-<td style="text-align: center;">8 kHz</td>
+<td class="text-center">8 kHz</td>
 <td>Removes hiss and high-frequency noise</td>
 </tr>
 <tr>
 <td>Noise gate</td>
-<td style="text-align: center;">-40 dB</td>
+<td class="text-center">-40 dB</td>
 <td>Silences quiet background noise</td>
 </tr>
 <tr>
 <td>De-esser</td>
-<td style="text-align: center;">Off</td>
+<td class="text-center">Off</td>
 <td>Reduces harsh "s" sounds</td>
 </tr>
 <tr>
 <td>Compressor</td>
-<td style="text-align: center;">-20 dB</td>
+<td class="text-center">-20 dB</td>
 <td>Evens out volume differences</td>
 </tr>
 <tr>
 <td>Loudness normalization</td>
-<td style="text-align: center;">-16 LUFS</td>
+<td class="text-center">-16 LUFS</td>
 <td>Standardizes overall volume</td>
 </tr>
 <tr>
 <td>Silence trimming</td>
-<td style="text-align: center;">-40 dB, 1s</td>
+<td class="text-center">-40 dB, 1s</td>
 <td>Removes long pauses</td>
 </tr>
 </tbody>
 </table>
-<p>Configure in <strong>Settings, then Audio Processing</strong>. Disable individual filters or turn off the entire chain.</p>
+<p>Configure in <strong>Settings, then Audio Processing</strong>. Disable individual filters or
+turn off the entire chain.</p>
 <blockquote>
-<p><strong>Note</strong>: Auphonic does its own professional-grade audio processing in the cloud. If using Auphonic, you may want to disable local preprocessing.</p>
+<p><strong>Note</strong>: Auphonic does its own professional-grade audio processing in the
+cloud. If using Auphonic, you may want to disable local preprocessing.</p>
 </blockquote>
+<hr>
+<h2 id="queue-management">Queue Management</h2>
+<p>The transcription queue uses a <strong>tree view</strong> that organizes your files for easy
+navigation and batch control.</p>
+<h3 id="queue-layout">Queue Layout</h3>
+<ul>
+<li><strong>Individual files</strong> appear at the root level of the tree</li>
+<li><strong>Folders</strong> appear as expandable branches — expand with arrow keys or
+  double-click to see files inside</li>
+<li>Each item shows: <strong>name — status — provider [— cost] [— AI action status]</strong></li>
+<li>Folders show a summary: <strong>📁 FolderName (5 files — 2 done, 1 in progress)</strong></li>
+</ul>
+<h3 id="toolbar">Toolbar</h3>
+<p>Above the tree, a toolbar provides quick actions:</p>
+<table>
+<thead>
+<tr>
+<th>Button</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>▶ Start</strong></td>
+<td>Start transcribing all pending jobs (F5)</td>
+</tr>
+<tr>
+<td><strong>✓ Clear Done</strong></td>
+<td>Remove all completed jobs from the queue</td>
+</tr>
+<tr>
+<td><strong>↻ Retry Failed</strong></td>
+<td>Re-queue all failed jobs for another attempt</td>
+</tr>
+</tbody>
+</table>
+<h3 id="filter-bar">Filter Bar</h3>
+<p>Below the toolbar, a <strong>filter bar</strong> lets you search the queue:</p>
+<ul>
+<li>Type any text to filter by file name, custom name, provider, or status</li>
+<li>Matching items are <strong>bolded</strong>; non-matching items are dimmed</li>
+<li>Press the <strong>✕</strong> button or clear the text to show all items</li>
+<li>The status bar announces how many items match your filter</li>
+</ul>
+<h3 id="context-menus">Context Menus</h3>
+<p><strong>Right-click a file</strong> (or press Shift+F10 / Apps key) to access:</p>
+<ul>
+<li><strong>View Transcript</strong> — Open the transcript tab (Enter)</li>
+<li><strong>Rename</strong> — Set a custom display name (F2)</li>
+<li><strong>Start Transcription</strong> — Begin this job (F5, pending only)</li>
+<li><strong>Retry Job</strong> — Re-queue a failed job (Ctrl+R)</li>
+<li><strong>Change Provider</strong> — Switch to a different transcription provider</li>
+<li><strong>Change Model</strong> — Select a different model for the provider</li>
+<li><strong>Change Language</strong> — Set the transcription language</li>
+<li><strong>Include Diarization</strong> — Toggle speaker identification</li>
+<li><strong>AI Action</strong> — Choose which AI action template to run after transcription
+  (built-in presets and custom templates)</li>
+<li><strong>File Operations</strong> — Copy file path (Ctrl+C) or open file location (Ctrl+L)</li>
+<li><strong>Cancel / Remove</strong> — Cancel an active job (Delete) or remove from queue</li>
+<li><strong>Properties</strong> — View file details, provider, model, cost, and status</li>
+</ul>
+<p><strong>Right-click a folder</strong> to access:</p>
+<ul>
+<li><strong>Rename</strong> — Set a custom folder name</li>
+<li><strong>Start All Pending / Retry All Failed / Cancel All Active</strong> — Batch
+  operations on the folder's files</li>
+<li><strong>Set AI Action for Pending</strong> — Apply an AI action template to all pending
+  files in the folder</li>
+<li><strong>Expand All / Collapse</strong> — Control folder tree display</li>
+<li><strong>Copy Folder Path / Open Folder</strong> — File system operations</li>
+<li><strong>Remove Folder</strong> — Remove the folder and all its files from the queue</li>
+<li><strong>Properties</strong> — View file count, total size, and status breakdown</li>
+</ul>
+<p><strong>Right-click empty space</strong> to access:</p>
+<ul>
+<li><strong>Add Files / Add Folder</strong> — Queue new audio</li>
+<li><strong>Start All / Clear Completed / Retry All Failed</strong> — Queue-wide batch
+  operations</li>
+<li><strong>Clear Entire Queue</strong> — Remove everything (Ctrl+Shift+Delete)</li>
+</ul>
+<h3 id="queue-custom-names">Queue Custom Names</h3>
+<p>Rename any job or folder without changing files on disk:</p>
+<ol>
+<li>Select an item and press <strong>F2</strong>, or right-click and choose <strong>Rename</strong></li>
+<li>Enter a custom name in the dialog — this name appears in the queue and
+   transcript panel</li>
+<li>Leave blank to restore the original file or folder name</li>
+</ol>
+<h3 id="drag-and-drop">Drag and Drop</h3>
+<p>Drag audio files from your file manager directly onto the queue panel. Folders
+can also be dropped — all supported audio files inside will be added
+recursively.</p>
+<h3 id="status-indicators">Status Indicators</h3>
+<table>
+<thead>
+<tr>
+<th>Icon</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>⭐</td>
+<td>Pending with AI action configured</td>
+</tr>
+<tr>
+<td>⏳</td>
+<td>AI action in progress</td>
+</tr>
+<tr>
+<td>✓</td>
+<td>AI action completed</td>
+</tr>
+<tr>
+<td>✗</td>
+<td>AI action failed</td>
+</tr>
+<tr>
+<td>Green text</td>
+<td>Transcription completed</td>
+</tr>
+<tr>
+<td>Red text</td>
+<td>Transcription failed</td>
+</tr>
+<tr>
+<td>Blue text</td>
+<td>Currently transcribing</td>
+</tr>
+</tbody>
+</table>
+<h3 id="budget-limits">Budget Limits</h3>
+<p>Control spending on paid cloud providers:</p>
+<ol>
+<li>Go to <strong>Settings</strong>, then <strong>General</strong></li>
+<li>Enable <strong>Budget Limits</strong> and set a default spending limit</li>
+<li>Optionally set per-provider limits for fine-grained control</li>
+<li>Enable <strong>Always Confirm Paid</strong> to see a cost confirmation dialog before each
+   paid transcription</li>
+<li>Cost estimates appear in the queue next to each job — format: <code>$0.05</code> for
+   estimates, <code>~$0.05</code> for approximate costs</li>
+</ol>
 <hr>
 <h2 id="system-tray">System Tray</h2>
 <p>BITS Whisperer can minimize to the system tray for background processing:</p>
@@ -1740,6 +2287,10 @@
 <tr>
 <td>Ctrl+O</td>
 <td>Add files</td>
+</tr>
+<tr>
+<td>Ctrl+Shift+O</td>
+<td>Add folder</td>
 </tr>
 <tr>
 <td>Ctrl+E</td>
@@ -1774,12 +2325,24 @@
 <td>Summarize Transcript</td>
 </tr>
 <tr>
+<td>Ctrl+Shift+P</td>
+<td>Audio Preview</td>
+</tr>
+<tr>
+<td>Ctrl+Alt+P</td>
+<td>Preview Selected (Queue)</td>
+</tr>
+<tr>
 <td>Ctrl+Shift+C</td>
 <td>Copilot Chat Panel</td>
 </tr>
 <tr>
 <td>F5</td>
 <td>Start transcription</td>
+</tr>
+<tr>
+<td>F2</td>
+<td>Rename selected item</td>
 </tr>
 <tr>
 <td>F3</td>
@@ -1790,12 +2353,32 @@
 <td>Find in transcript</td>
 </tr>
 <tr>
+<td>Ctrl+C</td>
+<td>Copy file path (in queue)</td>
+</tr>
+<tr>
+<td>Ctrl+R</td>
+<td>Retry selected job (in queue)</td>
+</tr>
+<tr>
+<td>Ctrl+L</td>
+<td>Open file location (in queue)</td>
+</tr>
+<tr>
 <td>Ctrl+W</td>
 <td>Close file</td>
 </tr>
 <tr>
 <td>Ctrl+Q</td>
 <td>Quit</td>
+</tr>
+<tr>
+<td>Ctrl+Shift+Del</td>
+<td>Clear entire queue</td>
+</tr>
+<tr>
+<td>Delete</td>
+<td>Cancel or remove selected job</td>
 </tr>
 <tr>
 <td>Alt+F</td>
@@ -1876,13 +2459,15 @@
 <h3 id="provider-key-invalid">"Provider key invalid"</h3>
 <ul>
 <li>Double-check the key in <strong>Settings, then Providers and Keys</strong></li>
-<li>Keys are validated on save — the app will confirm whether the key is valid or invalid</li>
+<li>Keys are validated on save — the app will confirm whether the key is valid or
+  invalid</li>
 <li>Some services require billing to be enabled before the API works</li>
 <li>Re-generate the key on the provider's website if needed</li>
 </ul>
 <h3 id="application-wont-start">"Application won't start"</h3>
 <ul>
-<li>Check the log file at: <code>%LOCALAPPDATA%\BITS Whisperer\app.log</code> (Windows) or <code>~/Library/Application Support/BITS Whisperer/app.log</code> (macOS)</li>
+<li>Check the log file at: <code>%LOCALAPPDATA%\BITS Whisperer\app.log</code> (Windows) or
+  <code>~/Library/Application Support/BITS Whisperer/app.log</code> (macOS)</li>
 <li>Delete <code>settings.json</code> to reset to defaults (same directory)</li>
 <li>Reinstall if the issue persists</li>
 </ul>
@@ -1892,7 +2477,8 @@
 <li>If automatic installation didn't work, install manually:</li>
 <li><strong>winget</strong>: <code>winget install Gyan.FFmpeg</code></li>
 <li><strong>Chocolatey</strong>: <code>choco install ffmpeg</code></li>
-<li><strong>Manual</strong>: Download from https://www.gyan.dev/ffmpeg/builds/ and add the <code>bin</code> folder to your PATH</li>
+<li><strong>Manual</strong>: Download from <a href="https://www.gyan.dev/ffmpeg/builds/">https://www.gyan.dev/ffmpeg/builds/</a> and add the
+    <code>bin</code> folder to your PATH</li>
 <li>Restart BITS Whisperer after installing ffmpeg</li>
 </ul>
 <h3 id="slow-transcription">"Slow transcription"</h3>
@@ -1906,12 +2492,14 @@
 <h3 id="sdk-installation-failed">"SDK installation failed"</h3>
 <ul>
 <li>Check your internet connection — SDKs are downloaded from PyPI.</li>
-<li>Ensure you have enough disk space. Some SDKs (like Local Whisper) need ~220 MB.</li>
+<li>Ensure you have enough disk space. Some SDKs (like Local Whisper) need ~220
+  MB.</li>
 <li>Check the log file (<strong>Tools, then View Log</strong>) for detailed error messages.</li>
 <li>Try again — the download may have been interrupted by network issues.</li>
 <li>As a fallback, you can install the SDK manually:</li>
 <li>Open a command prompt</li>
-<li>Run: <code>pip install --target "%LOCALAPPDATA%\BITS Whisperer\BITSWhisperer\site-packages" &lt;package-name&gt;</code></li>
+<li>Run:
+    <code>pip install --target "%LOCALAPPDATA%\BITS Whisperer\BITSWhisperer\site-packages" &lt;package-name&gt;</code></li>
 <li>Restart BITS Whisperer</li>
 </ul>
 <h3 id="provider-not-available-after-sdk-install">"Provider not available after SDK install"</h3>
@@ -1920,37 +2508,56 @@
 <li>Check that the API key is configured in <strong>Settings, then Providers and Keys</strong>.</li>
 <li>View the log file for import errors: <strong>Tools, then View Log</strong>.</li>
 </ul>
+<h3 id="leftover-temporary-files">Leftover Temporary Files</h3>
+<p>BITS Whisperer creates temporary files during audio preprocessing and
+transcoding. These are cleaned up automatically when each job completes and
+again during shutdown. If the app crashes or is force-killed, temporary files
+with prefixes <code>bw_transcode_*</code>, <code>bw_preprocess_*</code>, or <code>bw_update_*</code> may remain
+in your system temp directory (<code>%TEMP%</code> on Windows, <code>/tmp</code> on macOS). These are
+safe to delete. On the next normal shutdown, BITS Whisperer will automatically
+remove any stale temp files older than 1 hour.</p>
 <h3 id="resetting-the-app">Resetting the App</h3>
-<p>To start fresh:
-1. Delete the data directory:
-   - Windows: <code>%LOCALAPPDATA%\BITS Whisperer\</code>
-   - macOS: <code>~/Library/Application Support/BITS Whisperer/</code>
-2. This removes settings, downloaded models, and the job database.
-3. The Setup Wizard will appear again on next launch.</p>
+<p>To start fresh:</p>
+<ol>
+<li>Delete the data directory:</li>
+<li>Windows: <code>%LOCALAPPDATA%\BITS Whisperer\</code></li>
+<li>macOS: <code>~/Library/Application Support/BITS Whisperer/</code></li>
+<li>This removes settings, downloaded models, and the job database.</li>
+<li>The Setup Wizard will appear again on next launch.</li>
+</ol>
 <hr>
 <h2 id="faq">FAQ</h2>
-<p><strong>Q: Is my audio sent to the internet?</strong>
-A: Only if you use a cloud provider. Local Whisper processes everything on your computer. Your audio files are never uploaded without your explicit choice.</p>
-<p><strong>Q: Do I need an internet connection?</strong>
-A: No — once you've downloaded a local model, BITS Whisperer works entirely offline. You only need internet to download models or use cloud providers.</p>
-<p><strong>Q: Which model should I use?</strong>
-A: The Setup Wizard recommends one based on your hardware. As a rule of thumb:
-- <strong>4 GB RAM, no GPU</strong>: Base
-- <strong>8 GB RAM, no GPU</strong>: Small
-- <strong>GPU with 4+ GB VRAM</strong>: Large v3 Turbo
-- <strong>GPU with 6+ GB VRAM</strong>: Large v3</p>
-<p><strong>Q: How are my API keys stored?</strong>
-A: Keys are stored in your operating system's credential vault (Windows Credential Manager or macOS Keychain) — the same system used by web browsers and other apps. They are never written to plain-text files or logs.</p>
-<p><strong>Q: Can I use multiple providers for different files?</strong>
-A: Yes! You can set a default provider and change it per file from the queue or Settings.</p>
-<p><strong>Q: How much disk space do I need?</strong>
-A: The app itself needs about 100 MB. Models range from 75 MB (Tiny) to 3 GB (Large). Download only the models you need — you can always add more later.</p>
-<p><strong>Q: Does it work on macOS?</strong>
-A: Yes! BITS Whisperer runs on Windows 10+ and macOS 12+. Linux support is planned.</p>
-<p><strong>Q: How do I update?</strong>
-A: The app checks for updates on startup (configurable). When an update is available, you'll be prompted to download it. You can also check manually via <strong>Help, then Check for Updates</strong>.</p>
+<p><strong>Q: Is my audio sent to the internet?</strong> A: Only if you use a cloud provider.
+Local Whisper processes everything on your computer. Your audio files are never
+uploaded without your explicit choice.</p>
+<p><strong>Q: Do I need an internet connection?</strong> A: No — once you've downloaded a local
+model, BITS Whisperer works entirely offline. You only need internet to download
+models or use cloud providers.</p>
+<p><strong>Q: Which model should I use?</strong> A: The Setup Wizard recommends one based on
+your hardware. As a rule of thumb:</p>
+<ul>
+<li><strong>4 GB RAM, no GPU</strong>: Base</li>
+<li><strong>8 GB RAM, no GPU</strong>: Small</li>
+<li><strong>GPU with 4+ GB VRAM</strong>: Large v3 Turbo</li>
+<li><strong>GPU with 6+ GB VRAM</strong>: Large v3</li>
+</ul>
+<p><strong>Q: How are my API keys stored?</strong> A: Keys are stored in your operating system's
+credential vault (Windows Credential Manager or macOS Keychain) — the same
+system used by web browsers and other apps. They are never written to plain-text
+files or logs.</p>
+<p><strong>Q: Can I use multiple providers for different files?</strong> A: Yes! You can set a
+default provider and change it per file from the queue or Settings.</p>
+<p><strong>Q: How much disk space do I need?</strong> A: The app itself needs about 100 MB.
+Models range from 75 MB (Tiny) to 3 GB (Large). Download only the models you
+need — you can always add more later.</p>
+<p><strong>Q: Does it work on macOS?</strong> A: Yes! BITS Whisperer runs on Windows 10+ and
+macOS 12+. Linux support is planned.</p>
+<p><strong>Q: How do I update?</strong> A: The app checks for updates on startup (configurable).
+When an update is available, you'll be prompted to download it. You can also
+check manually via <strong>Help, then Check for Updates</strong>.</p>
 <hr>
-<p><em>BITS Whisperer v1.0.0 — Developed by Blind Information Technology Solutions (BITS). Made with care for accessibility and privacy.</em></p>
+<p><em>BITS Whisperer v1.0.0 — Developed by Blind Information Technology Solutions
+(BITS). Made with care for accessibility and privacy.</em></p>
 <div class="footer">
   Generated from <code>USER_GUIDE.md</code> &mdash; BITS Whisperer Documentation
 </div>

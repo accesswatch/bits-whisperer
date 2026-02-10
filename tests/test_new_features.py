@@ -421,7 +421,7 @@ class TestKeyStoreAIEntries:
         assert "azure_openai_deployment" in _KEY_NAMES
 
     def test_total_key_count(self) -> None:
-        """Should now have 20 key entries (15 original + 4 AI + 1 Copilot)."""
+        """Should now have 22 key entries (15 original + 4 AI + 1 Copilot + 2 registration)."""
         from bits_whisperer.storage.key_store import _KEY_NAMES
 
-        assert len(_KEY_NAMES) == 20
+        assert len(_KEY_NAMES) == 22
