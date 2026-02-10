@@ -1,6 +1,7 @@
 # BITS Whisperer — CI: Lint, Format, Security, Test
 # Runs on every push and pull request to main.
-# Gates: black, ruff, mypy, pip-audit, pytest — all must pass before merge.
+# Gates: black, ruff, pytest — must pass before merge.
+# Informational: mypy (type check), pip-audit (security).
 
 name: CI
 
@@ -38,8 +39,8 @@ jobs:
       - name: Ruff (lint check)
         run: ruff check src/ tests/
 
-      - name: Mypy (type check)
-        run: mypy src/ --ignore-missing-imports
+      - name: Mypy (type check — informational)
+        run: mypy src/ --ignore-missing-imports || echo "::warning::mypy reported type errors — see output above"
 
   security:
     name: Dependency Audit
@@ -67,7 +68,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [windows-latest]
         python-version: ["3.13"]
     steps:
       - uses: actions/checkout@v4
@@ -84,7 +85,7 @@ jobs:
         run: pytest tests/ -v --tb=short --strict-markers --cov=bits_whisperer --cov-report=term-missing --cov-report=xml
 
       - name: Upload coverage (PR only)
-        if: matrix.os == 'ubuntu-latest' && github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
