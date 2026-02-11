@@ -308,7 +308,7 @@ class GitHubDeviceFlow:
                 )
                 if on_status:
                     on_status("Authorized!")
-                return token
+                return str(token)
 
             # Handle error responses
             error = body.get("error", "")

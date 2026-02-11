@@ -12,11 +12,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import markdown
-from markdown.extensions.codehilite import CodeHiliteExtension
-from markdown.extensions.fenced_code import FencedCodeExtension
-from markdown.extensions.tables import TableExtension
-from markdown.extensions.toc import TocExtension
+import markdown  # type: ignore[import-untyped]
+from markdown.extensions.codehilite import CodeHiliteExtension  # type: ignore[import-untyped]
+from markdown.extensions.fenced_code import FencedCodeExtension  # type: ignore[import-untyped]
+from markdown.extensions.tables import TableExtension  # type: ignore[import-untyped]
+from markdown.extensions.toc import TocExtension  # type: ignore[import-untyped]
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = ROOT / "docs"

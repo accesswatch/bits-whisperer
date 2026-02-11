@@ -184,7 +184,10 @@ ruff check src/ tests/
 # Gate 3: Tests — must produce zero failures
 pytest tests/ -v --tb=short --strict-markers
 
-# Gate 4 (if UI changed): Accessibility review
+# Gate 4 (if applicable): Problems pane — zero errors
+# Resolve all warnings/errors shown in VS Code Problems pane
+
+# Gate 5 (if UI changed): Accessibility review
 # Manually verify SetName(), keyboard nav, screen reader output
 ```
 
@@ -201,6 +204,9 @@ pytest tests/ -v --tb=short --strict-markers
    formatter is authoritative.
 6. **Check `get_errors` after edits** to catch type errors the linter
    may miss.
+7. **Resolve Problems pane errors** — before committing, run
+   `get_errors` and fix all reported issues. Type errors, unused
+   imports, and markdownlint violations must be resolved.
 
 ### Pre-commit hooks
 Pre-commit hooks are configured in `.pre-commit-config.yaml`. After

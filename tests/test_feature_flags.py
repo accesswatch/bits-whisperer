@@ -135,9 +135,9 @@ class TestFeatureFlagConfig:
 class TestFeatureFlagServiceCore:
     """Tests for FeatureFlagService without network calls."""
 
-    def _make_service(self, **kwargs) -> FeatureFlagService:
+    def _make_service(self, **kwargs: object) -> FeatureFlagService:
         """Create a service with a non-existent cache path."""
-        defaults = {
+        defaults: dict[str, object] = {
             "remote_url": "https://example.com/flags.json",
             "cache_path": Path("/nonexistent/cache.json"),
             "app_version": "1.0.0",

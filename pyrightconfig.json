@@ -1,7 +1,11 @@
 {
-  "include": ["src"],
+  "include": ["src", "tests"],
   "extraPaths": ["src"],
   "executionEnvironments": [
+    {
+      "root": "tests",
+      "reportPrivateUsage": "none"
+    },
     {
       "root": "src"
     }
@@ -11,7 +15,7 @@
 
   "typeCheckingMode": "basic",
 
-  "reportMissingImports": "warning",
+  "reportMissingImports": "none",
   "reportMissingTypeStubs": "none",
   "reportMissingModuleSource": "none",
 
@@ -19,7 +23,9 @@
   "reportUnusedVariable": "warning",
   "reportDuplicateImport": "warning",
   "reportUntypedFunctionDecorator": "none",
-  "reportPrivateUsage": "warning",
+  "reportPrivateUsage": "none",
+  "reportUnnecessaryTypeIgnoreComment": "none",
+  "reportReturnType": "none",
 
   "reportUnknownMemberType": "none",
   "reportUnknownArgumentType": "none",

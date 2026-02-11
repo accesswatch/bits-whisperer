@@ -190,7 +190,7 @@ class RevAIProvider(TranscriptionProvider):
                             start=start_time or 0.0,
                             end=end_time,
                             text=text,
-                            speaker=f"Speaker {speaker_id}" if speaker_id is not None else None,
+                            speaker=(f"Speaker {speaker_id}" if speaker_id is not None else ""),
                         )
                     )
                     full_text_parts.append(text)

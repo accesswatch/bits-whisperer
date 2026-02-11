@@ -60,21 +60,15 @@ def _create_lean_venv(root: Path) -> Path:
         check=True,
     )
     subprocess.run(
-        [
-            str(python),
-            "-m",
-            "pip",
-            "install",
-            "--quiet",
-            "-r",
-            str(root / "requirements.txt"),
-            "pyinstaller",
-        ],
+        [str(python), "-m", "pip", "install", "--quiet",
+         "-r", str(root / "requirements.txt"),
+         "pyinstaller"],
         check=True,
     )
     # Install the project itself (editable) so PyInstaller can find it
     subprocess.run(
-        [str(python), "-m", "pip", "install", "--quiet", "--no-deps", "-e", str(root)],
+        [str(python), "-m", "pip", "install", "--quiet",
+         "--no-deps", "-e", str(root)],
         check=True,
     )
     print("  Build venv ready.")
@@ -112,10 +106,10 @@ def main() -> None:
     args = parser.parse_args()
 
     root = Path(__file__).parent
-    spec_file = root / "BITS Whisperer.spec"
+    spec_file = root / "bits_whisperer.spec"
 
     if not args.onefile and not spec_file.exists():
-        print("ERROR: BITS Whisperer.spec not found in project root.")
+        print("ERROR: bits_whisperer.spec not found in project root.")
         print("       Use --onefile to build without a spec file.")
         sys.exit(1)
 
@@ -131,7 +125,7 @@ def main() -> None:
     else:
         # Verify PyInstaller is available in current env
         try:
-            import PyInstaller  # noqa: F401
+            import PyInstaller  # noqa: F401  # type: ignore[import-untyped]
         except ImportError:
             print("ERROR: PyInstaller is not installed.")
             print("       pip install pyinstaller")
@@ -145,15 +139,13 @@ def main() -> None:
 
     if args.onefile:
         # Override spec with direct command for one-file build
-        cmd.extend(
-            [
-                "--onefile",
-                "--windowed",
-                "--name",
-                args.name,
-                str(root / "src" / "bits_whisperer" / "__main__.py"),
-            ]
-        )
+        cmd.extend([
+            "--onefile",
+            "--windowed",
+            "--name",
+            args.name,
+            str(root / "src" / "bits_whisperer" / "__main__.py"),
+        ])
     else:
         cmd.append(str(spec_file))
 
@@ -162,7 +154,7 @@ def main() -> None:
 
     cmd.extend(["--distpath", str(root / "dist"), "--workpath", str(root / "build")])
 
-    print("Building BITS Whisperer...")
+    print(f"Building BITS Whisperer...")
     print(f"  Command: {' '.join(cmd)}")
     print()
 

@@ -47,7 +47,7 @@ GITHUB_CERT_FINGERPRINTS = [
 _EXPECTED_MODULE_HASH = None  # Set by build process
 
 # Rate limiting
-_LAST_VERIFICATION_TIME = 0
+_LAST_VERIFICATION_TIME: float = 0
 _MIN_VERIFICATION_INTERVAL = 60  # Minimum seconds between online checks
 
 
@@ -56,7 +56,7 @@ class BITS_RegistrationService:
 
     def __init__(self, key_store: KeyStore) -> None:
         self._key_store = key_store
-        self._verification_cache = {}  # In-memory cache for rate limiting
+        self._verification_cache: dict[str, bool] = {}  # In-memory cache for rate limiting
         self._perform_integrity_check()
 
     def _perform_integrity_check(self) -> None:

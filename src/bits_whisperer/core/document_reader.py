@@ -255,7 +255,7 @@ def _read_pdf(path: Path) -> str:
 
     # Try PyPDF2 (legacy)
     try:
-        from PyPDF2 import PdfReader as LegacyReader  # type: ignore[import-untyped]
+        from PyPDF2 import PdfReader as LegacyReader
 
         reader = LegacyReader(str(path))
         pages = []
@@ -285,4 +285,4 @@ def _read_rtf(path: Path) -> str:
         )
 
     raw = path.read_bytes().decode("utf-8", errors="replace")
-    return rtf_to_text(raw)
+    return str(rtf_to_text(raw))

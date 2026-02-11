@@ -303,10 +303,11 @@ class SettingsDialog(wx.Dialog):
             if pm_info is None or pm_info[0] is None:
                 continue  # Skip auxiliary keys
 
-            pm_key, display_name = pm_info
+            pm_key, _display_name = pm_info
             if is_advanced or kid in activated:
                 provider_names.append(pname)
-                self._provider_keys.append(pm_key)
+                if pm_key is not None:
+                    self._provider_keys.append(pm_key)
 
         self._provider_ch = wx.Choice(panel, choices=provider_names)
         # Select current default provider
@@ -1631,7 +1632,7 @@ class SettingsDialog(wx.Dialog):
                     region = self._get_field_value("azure_region") or "eastus"
                     provider = AzureSpeechProvider(region=region)
                 else:
-                    provider = pm.get_provider(provider_key)
+                    provider = pm.get_provider(provider_key)  # type: ignore[assignment]
 
                 if provider is None:
                     safe_call_after(
@@ -1694,7 +1695,7 @@ class SettingsDialog(wx.Dialog):
         raw = txt.GetValue().strip()
         if not raw or raw == "\u2022" * 8:
             return self._key_store.get_key(pid) or ""
-        return raw
+        return str(raw)
 
     # ================================================================== #
     # Directory browser helper                                             #

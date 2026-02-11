@@ -319,6 +319,7 @@ class TestRunAIAction:
     def test_empty_transcript_fails(self) -> None:
         svc = self._make_service()
         job = self._make_completed_job()
+        assert job.result is not None
         job.result.full_text = ""
         job.result.segments = []
         svc._run_ai_action(job)
@@ -443,8 +444,8 @@ class TestRunAIAction:
 
         statuses_seen = []
 
-        def capture_notify(j):
-            statuses_seen.append(j.ai_action_status)
+        def capture_notify(job):
+            statuses_seen.append(job.ai_action_status)
 
         svc._notify_update = capture_notify
 

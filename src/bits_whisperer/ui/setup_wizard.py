@@ -713,7 +713,9 @@ class SetupWizard(wx.Dialog):
         """Start downloading all selected models asynchronously."""
         # Pre-check: is faster-whisper installed?
         try:
-            import faster_whisper  # noqa: F401
+            import faster_whisper
+
+            _ = faster_whisper  # availability check
         except ImportError:
             accessible_message_box(
                 "The faster-whisper library is not installed.\n\n"

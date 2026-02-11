@@ -577,7 +577,7 @@ class AddProviderDialog(wx.Dialog):
         if self._selected_provider < 0:
             return
 
-        kid, name, pm_key, _url, _desc, aux_keys = self._available_providers[
+        kid, name, pm_key, _url, _desc, _aux_keys = self._available_providers[
             self._selected_provider
         ]
 
@@ -626,7 +626,7 @@ class AddProviderDialog(wx.Dialog):
                     region = region_field.GetValue().strip() if region_field else "eastus"
                     provider = AzureSpeechProvider(region=region)
                 else:
-                    provider = pm.get_provider(pm_key)
+                    provider = pm.get_provider(pm_key)  # type: ignore[assignment]
 
                 if provider is None:
                     safe_call_after(

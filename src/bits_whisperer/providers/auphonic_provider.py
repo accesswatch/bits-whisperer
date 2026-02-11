@@ -355,7 +355,9 @@ class AuphonicService:
             api_key: Auphonic API token (Bearer token).
         """
         try:
-            import httpx  # noqa: F401
+            import httpx
+
+            _ = httpx  # availability check
         except ImportError:
             raise RuntimeError("httpx package not installed. pip install httpx") from None
         self._api_key = api_key

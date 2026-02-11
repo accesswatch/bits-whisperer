@@ -1,23 +1,7 @@
 {
   // ── Python Analysis ─────────────────────────────────────────────────
-  "python.analysis.extraPaths": ["./src"],
-  "python.analysis.stubPath": "./typings",
-  "python.analysis.typeCheckingMode": "basic",
+  // Type checking settings are in pyrightconfig.json (authoritative).
   "python.analysis.autoImportCompletions": true,
-  "python.analysis.diagnosticSeverityOverrides": {
-    "reportMissingImports": "none",
-    "reportMissingTypeStubs": "none",
-    "reportMissingModuleSource": "none",
-    "reportUnknownMemberType": "none",
-    "reportUnknownArgumentType": "none",
-    "reportUnknownParameterType": "none",
-    "reportUnknownVariableType": "none",
-    "reportUnknownLambdaType": "none",
-    "reportArgumentType": "none",
-    "reportCallIssue": "none",
-    "reportIndexIssue": "none",
-    "reportGeneralTypeIssues": "none"
-  },
 
   // ── Formatting ──────────────────────────────────────────────────────
   // Black is the authoritative formatter (via the Black Formatter extension).

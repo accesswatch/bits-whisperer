@@ -145,7 +145,7 @@ class TestVoskModels:
             model.id = "tampered"  # type: ignore[misc]
             raise AssertionError("Should have raised FrozenInstanceError")
         except AttributeError:
-            pass  # Expected -- frozen dataclass
+            pass  # Expected — frozen dataclass
 
 
 class TestParakeetModels:

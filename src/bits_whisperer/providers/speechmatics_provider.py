@@ -257,7 +257,7 @@ class SpeechmaticsProvider(TranscriptionProvider):
                             start=seg_start,
                             end=seg_end,
                             text=text,
-                            speaker=current_speaker,
+                            speaker=current_speaker or "",
                         )
                     )
                     full_text_parts.append(text)
@@ -277,7 +277,7 @@ class SpeechmaticsProvider(TranscriptionProvider):
                         start=seg_start,
                         end=seg_end,
                         text=text,
-                        speaker=current_speaker,
+                        speaker=current_speaker or "",
                     )
                 )
                 full_text_parts.append(text)

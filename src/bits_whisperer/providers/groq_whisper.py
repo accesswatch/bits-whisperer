@@ -122,8 +122,8 @@ class GroqWhisperProvider(TranscriptionProvider):
             progress_callback(85.0)
 
         segments: list[TranscriptSegment] = []
-        if hasattr(response, "segments") and response.segments:
-            for seg in response.segments:
+        if hasattr(response, "segments") and response.segments:  # type: ignore[attr-defined]
+            for seg in response.segments:  # type: ignore[attr-defined]
                 start = (
                     seg.get("start", 0.0) if isinstance(seg, dict) else getattr(seg, "start", 0.0)
                 )

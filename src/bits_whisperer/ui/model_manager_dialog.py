@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import threading
+from pathlib import Path
 
 import wx
 
@@ -51,7 +52,7 @@ class ModelManagerDialog(wx.Dialog):
         self._downloading = False
         self._download_model_id: str | None = None
         self._expected_bytes = 0
-        self._download_dir = None
+        self._download_dir: Path | None = None
         self._progress_timer: wx.Timer | None = None
 
         self._build_ui()

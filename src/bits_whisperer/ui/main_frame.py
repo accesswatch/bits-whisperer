@@ -6,6 +6,7 @@ import contextlib
 import json
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import wx
 import wx.adv
@@ -26,6 +27,9 @@ from bits_whisperer.utils.constants import (
     DATA_DIR,
     SUPPORTED_AUDIO_EXTENSIONS,
 )
+
+if TYPE_CHECKING:
+    from bits_whisperer.core.copilot_service import CopilotService
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +149,7 @@ class MainFrame(wx.Frame):
         self.feature_flags.refresh()
 
         # ---- Copilot service (lazy start) ----
-        self._copilot_service = None
+        self._copilot_service: CopilotService | None = None
 
         # ---- State flags (synced from settings) ----
         self._advanced_mode = self.app_settings.general.experience_mode == "advanced"
@@ -1490,6 +1494,7 @@ class MainFrame(wx.Frame):
         from bits_whisperer.ui.agent_builder_dialog import AgentBuilderDialog
 
         self._ensure_copilot_service()
+        assert self._copilot_service is not None  # ensured above
 
         dlg = AgentBuilderDialog(
             self,
@@ -1942,7 +1947,8 @@ class MainFrame(wx.Frame):
         """Load recent file paths from disk."""
         try:
             if _RECENT_FILE.exists():
-                return json.loads(_RECENT_FILE.read_text("utf-8"))[:_MAX_RECENT]
+                data = json.loads(_RECENT_FILE.read_text("utf-8"))
+                return list(data[:_MAX_RECENT])
         except Exception:
             pass
         return []

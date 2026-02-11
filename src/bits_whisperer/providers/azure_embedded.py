@@ -119,7 +119,7 @@ class AzureEmbeddedSpeechProvider(TranscriptionProvider):
             TranscriptionResult.
         """
         try:
-            import azure.cognitiveservices.speech as speechsdk  # type: ignore[import]
+            import azure.cognitiveservices.speech as speechsdk  # type: ignore[import-untyped]
         except ImportError:
             raise RuntimeError(
                 "azure-cognitiveservices-speech not installed. "
@@ -143,7 +143,9 @@ class AzureEmbeddedSpeechProvider(TranscriptionProvider):
         )
 
         # Configure embedded speech
-        speech_config = speechsdk.EmbeddedSpeechConfig(path=str(model_path))
+        speech_config = speechsdk.EmbeddedSpeechConfig(  # type: ignore[attr-defined]
+            path=str(model_path)
+        )
         speech_config.speech_recognition_language = language
 
         audio_config = speechsdk.audio.AudioConfig(filename=audio_path)
@@ -160,7 +162,7 @@ class AzureEmbeddedSpeechProvider(TranscriptionProvider):
         full_text_parts: list[str] = []
         done = False
 
-        def on_recognized(evt) -> None:  # type: ignore[no-untyped-def]
+        def on_recognized(evt) -> None:
             result = evt.result
             if result.reason == speechsdk.ResultReason.RecognizedSpeech:
                 offset_s = result.offset / 10_000_000
@@ -176,13 +178,13 @@ class AzureEmbeddedSpeechProvider(TranscriptionProvider):
                 if progress_callback:
                     progress_callback(min(90.0, 15.0 + len(segments) * 2))
 
-        def on_session_stopped(evt) -> None:  # type: ignore[no-untyped-def]
+        def on_session_stopped(evt) -> None:
             nonlocal done
             done = True
 
         cancel_error: str | None = None
 
-        def on_canceled(evt) -> None:  # type: ignore[no-untyped-def]
+        def on_canceled(evt) -> None:
             nonlocal done, cancel_error
             if evt.result.reason == speechsdk.ResultReason.Canceled:
                 cancellation = speechsdk.CancellationDetails(evt.result)

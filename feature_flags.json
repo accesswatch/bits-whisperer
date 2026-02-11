@@ -1,5 +1,4 @@
 {
-  "$schema": "https://raw.githubusercontent.com/accesswatch/bits-whisperer/main/feature_flags.schema.json",
   "version": 1,
   "description": "Remote feature flags for BITS Whisperer staged rollout. Edit this file to enable/disable features across all deployed instances.",
   "features": {

@@ -438,7 +438,8 @@ class WheelInstaller:
             ) as client:
                 r = client.get(url)
                 r.raise_for_status()
-                return r.json()
+                result: dict[str, Any] = r.json()
+                return result
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             if status == 404:

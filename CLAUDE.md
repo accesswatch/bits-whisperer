@@ -77,9 +77,13 @@ ruff check src/ tests/
 
 # Gate 3: Tests — must produce zero failures
 pytest tests/ -v --tb=short --strict-markers
+
+# Gate 4 (if applicable): Problems pane — zero errors
+# Resolve all warnings/errors shown in VS Code Problems pane
 ```
 
 Rules:
+
 1. Run all three gates after completing edits. Do not mark work as
    done until all pass.
 2. Fix violations immediately — do not leave lint or test failures
@@ -93,10 +97,12 @@ Rules:
 ### Pre-commit hooks
 
 Pre-commit hooks are configured in `.pre-commit-config.yaml`:
+
 ```bash
 pip install pre-commit
 pre-commit install
 ```
+
 Hooks: black, ruff, mypy, codespell, markdownlint, pre-commit-hooks
 (trailing whitespace, YAML/TOML/JSON validation, debug statements,
 large files, merge conflicts).
@@ -105,20 +111,23 @@ large files, merge conflicts).
 
 GitHub Actions CI (`.github/workflows/ci.yml`) runs on every push
 and PR to `main`:
+
 - **Lint job**: black, ruff, mypy
 - **Security job**: pip-audit (dependency vulnerability scanning)
-- **Test job**: pytest with coverage on Ubuntu + Windows, Python 3.13
+- **Test job**: pytest with coverage on Windows, Python 3.13
 - **Quality gate**: blocks merge if lint or test fails
 
 ### VS Code workspace
 
 `.vscode/settings.json` configures:
+
 - Ruff as sole linter (flake8/pylint disabled)
 - Black as formatter with format-on-save
 - 100-char ruler
 - Spell checker dictionary for project terms
 
 `.vscode/extensions.json` recommends:
+
 - Ruff, Black Formatter, Python, mypy, EditorConfig, Code Spell Checker
 
 ## Architecture
@@ -201,6 +210,7 @@ Read `.github/accessibility.agent.md` before any UI changes.
 
 When adding features, providers, or changing architecture, update ALL
 of these to stay in sync:
+
 - `docs/README.md`, `docs/PRD.md`, `docs/USER_GUIDE.md`,
   `docs/ANNOUNCEMENT.md`
 - `.github/copilot-instructions.md` (architecture tree, provider

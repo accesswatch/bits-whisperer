@@ -185,4 +185,4 @@ def accessible_message_box(
     # Announce to screen reader
     speak(f"{prefix}: {caption}. {message}")
 
-    return wx.MessageBox(message, caption, style, parent)
+    return int(wx.MessageBox(message, caption, style, parent))

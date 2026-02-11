@@ -157,7 +157,9 @@ class DeepgramProvider(TranscriptionProvider):
         if progress_callback:
             progress_callback(30.0)
 
-        response = client.listen.rest.v("1").transcribe_file(payload, options)
+        response = client.listen.rest.v("1").transcribe_file(  # type: ignore[attr-defined]
+            payload, options
+        )
 
         if progress_callback:
             progress_callback(85.0)

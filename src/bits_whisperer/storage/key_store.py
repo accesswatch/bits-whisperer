@@ -47,8 +47,9 @@ class KeyStore:
 
     def __init__(self) -> None:
         try:
-            import keyring  # noqa: F401
+            import keyring
 
+            _ = keyring  # ensure pyright sees it as used
             self._available = True
         except ImportError:
             logger.warning(
@@ -100,7 +101,7 @@ class KeyStore:
             keyring.delete_password(_SERVICE_NAME, _key_id(provider))
             logger.debug("Deleted key for provider %s", provider)
             return True
-        except keyring.errors.PasswordDeleteError:
+        except keyring.errors.PasswordDeleteError:  # type: ignore[attr-defined]
             return False
 
     def has_key(self, provider: str) -> bool:

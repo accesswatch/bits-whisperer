@@ -185,7 +185,7 @@ class TranscriptionService:
         self._running = False
         # Unblock waiting workers with sentinels
         for _ in self._workers:
-            self._job_queue.put(None)  # type: ignore[arg-type]
+            self._job_queue.put(None)
 
         # Join worker threads so they finish before we exit
         for t in self._workers:

@@ -707,7 +707,8 @@ class CopilotSetupDialog(wx.Dialog):
             return
 
         logger.info("Starting browser sign-in via OAuth Device Flow")
-        self._sign_in_btn.Disable()
+        if self._sign_in_btn:
+            self._sign_in_btn.Disable()
         self._auth_status.SetLabel("Starting sign-in...")
 
         # Auto-install SDK in background if needed (non-blocking)

@@ -205,27 +205,27 @@ class TestFitTranscript(unittest.TestCase):
 
     def test_fits_entirely(self) -> None:
         text = "Short transcript."
-        fitted, strategy, tokens = fit_transcript(text, 1000)
+        fitted, strategy, _tokens = fit_transcript(text, 1000)
         assert fitted == text
         assert strategy == "none"
 
     def test_truncate_strategy(self) -> None:
         text = "a" * 10000  # ~2500 tokens
-        fitted, strategy, tokens = fit_transcript(text, 500, strategy="truncate")
+        fitted, strategy, tokens_ = fit_transcript(text, 500, strategy="truncate")
         assert strategy == "truncate"
         assert len(fitted) < len(text)
-        assert tokens <= 500
+        assert tokens_ <= 500
 
     def test_tail_strategy(self) -> None:
         text = "START " + "x" * 10000 + " END"
-        fitted, strategy, tokens = fit_transcript(text, 500, strategy="tail")
+        fitted, strategy, _tokens = fit_transcript(text, 500, strategy="tail")
         assert strategy == "tail"
         assert "END" in fitted
         assert "START" not in fitted
 
     def test_head_tail_strategy(self) -> None:
         text = "START " + "x" * 10000 + " END"
-        fitted, strategy, tokens = fit_transcript(text, 500, strategy="head_tail")
+        fitted, strategy, _tokens = fit_transcript(text, 500, strategy="head_tail")
         assert strategy == "head_tail"
         assert "START" in fitted
         assert "END" in fitted
@@ -233,20 +233,20 @@ class TestFitTranscript(unittest.TestCase):
 
     def test_smart_strategy_fits(self) -> None:
         text = "Short text"
-        fitted, strategy, tokens = fit_transcript(text, 1000, strategy="smart")
+        fitted, strategy, _tokens = fit_transcript(text, 1000, strategy="smart")
         assert strategy == "none"
         assert fitted == text
 
     def test_smart_strategy_slight_overflow(self) -> None:
         # Create text that's slightly over budget (ratio <= 1.3)
         text = "a" * 5200  # ~1300 tokens at 4 cpt
-        fitted, strategy, tokens = fit_transcript(text, 1100, strategy="smart")
+        _fitted, strategy, _tokens = fit_transcript(text, 1100, strategy="smart")
         assert strategy == "truncate"
 
     def test_smart_strategy_moderate_overflow(self) -> None:
         # Create text that's moderately over budget (ratio > 1.3, <= 3.0)
         text = "START " + "a" * 8000 + " END"  # ~2000 tokens
-        fitted, strategy, tokens = fit_transcript(text, 1000, strategy="smart")
+        fitted, strategy, _tokens = fit_transcript(text, 1000, strategy="smart")
         assert strategy == "head_tail"
         assert "START" in fitted
         assert "END" in fitted
@@ -254,11 +254,11 @@ class TestFitTranscript(unittest.TestCase):
     def test_smart_strategy_severe_overflow(self) -> None:
         # Create text that's severely over budget (ratio > 3.0)
         text = "START " + "a" * 40000 + " END"  # ~10000 tokens
-        fitted, strategy, tokens = fit_transcript(text, 1000, strategy="smart")
+        _fitted, strategy, _tokens = fit_transcript(text, 1000, strategy="smart")
         assert strategy == "head_tail"
 
     def test_zero_budget(self) -> None:
-        text, strategy, tokens = fit_transcript("hello", 0)
+        text, _strategy, tokens = fit_transcript("hello", 0)
         assert text == ""
         assert tokens == 0
 
@@ -273,7 +273,7 @@ class TestFitTranscript(unittest.TestCase):
 
     def test_preserves_content_within_budget(self) -> None:
         text = "Important text that should fit."
-        fitted, strategy, tokens = fit_transcript(text, 100)
+        fitted, strategy, _tokens = fit_transcript(text, 100)
         assert fitted == text
         assert strategy == "none"
 
@@ -802,13 +802,13 @@ class TestEdgeCases(unittest.TestCase):
     def test_transcript_exactly_budget_size(self) -> None:
         # Create a transcript that's exactly the right size
         text = "a" * 400  # exactly 100 tokens at 4 cpt
-        fitted, strategy, tokens = fit_transcript(text, 100)
+        fitted, strategy, _tokens = fit_transcript(text, 100)
         assert strategy == "none"
         assert fitted == text
 
     def test_transcript_one_token_over(self) -> None:
         text = "a" * 404  # 101 tokens at 4 cpt
-        fitted, strategy, tokens = fit_transcript(text, 100, strategy="truncate")
+        fitted, strategy, _tokens = fit_transcript(text, 100, strategy="truncate")
         assert strategy == "truncate"
         assert len(fitted) <= 400
 

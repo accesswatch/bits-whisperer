@@ -265,9 +265,9 @@ class OpenAIAIProvider(AIProvider):
                     stream=True,
                 )
                 full_text = ""
-                for chunk in stream:  # type: ignore[union-attr]
-                    if chunk.choices and chunk.choices[0].delta.content:
-                        delta = chunk.choices[0].delta.content
+                for chunk in stream:
+                    if chunk.choices and chunk.choices[0].delta.content:  # type: ignore[union-attr]
+                        delta = chunk.choices[0].delta.content  # type: ignore[union-attr]
                         full_text += delta
                         on_delta(delta)
                 return AIResponse(text=full_text, provider="openai", model=self._model)
@@ -449,7 +449,7 @@ class AzureOpenAIProvider(AIProvider):
             )
             response = client.chat.completions.create(
                 model=self._deployment,
-                messages=[  # type: ignore[arg-type]
+                messages=[
                     {
                         "role": "system",
                         "content": "You are a helpful assistant that processes transcripts.",
@@ -541,9 +541,9 @@ class AzureOpenAIProvider(AIProvider):
                     stream=True,
                 )
                 full_text = ""
-                for chunk in stream:  # type: ignore[union-attr]
-                    if chunk.choices and chunk.choices[0].delta.content:
-                        delta = chunk.choices[0].delta.content
+                for chunk in stream:
+                    if chunk.choices and chunk.choices[0].delta.content:  # type: ignore[union-attr]
+                        delta = chunk.choices[0].delta.content  # type: ignore[union-attr]
                         full_text += delta
                         on_delta(delta)
                 return AIResponse(
@@ -783,12 +783,11 @@ class CopilotAIProvider(AIProvider):
                 await client.start()
                 logger.debug("CopilotClient started")
                 try:
+                    sys_msg = "You are a helpful assistant that processes transcripts."
                     session = await client.create_session(
                         {
                             "model": self._model,
-                            "system_message": (  # type: ignore[typeddict-item]
-                                "You are a helpful assistant that processes transcripts."
-                            ),
+                            "system_message": sys_msg,  # type: ignore[typeddict-item]
                         }
                     )
                     logger.debug("Session created, sending prompt...")
@@ -949,7 +948,7 @@ class OllamaAIProvider(AIProvider):
             )
             response = client.chat.completions.create(
                 model=self._model,
-                messages=[  # type: ignore[arg-type]
+                messages=[
                     {
                         "role": "system",
                         "content": "You are a helpful assistant that processes transcripts.",
@@ -986,7 +985,6 @@ class OllamaAIProvider(AIProvider):
     def validate_key(self, api_key: str) -> bool:
         """Validate Ollama connectivity by listing local models."""
         try:
-            import urllib.error
             import urllib.request
 
             url = f"{self._endpoint}/api/tags"
@@ -1034,9 +1032,9 @@ class OllamaAIProvider(AIProvider):
                     stream=True,
                 )
                 full_text = ""
-                for chunk in stream:  # type: ignore[union-attr]
-                    if chunk.choices and chunk.choices[0].delta.content:
-                        delta = chunk.choices[0].delta.content
+                for chunk in stream:
+                    if chunk.choices and chunk.choices[0].delta.content:  # type: ignore[union-attr]
+                        delta = chunk.choices[0].delta.content  # type: ignore[union-attr]
                         full_text += delta
                         on_delta(delta)
                 return AIResponse(text=full_text, provider="ollama", model=self._model)

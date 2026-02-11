@@ -206,8 +206,10 @@ class WindowsSpeechProvider(TranscriptionProvider):
         Uses ``comtypes`` to drive ``ISpRecoGrammar`` with a dictation
         grammar for general speech-to-text.
         """
-        import comtypes  # noqa: F401
+        import comtypes
         from comtypes.client import CreateObject
+
+        _ = comtypes  # availability check
 
         if progress_callback:
             progress_callback(10.0)
