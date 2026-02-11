@@ -30,7 +30,7 @@ pytest tests/test_providers.py::TestProviderName::test_method
 # Lint and format
 black --check src/ tests/
 ruff check src/ tests/
-mypy src/
+pyright src/
 
 # Auto-fix
 black src/ tests/
@@ -103,7 +103,7 @@ pip install pre-commit
 pre-commit install
 ```
 
-Hooks: black, ruff, mypy, codespell, markdownlint, pre-commit-hooks
+Hooks: black, ruff, pyright, codespell, markdownlint, pre-commit-hooks
 (trailing whitespace, YAML/TOML/JSON validation, debug statements,
 large files, merge conflicts).
 
@@ -112,7 +112,7 @@ large files, merge conflicts).
 GitHub Actions CI (`.github/workflows/ci.yml`) runs on every push
 and PR to `main`:
 
-- **Lint job**: black, ruff, mypy
+- **Lint job**: black, ruff, pyright
 - **Security job**: pip-audit (dependency vulnerability scanning)
 - **Test job**: pytest with coverage on Windows, Python 3.13
 - **Quality gate**: blocks merge if lint or test fails
@@ -128,7 +128,7 @@ and PR to `main`:
 
 `.vscode/extensions.json` recommends:
 
-- Ruff, Black Formatter, Python, mypy, EditorConfig, Code Spell Checker
+- Ruff, Black Formatter, Python, Pylance, EditorConfig, Code Spell Checker
 
 ## Architecture
 

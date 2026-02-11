@@ -39,6 +39,7 @@ build/
 # --- Testing & Linting ---
 .pytest_cache/
 .mypy_cache/
+.pyright/
 .ruff_cache/
 .coverage
 htmlcov/

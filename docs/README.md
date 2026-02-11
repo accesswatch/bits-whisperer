@@ -326,7 +326,7 @@ black src/ tests/
 ruff check src/ tests/
 
 # Type check
-mypy src/
+pyright src/
 ```
 
 ## Building & Packaging

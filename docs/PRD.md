@@ -1245,7 +1245,7 @@ From `pyproject.toml`:
 | winsdk ≥ 1.0.0b10                       | Windows Speech Runtime (Win) |
 | comtypes ≥ 1.2.0                        | COM interop (Win)            |
 
-Dev dependencies: pytest, pytest-cov, black, ruff, mypy.
+Dev dependencies: pytest, pytest-cov, black, ruff, pyright.
 
 ______________________________________________________________________
 

@@ -215,13 +215,13 @@ cloning, developers should run:
 pip install pre-commit
 pre-commit install
 ```
-This runs black, ruff, mypy, codespell, markdownlint, and
+This runs black, ruff, pyright, codespell, markdownlint, and
 pre-commit-hooks automatically before each commit.
 
 ### CI pipeline
 GitHub Actions CI (`.github/workflows/ci.yml`) runs on every push and
 PR to `main`:
-- **Lint job**: black, ruff, mypy
+- **Lint job**: black, ruff, pyright
 - **Security job**: pip-audit (dependency vulnerability scanning)
 - **Test job**: pytest with coverage on Ubuntu + Windows, Python 3.13
 - **Quality gate**: blocks merge if lint or test fails
@@ -231,7 +231,7 @@ The `.vscode/` directory configures the recommended development
 environment:
 - `settings.json`: Ruff as sole linter (flake8/pylint disabled),
   Black formatter with format-on-save, 100-char ruler, spell checker.
-- `extensions.json`: Recommends Ruff, Black Formatter, Python, mypy,
+- `extensions.json`: Recommends Ruff, Black Formatter, Python, Pylance,
   EditorConfig, Code Spell Checker. Blocks flake8 and pylint extensions.
 
 ## 8. Editing Policy

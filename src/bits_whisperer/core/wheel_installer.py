@@ -129,7 +129,7 @@ _EXCLUDED: Final[frozenset[str]] = frozenset(
         "pytest",
         "black",
         "ruff",
-        "mypy",
+        "pyright",
         "pylint",
         "coverage",
     }

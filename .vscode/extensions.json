@@ -5,7 +5,7 @@
     "charliermarsh.ruff",
     "editorconfig.editorconfig",
     "streetsidesoftware.code-spell-checker",
-    "ms-python.mypy-type-checker"
+    "ms-python.vscode-pylance"
   ],
   "unwantedRecommendations": [
     "ms-python.flake8",
