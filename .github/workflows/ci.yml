@@ -1,6 +1,6 @@
 # BITS Whisperer — CI: Lint, Format, Security, Test
 # Runs on every push and pull request to main.
-# Gates: black, ruff, pytest — must pass before merge.
+# Gates: ruff (format + lint), pytest — must pass before merge.
 # Informational: pyright (type check), pip-audit (security).
 
 name: CI
@@ -31,10 +31,10 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install black ruff pyright
+        run: pip install ruff pyright
 
-      - name: Black (formatting check)
-        run: black --check --diff src/ tests/
+      - name: Ruff Format (formatting check)
+        run: ruff format --check --diff src/ tests/
 
       - name: Ruff (lint check)
         run: ruff check src/ tests/

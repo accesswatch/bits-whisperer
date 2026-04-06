@@ -51,10 +51,22 @@ class TestDocumentReaderSupport:
     def test_supported_rtf_extensions(self) -> None:
         assert is_supported("notes.rtf")
 
+    def test_supported_pptx_extensions(self) -> None:
+        assert is_supported("slides.pptx")
+
+    def test_supported_epub_extensions(self) -> None:
+        assert is_supported("book.epub")
+
+    def test_supported_msg_extensions(self) -> None:
+        assert is_supported("email.msg")
+
+    def test_supported_zip_extensions(self) -> None:
+        assert is_supported("archive.zip")
+
     def test_unsupported_extensions(self) -> None:
         assert not is_supported("image.png")
         assert not is_supported("video.mp4")
-        assert not is_supported("archive.zip")
+        assert not is_supported("binary.exe")
 
     def test_case_insensitive_check(self) -> None:
         # is_supported lowercases the extension
@@ -192,6 +204,45 @@ class TestDocumentReaderPDF:
         with patch.dict("sys.modules", {"pypdf": None, "PyPDF2": None}):
             result = read_document_safe(f)
             assert "pypdf" in result or "Error" in result
+
+
+class TestDocumentReaderMarkItDown:
+    """Test MarkItDown-backed readers (pptx, epub, msg, zip)."""
+
+    def test_pptx_missing_markitdown(self, tmp_path: Path) -> None:
+        f = tmp_path / "slides.pptx"
+        f.write_bytes(b"PK")
+        with patch.dict("sys.modules", {"markitdown": None}):
+            result = read_document_safe(f)
+            assert "markitdown" in result or "Error" in result
+
+    def test_epub_missing_markitdown(self, tmp_path: Path) -> None:
+        f = tmp_path / "book.epub"
+        f.write_bytes(b"PK")
+        with patch.dict("sys.modules", {"markitdown": None}):
+            result = read_document_safe(f)
+            assert "markitdown" in result or "Error" in result
+
+    def test_msg_missing_markitdown(self, tmp_path: Path) -> None:
+        f = tmp_path / "email.msg"
+        f.write_bytes(b"\xd0\xcf\x11\xe0")  # OLE header bytes
+        with patch.dict("sys.modules", {"markitdown": None}):
+            result = read_document_safe(f)
+            assert "markitdown" in result or "Error" in result
+
+    def test_zip_missing_markitdown(self, tmp_path: Path) -> None:
+        f = tmp_path / "archive.zip"
+        f.write_bytes(b"PK\x03\x04")
+        with patch.dict("sys.modules", {"markitdown": None}):
+            result = read_document_safe(f)
+            assert "markitdown" in result or "Error" in result
+
+    def test_try_markitdown_fallback_for_unknown_extension(self, tmp_path: Path) -> None:
+        f = tmp_path / "data.custom"
+        f.write_text("custom format data", encoding="utf-8")
+        result = read_document_safe(f)
+        # Unknown extensions try MarkItDown then fall back to plain text
+        assert "custom format data" in result
 
 
 # ======================================================================

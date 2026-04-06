@@ -179,7 +179,7 @@ class AudioPlayer:
             raise AudioPlayerError("ffmpeg not found. Install ffmpeg and add it to PATH.")
         if importlib.util.find_spec("sounddevice") is None:
             raise AudioPlayerError(
-                "sounddevice is not installed. " "Install the audio playback dependency."
+                "sounddevice is not installed. Install the audio playback dependency."
             )
         if self.is_playing:
             return

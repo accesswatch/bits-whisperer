@@ -29,6 +29,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _get_tree_status_colour(status: JobStatus) -> wx.Colour:
+    """Return a theme-aware colour for queue items."""
+    if status in (JobStatus.TRANSCODING, JobStatus.TRANSCRIBING):
+        return wx.SystemSettings.GetColour(wx.SYS_COLOUR_HOTLIGHT)
+    return wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWTEXT)
+
+
 class QueuePanel(wx.Panel):
     """Panel showing the transcription job queue as a tree view.
 
@@ -446,13 +453,8 @@ class QueuePanel(wx.Panel):
 
         self._tree.SetItemText(item, self._format_item_text(job))
 
-        # Colour-code status
-        if job.status == JobStatus.COMPLETED:
-            self._tree.SetItemTextColour(item, wx.Colour(0, 128, 0))
-        elif job.status == JobStatus.FAILED:
-            self._tree.SetItemTextColour(item, wx.Colour(192, 0, 0))
-        elif job.status in (JobStatus.TRANSCODING, JobStatus.TRANSCRIBING):
-            self._tree.SetItemTextColour(item, wx.SystemSettings.GetColour(wx.SYS_COLOUR_HOTLIGHT))
+        # State is conveyed in text; colour is only a secondary cue.
+        self._tree.SetItemTextColour(item, _get_tree_status_colour(job.status))
 
         # Update parent folder label if this job is inside a folder
         self._update_parent_folder_label(job.id)
@@ -1257,7 +1259,7 @@ class QueuePanel(wx.Panel):
         item = self._job_tree_items.get(job_id)
         if item and item.IsOk():
             self._tree.SetItemText(item, self._format_item_text(job))
-        label = template.split("/")[-1].split("\\")[-1] if template else "None"
+        label = template.rsplit("/", maxsplit=1)[-1].split("\\")[-1] if template else "None"
         announce_status(self._main_frame, f"AI action set to: {label}")
 
     def _set_folder_ai_action(self, folder_path: str, template: str) -> None:
@@ -1278,7 +1280,7 @@ class QueuePanel(wx.Panel):
             if item and item.IsOk():
                 self._tree.SetItemText(item, self._format_item_text(job))
 
-        label = template.split("/")[-1].split("\\")[-1] if template else "None"
+        label = template.rsplit("/", maxsplit=1)[-1].split("\\")[-1] if template else "None"
         count = len(pending)
         announce_status(
             self._main_frame,
@@ -1358,7 +1360,7 @@ class QueuePanel(wx.Panel):
         current_name = job.custom_name or job.display_name
         dlg = wx.TextEntryDialog(
             self,
-            "Enter a custom name for this file.\n" "Leave blank to use the original file name.",
+            "Enter a custom name for this file.\nLeave blank to use the original file name.",
             "Rename — " + (job.file_name or Path(job.file_path).name),
             current_name,
         )
@@ -1392,7 +1394,7 @@ class QueuePanel(wx.Panel):
         current_name = self._folder_custom_names.get(folder_path) or Path(folder_path).name
         dlg = wx.TextEntryDialog(
             self,
-            "Enter a custom name for this folder.\n" "Leave blank to use the original folder name.",
+            "Enter a custom name for this folder.\nLeave blank to use the original folder name.",
             "Rename Folder — " + Path(folder_path).name,
             current_name,
         )
@@ -1740,16 +1742,8 @@ class QueuePanel(wx.Panel):
                 if item.IsOk():
                     job = self._jobs.get(job_id)
                     if job:
-                        # Restore status-based colour
-                        if job.status == JobStatus.COMPLETED:
-                            self._tree.SetItemTextColour(item, wx.Colour(0, 128, 0))
-                        elif job.status == JobStatus.FAILED:
-                            self._tree.SetItemTextColour(item, wx.Colour(192, 0, 0))
-                        elif job.status in (JobStatus.TRANSCODING, JobStatus.TRANSCRIBING):
-                            self._tree.SetItemTextColour(
-                                item,
-                                wx.SystemSettings.GetColour(wx.SYS_COLOUR_HOTLIGHT),
-                            )
+                        if job.status in (JobStatus.TRANSCODING, JobStatus.TRANSCRIBING):
+                            self._tree.SetItemTextColour(item, _get_tree_status_colour(job.status))
                         else:
                             self._tree.SetItemTextColour(item, normal_colour)
                     self._tree.SetItemBold(item, False)

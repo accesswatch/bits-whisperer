@@ -11,7 +11,11 @@ Supported formats
 - **Spreadsheets** (.xlsx, .xls) — sheet-by-sheet CSV via ``openpyxl``
 - **PDF** (.pdf) — page-by-page text via ``PyPDF2`` / ``pypdf``
 - **Rich text** (.rtf) — via ``striprtf``
-"""
+- **PowerPoint** (.pptx) — via ``markitdown`` (optional)
+- **EPUB** (.epub) — via ``markitdown`` (optional)
+- **Outlook messages** (.msg) — via ``markitdown`` (optional)
+- **ZIP archives** (.zip) — via ``markitdown`` (iterates contents)
+- **Additional formats** — via ``markitdown`` when installed (fallback for unknown types)"""
 
 from __future__ import annotations
 
@@ -51,21 +55,37 @@ _WORD_EXTENSIONS: Final[frozenset[str]] = frozenset({".docx"})
 _EXCEL_EXTENSIONS: Final[frozenset[str]] = frozenset({".xlsx", ".xls"})
 _PDF_EXTENSIONS: Final[frozenset[str]] = frozenset({".pdf"})
 _RTF_EXTENSIONS: Final[frozenset[str]] = frozenset({".rtf"})
+_PPTX_EXTENSIONS: Final[frozenset[str]] = frozenset({".pptx"})
+_EPUB_EXTENSIONS: Final[frozenset[str]] = frozenset({".epub"})
+_MSG_EXTENSIONS: Final[frozenset[str]] = frozenset({".msg"})
+_ZIP_EXTENSIONS: Final[frozenset[str]] = frozenset({".zip"})
 
 SUPPORTED_EXTENSIONS: Final[frozenset[str]] = (
-    _TEXT_EXTENSIONS | _WORD_EXTENSIONS | _EXCEL_EXTENSIONS | _PDF_EXTENSIONS | _RTF_EXTENSIONS
+    _TEXT_EXTENSIONS
+    | _WORD_EXTENSIONS
+    | _EXCEL_EXTENSIONS
+    | _PDF_EXTENSIONS
+    | _RTF_EXTENSIONS
+    | _PPTX_EXTENSIONS
+    | _EPUB_EXTENSIONS
+    | _MSG_EXTENSIONS
+    | _ZIP_EXTENSIONS
 )
 
 # File dialog wildcard for supported attachment types
 ATTACHMENT_WILDCARD: Final[str] = (
     "All supported files|"
     "*.txt;*.md;*.csv;*.log;*.json;*.xml;*.yaml;*.yml;*.ini;*.cfg;*.conf;*.rst;"
-    "*.tsv;*.html;*.htm;*.docx;*.xlsx;*.xls;*.pdf;*.rtf|"
+    "*.tsv;*.html;*.htm;*.docx;*.xlsx;*.xls;*.pdf;*.rtf;*.pptx;*.epub;*.msg;*.zip|"
     "Text files (*.txt, *.md, *.csv, *.log)|*.txt;*.md;*.csv;*.log;*.tsv|"
     "Word documents (*.docx)|*.docx|"
+    "PowerPoint (*.pptx)|*.pptx|"
+    "EPUB e-books (*.epub)|*.epub|"
     "Spreadsheets (*.xlsx, *.xls)|*.xlsx;*.xls|"
     "PDF files (*.pdf)|*.pdf|"
     "Rich text (*.rtf)|*.rtf|"
+    "Outlook messages (*.msg)|*.msg|"
+    "ZIP archives (*.zip)|*.zip|"
     "Data files (*.json, *.xml, *.yaml)|*.json;*.xml;*.yaml;*.yml|"
     "All files (*.*)|*.*"
 )
@@ -131,8 +151,13 @@ def read_document(path: str | Path) -> str:
         return _read_pdf(p)
     elif ext in _RTF_EXTENSIONS:
         return _read_rtf(p)
+    elif ext in (_PPTX_EXTENSIONS | _EPUB_EXTENSIONS | _MSG_EXTENSIONS | _ZIP_EXTENSIONS):
+        return _read_markitdown(p)
     else:
-        # Attempt plain-text read for unknown extensions
+        # Try MarkItDown for unknown extensions, fall back to plain-text
+        result = _try_markitdown(p)
+        if result:
+            return result
         logger.info("Unknown extension '%s', attempting plain-text read", ext)
         return _read_text(p)
 
@@ -266,8 +291,7 @@ def _read_pdf(path: Path) -> str:
         return "\n\n".join(pages) if pages else "[No extractable text in PDF]"
     except ImportError:
         return (
-            f"[Cannot read {path.name}: pypdf is not installed. "
-            f"Install it with: pip install pypdf]"
+            f"[Cannot read {path.name}: pypdf is not installed. Install it with: pip install pypdf]"
         )
 
 
@@ -286,3 +310,46 @@ def _read_rtf(path: Path) -> str:
 
     raw = path.read_bytes().decode("utf-8", errors="replace")
     return str(rtf_to_text(raw))
+
+
+def _try_markitdown(path: Path) -> str:
+    """Attempt to read a file using MarkItDown.
+
+    Returns empty string if MarkItDown is not installed or conversion fails.
+    """
+    try:
+        from markitdown import MarkItDown
+
+        md = MarkItDown()
+        result = md.convert(str(path))
+        text = result.text_content.strip() if result.text_content else ""
+        if text:
+            logger.info("MarkItDown successfully read '%s' (%d chars)", path.name, len(text))
+        return text
+    except ImportError:
+        return ""
+    except Exception:
+        logger.debug("MarkItDown could not read '%s'", path.name, exc_info=True)
+        return ""
+
+
+def _read_markitdown(path: Path) -> str:
+    """Read a file using MarkItDown (required for .pptx and similar).
+
+    Falls back to a user-friendly error message if MarkItDown is not installed.
+    """
+    result = _try_markitdown(path)
+    if result:
+        return result
+
+    try:
+        from markitdown import MarkItDown
+
+        _ = MarkItDown
+
+        return f"[MarkItDown could not extract text from {path.name}]"
+    except ImportError:
+        return (
+            f"[Cannot read {path.name}: markitdown is not installed. "
+            f"Install it with: pip install markitdown]"
+        )

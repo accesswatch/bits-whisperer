@@ -349,10 +349,10 @@ class TestKeyStoreCopilotEntry:
         assert "copilot_github_token" in _KEY_NAMES
 
     def test_total_key_count_with_copilot(self) -> None:
-        """Should now have 22 key entries (15 original + 4 AI + 1 Copilot + 2 registration)."""
+        """Should have 32 key entries (16 + 4 AI + 1 Copilot + 2 reg + 1 beta)."""
         from bits_whisperer.storage.key_store import _KEY_NAMES
 
-        assert len(_KEY_NAMES) == 22
+        assert len(_KEY_NAMES) == 33
 
 
 # -----------------------------------------------------------------------

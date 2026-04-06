@@ -98,14 +98,12 @@ class AWSTranscribeProvider(TranscriptionProvider):
             raise RuntimeError("boto3 package not installed. pip install boto3") from None
 
         if not api_key:
-            raise RuntimeError(
-                "AWS credentials are required. " "Format: ACCESS_KEY:SECRET_KEY:REGION"
-            )
+            raise RuntimeError("AWS credentials are required. Format: ACCESS_KEY:SECRET_KEY:REGION")
 
         parts = api_key.split(":")
         if len(parts) < 3:
             raise RuntimeError(
-                "Invalid AWS credentials format. " "Expected: ACCESS_KEY:SECRET_KEY:REGION"
+                "Invalid AWS credentials format. Expected: ACCESS_KEY:SECRET_KEY:REGION"
             )
 
         access_key, secret_key, region = parts[0], parts[1], parts[2]

@@ -4,15 +4,14 @@
   "python.analysis.autoImportCompletions": true,
 
   // ── Formatting ──────────────────────────────────────────────────────
-  // Black is the authoritative formatter (via the Black Formatter extension).
+  // Ruff is the authoritative formatter (replaces Black — same AST style).
   "[python]": {
-    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.formatOnSave": true,
     "editor.rulers": [100],
     "editor.tabSize": 4,
     "editor.insertSpaces": true
   },
-  "black-formatter.args": ["--line-length", "100"],
 
   // ── Linting ─────────────────────────────────────────────────────────
   // Ruff replaces flake8, pylint, isort, pyupgrade, bandit, etc.
@@ -24,7 +23,6 @@
 
   // Ruff extension — reads rules from pyproject.toml automatically.
   "ruff.enable": true,
-  "ruff.lint.run": "onType",
   "ruff.organizeImports": true,
   "ruff.fixAll": true,
 

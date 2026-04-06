@@ -96,7 +96,7 @@ class SetupWizard(wx.Dialog):
             parent,
             title=f"Welcome to {APP_NAME}",
             size=(700, 560),
-            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL,
         )
         set_accessible_name(self, f"{APP_NAME} setup wizard")
         self.SetMinSize((640, 500))
@@ -156,7 +156,7 @@ class SetupWizard(wx.Dialog):
         main_sizer.Add(self._page_panel, 1, wx.EXPAND | wx.ALL, 12)
 
         # --- Progress indicator ---
-        self._step_label = wx.StaticText(self, label="Step 1 of 6")
+        self._step_label = wx.StaticText(self, label="Step 1 of 9")
         set_accessible_name(self._step_label, "Wizard progress")
         main_sizer.Add(self._step_label, 0, wx.LEFT | wx.RIGHT, 16)
 
@@ -309,15 +309,15 @@ class SetupWizard(wx.Dialog):
         sizer = self._page_sizer
 
         intro_text = (
-            f"{APP_NAME} turns your audio files into text using the latest AI technology. "
-            "You can use free on-device models that keep your data private, or connect "
-            "to cloud services for maximum accuracy.\n\n"
+            f"{APP_NAME} turns your audio files into text. "
+            "You can keep everything on your computer with free local models, or "
+            "sign in to online services for more choices.\n\n"
             "This setup wizard will:\n"
             "  1.  Let you choose Basic or Advanced mode\n"
             "  2.  Detect your computer's hardware\n"
             "  3.  Recommend AI models that work best on your machine\n"
             "  4.  Let you download models for offline use\n"
-            "  5.  Help you connect cloud services (optional)\n"
+            "  5.  Help you add optional online services\n"
             "  6.  Set up AI features and spending limits\n"
             "  7.  Set your preferences\n\n"
             "You can always change these settings later from the Tools menu."
@@ -331,8 +331,8 @@ class SetupWizard(wx.Dialog):
         fb_sizer = wx.StaticBoxSizer(features_box, wx.VERTICAL)
 
         highlights = [
-            "16 transcription engines — cloud and local",
-            "14 AI models matched to your hardware",
+            "17 transcription engines — cloud and local",
+            "AI models and assistants matched to your setup",
             "7 export formats (Text, Word, SRT, and more)",
             "Full keyboard navigation and screen reader support",
             "Your audio stays on your computer with local models",
@@ -552,7 +552,7 @@ class SetupWizard(wx.Dialog):
                     "Large models may not fit. Consider freeing up space first."
                 ),
             )
-            warn.SetForegroundColour(wx.Colour(200, 80, 0))
+            warn.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT))
             set_accessible_name(warn, "Low disk space warning")
             sizer.Add(warn, 0, wx.ALL, 4)
 
@@ -718,10 +718,8 @@ class SetupWizard(wx.Dialog):
             _ = faster_whisper  # availability check
         except ImportError:
             accessible_message_box(
-                "The faster-whisper library is not installed.\n\n"
-                "Install it with:\n"
-                "  pip install faster-whisper\n\n"
-                "Then restart the application and try again.",
+                "A required speech engine is missing.\n\n"
+                "Please repair or reinstall the application, then restart and try again.",
                 "Missing Dependency",
                 wx.OK | wx.ICON_ERROR,
                 self,
@@ -1023,8 +1021,7 @@ class SetupWizard(wx.Dialog):
         gemini_desc = wx.StaticText(
             scroll,
             label=(
-                "Most affordable option. Free tier available. "
-                "Get an API key from Google AI Studio."
+                "Most affordable option. Free tier available. Get an API key from Google AI Studio."
             ),
         )
         gemini_sizer.Add(gemini_desc, 0, wx.ALL, 4)
@@ -1071,13 +1068,15 @@ class SetupWizard(wx.Dialog):
 
         sdk_ok = is_sdk_available("copilot_sdk")
         if sdk_ok:
-            sdk_status = "Copilot SDK: Installed (includes CLI)"
+            sdk_status = "Copilot: Ready"
         else:
-            sdk_status = "Copilot SDK not installed. Install later via AI > Copilot Setup."
+            sdk_status = (
+                "Copilot is not ready yet. You can finish setup later from AI > Copilot Setup."
+            )
 
         sdk_label = wx.StaticText(scroll, label=sdk_status)
         sdk_label.Wrap(560)
-        set_accessible_name(sdk_label, "Copilot SDK status")
+        set_accessible_name(sdk_label, "Copilot status")
         copilot_sizer.Add(sdk_label, 0, wx.ALL, 4)
 
         # Enable Copilot checkbox
@@ -1167,7 +1166,7 @@ class SetupWizard(wx.Dialog):
         )
         set_accessible_help(
             self._wiz_budget_enabled,
-            "Show a warning when a transcription's estimated cost " "exceeds your spending limit",
+            "Show a warning when a transcription's estimated cost exceeds your spending limit",
         )
         ctrl_sizer.Add(self._wiz_budget_enabled, 0, wx.ALL, 6)
 
@@ -1201,7 +1200,7 @@ class SetupWizard(wx.Dialog):
         label_control(lim_lbl, self._wiz_budget_limit)
         set_accessible_help(
             self._wiz_budget_limit,
-            "Maximum cost in USD per transcription. " "Set to 0 for no limit.",
+            "Maximum cost in USD per transcription. Set to 0 for no limit.",
         )
         lim_row.Add(lim_lbl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
         lim_row.Add(self._wiz_budget_limit, 0)
@@ -1341,7 +1340,7 @@ class SetupWizard(wx.Dialog):
         """Build the final summary page."""
         self._header.SetLabel("You're All Set!")
         self._subtitle.SetLabel(
-            "Here's a summary of your setup. Click Finish to start using " f"{APP_NAME}."
+            f"Here's a summary of your setup. Click Finish to start using {APP_NAME}."
         )
 
         panel = self._page_panel

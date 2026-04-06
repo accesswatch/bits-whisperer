@@ -1,0 +1,63 @@
+name: BITS Manual Key Issuance
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: "User email address"
+        required: true
+      product_id:
+        description: "Product ID"
+        required: true
+        default: "bits_whisperer"
+      key_type:
+        description: "Key type"
+        required: true
+        default: "annual"
+        type: choice
+        options:
+          - annual
+          - lifetime
+          - contributor
+          - tester
+
+permissions:
+  contents: write
+
+jobs:
+  issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install cryptography
+
+      - name: Issue key
+        id: issue_key
+        env:
+          BITS_PRIVATE_KEY_BASE64: ${{ secrets.BITS_PRIVATE_KEY_BASE64 }}
+        run: |
+          python backend_scripts/admin_cli.py issue \
+            "${{ github.event.inputs.email }}" \
+            --product "${{ github.event.inputs.product_id }}" \
+            --type "${{ github.event.inputs.key_type }}"
+
+      - name: Generate public manifest
+        env:
+          BITS_PRIVATE_KEY_BASE64: ${{ secrets.BITS_PRIVATE_KEY_BASE64 }}
+        run: python backend_scripts/manifest_generator.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "BITS Registration Bot"
+          git config --global user.email "registration@bits.org"
+          git add tokens.json public_manifest.json audit_log.json
+          git diff --cached --quiet || git commit -m "Manual key issued to ${{ github.event.inputs.email }} (${{ github.event.inputs.key_type }})"
+          git push

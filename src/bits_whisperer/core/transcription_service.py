@@ -478,7 +478,7 @@ class TranscriptionService:
                 audio_path = str(transcoded)
             except Exception as exc:
                 logger.warning(
-                    "Transcoding failed, using " "preprocessed/original: %s",
+                    "Transcoding failed, using preprocessed/original: %s",
                     exc,
                 )
 
@@ -532,9 +532,7 @@ class TranscriptionService:
                         len(turns),
                     )
                 else:
-                    logger.debug(
-                        "Local diarization requested but pyannote.audio " "is not installed."
-                    )
+                    logger.debug("Local diarization requested but pyannote.audio is not installed.")
             except Exception as exc:
                 logger.warning("Local diarization failed: %s", exc)
 
@@ -670,7 +668,7 @@ class TranscriptionService:
 
                 delay = 2 ** (attempt + 1)  # 2s, 4s
                 logger.warning(
-                    "Transient error on attempt %d/%d for %s: %s " "(retrying in %ds)",
+                    "Transient error on attempt %d/%d for %s: %s (retrying in %ds)",
                     attempt + 1,
                     max_retries + 1,
                     job.display_name,
@@ -825,7 +823,7 @@ class TranscriptionService:
             if not ai_service.is_configured():
                 job.ai_action_status = "failed"
                 job.ai_action_error = (
-                    "No AI provider is configured. " "Add an API key in AI Provider Settings."
+                    "No AI provider is configured. Add an API key in AI Provider Settings."
                 )
                 self._notify_update(job)
                 return
@@ -867,17 +865,17 @@ class TranscriptionService:
             prompt_parts.append("--- END TRANSCRIPT ---")
             prompt_parts.append("")
             prompt_parts.append(
-                "Please process this transcript according to the instructions " "above."
+                "Please process this transcript according to the instructions above."
             )
             if attachments_text:
                 prompt_parts.append(
-                    "Use the attached documents as reference material " "where relevant."
+                    "Use the attached documents as reference material where relevant."
                 )
             prompt = "\n".join(prompt_parts)
 
             if prepared.budget.is_truncated:
                 logger.info(
-                    "AI action transcript truncated: %d -> %d tokens " "(%s strategy) for model %s",
+                    "AI action transcript truncated: %d -> %d tokens (%s strategy) for model %s",
                     prepared.budget.transcript_actual_tokens,
                     prepared.budget.transcript_fitted_tokens,
                     prepared.budget.strategy_used,

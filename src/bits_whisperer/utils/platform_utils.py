@@ -218,3 +218,23 @@ def detect_gpu() -> tuple[bool, str, float]:
             pass
 
     return False, "", 0.0
+
+
+def find_ffmpeg() -> str:
+    """Locate the ffmpeg executable on PATH or in common install locations.
+
+    Returns:
+        Absolute path to ffmpeg, or empty string if not found.
+    """
+    path = shutil.which("ffmpeg")
+    if path:
+        return path
+    # Check common Windows locations
+    for candidate in [
+        r"C:\ffmpeg\bin\ffmpeg.exe",
+        r"C:\Program Files\ffmpeg\bin\ffmpeg.exe",
+    ]:
+        if Path(candidate).exists():
+            return candidate
+    logger.warning("ffmpeg not found on PATH")
+    return ""

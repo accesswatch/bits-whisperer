@@ -1,517 +1,233 @@
 # BITS Whisperer
 
-**Consumer-grade audio transcription for Windows and macOS.** *Developed by
-Blind Information Technology Solutions (BITS).*
+**Turn speech into text - privately, accurately, and accessibly.**
 
-BITS Whisperer is a desktop application that converts speech to text using **17
-transcription providers** — cloud services from Microsoft, Google, Amazon,
-OpenAI, and more, plus on-device Whisper models for complete privacy. Built with
-accessibility as a core requirement — every feature works with keyboard-only
+BITS Whisperer is a free, open-source desktop application for audio
+transcription on Windows and macOS. Transcribe meetings, interviews, lectures,
+podcasts, and voice memos using on-device AI or cloud services. You choose
+what stays on your computer and what goes to the cloud.
+
+built by [Blind Information Technology Solutions (BITS)](https://www.yourblindspot.com/)
+with accessibility as a core requirement - every feature works with keyboard
 navigation and screen readers.
 
 ______________________________________________________________________
 
-## Features
+## Why BITS Whisperer?
 
-- **17 transcription providers** — Every major cloud platform plus free
-  on-device options (see table below)
-- **Auphonic integration** — Professional cloud audio post-production (leveling,
-  loudness normalization, noise reduction, silence/filler/cough cutting, hum
-  reduction) with configurable speech recognition (Whisper, Google, Amazon,
-  Speechmatics) and output formats
-- **Speaker diarization** — Automatic speaker detection via cloud providers
-  (Azure, Google, Deepgram, AssemblyAI, Rev.ai, Speechmatics, ElevenLabs,
-  Amazon, Gemini) or cloud-free local diarization using pyannote.audio
-- **Speaker editing** — Post-transcription speaker management: rename speakers,
-  reassign segments via right-click, create new speakers, with display format
-  "Speaker: text" for natural reading
-- **Provider-specific settings** — Configure each provider's unique features
-  during onboarding (Auphonic loudness/silence/filler settings, Deepgram
-  model/smart format, AssemblyAI chapters, Azure custom endpoints, and more)
-- **14 Whisper models** — Tiny through Large-v3, plus Turbo and Distil variants,
-  with plain-English descriptions and hardware eligibility checks
-- **Audio preprocessing** — 7-filter ffmpeg pipeline (high-pass, low-pass, noise
-  gate, de-esser, compressor, loudness normalisation, silence trim) to maximise
-  transcription accuracy
-- **Audio preview + clip selection** — Listen before transcribing with
-  pitch-preserving speed control, configurable jump timing, and optional
-  time-range selection
-- **Batch processing** — Drag-and-drop files or entire folders with concurrent
-  workers
-- **Background processing** — Minimize to system tray and keep transcribing;
-  balloon notifications on completion or errors
-- **System tray** — Progress tooltip, left-click show/hide, right-click context
-  menu (pause/resume, progress summary, quit)
-- **Real-time progress** — Per-file progress in the queue panel, status bar
-  gauge, and tray tooltip
-- **Cloud provider onboarding** — Add cloud providers via Tools, then Add
-  Provider with step-by-step credential entry, live API validation, and
-  one-click activation
-- **Basic & Advanced modes** — Choose your experience level in the Setup Wizard
-  or toggle anytime via View, then Advanced Mode (Ctrl+Shift+A). Basic mode
-  shows a streamlined interface with only activated providers; Advanced mode
-  unlocks all providers, audio processing, and power-user settings
-- **7 export formats** — Plain Text, Markdown, HTML, Word (.docx), SRT, VTT,
-  JSON
-- **Auto-export** — Optionally save each transcript as `.txt` alongside the
-  audio file on completion
-- **Recent files** — Quick access to the last 10 opened files via File, then
-  Recent Files
-- **Self-update** — Help, then Check for Updates fetches the latest release from
-  GitHub; silent startup check notifies you when a new version is available
-- **View log** — Tools, then View Log opens the application log in your default
-  text editor
-- **Accessible** — Full keyboard navigation, screen reader support (NVDA/JAWS),
-  high contrast, WCAG 2.1 adapted for desktop
-- **Privacy-first** — Local transcript storage, API keys in Windows Credential
-  Manager
-- **Smart hardware detection** — Automatically identifies eligible Whisper
-  models for your CPU, RAM, and GPU
-- **Automatic dependency setup** — Detects missing ffmpeg at startup and offers
-  one-click install via winget (Windows), with manual instructions fallback
-- **On-demand SDK installer** — Provider SDKs are not bundled in the installer.
-  When you first use a cloud or local provider, BITS Whisperer automatically
-  downloads and installs only the packages needed — keeping the installer small
-  (~40 MB) and startup fast
-- **First-run setup wizard** — Guided 8-page wizard on first launch: experience
-  mode selection, hardware scan, model recommendations, downloads, provider
-  setup, AI & Copilot configuration, preferences, and summary — all in one
-  handholding experience
-- **Disk space checks** — Pre-flight validation before every model download with
-  10% headroom; friendly warnings when space is low
-- **Cross-platform** — Runs on Windows 10+ and macOS 12+; auto-detect GPU (CUDA
-  / Apple Silicon Metal)
-- **User guide** — Comprehensive built-in user guide covering every feature,
-  provider, setting, and keyboard shortcut
-- **Live microphone transcription** — Real-time speech-to-text from your
-  microphone using faster-whisper with energy-based VAD, configurable
-  model/language/device via Tools, then Live Transcription (Ctrl+L)
-- **AI translation & summarization** — Translate transcripts to 15+ languages or
-  generate summaries (concise/detailed/bullet points/meeting minutes) using
-  OpenAI GPT-4o, Anthropic Claude, Azure OpenAI, or Google Gemini via AI menu
-  (Ctrl+T / Ctrl+Shift+S)
-- **Multi-language simultaneous translation** — Translate a transcript to
-  multiple target languages in one operation via AI, then Translate to Multiple
-  Languages; results displayed with language-headed sections and Copy button
-- **AI model catalog with real-time pricing** — 22 AI models across 4 providers
-  with live per-1K-token pricing displayed in the AI settings dialog; compare
-  costs before choosing a model
-- **Copilot subscription tier gating** — Select your GitHub Copilot subscription
-  tier (Free/Pro/Business/Enterprise) to see only the models available to you,
-  with tier pricing and model descriptions
-- **Gemma models** — All 5 Google Gemma variants supported (Gemma 3
-  27B/12B/4B/1B and Gemma 3n E4B) alongside Gemini models for AI tasks
-- **Custom vocabulary** — Define domain-specific terms (medical, legal,
-  technical) that are injected into AI prompts for more accurate translations
-  and summaries
-- **Prompt templates** — 10 built-in templates (4 translation styles, 4
-  summarization styles, 2 analysis) plus support for custom user templates;
-  select active templates in AI settings
-- **Real-time streaming** — Deepgram and AssemblyAI support streaming
-  transcription for near-instant results on long audio
-- **GitHub Copilot SDK integration** — Interactive AI transcript chat panel
-  (Ctrl+Shift+C) with streaming responses, quick actions, custom agent builder,
-  and session management via the Copilot SDK
-- **6 AI providers** — OpenAI, Anthropic Claude, Azure OpenAI, Google Gemini,
-  GitHub Copilot, and Ollama (local) for translation, summarization, and
-  interactive chat
-- **Ollama local AI** — Run AI translation, summarization, and chat entirely
-  on-device using Ollama with any model from the Ollama library or HuggingFace
-  GGUF repositories (Llama, Mistral, Gemma, Phi, and more) — no API key or cloud
-  required
-- **AI Actions** — Automatic post-transcription AI processing using configurable
-  templates. Choose from 6 built-in presets (Meeting Minutes, Action Items,
-  Executive Summary, Interview Notes, Lecture Notes, Q&A Extraction) or create
-  custom templates in the AI Action Builder. Select an AI Action when adding
-  files and the result appears alongside your transcript
-- **Document attachments for AI Actions** — Attach reference documents (Word,
-  PDF, Excel, RTF, plain text) to AI Action templates to provide additional
-  context such as glossaries, style guides, or meeting agendas. Per-attachment
-  instructions let you tell the AI how to use each document (e.g., "Use as
-  glossary", "Cross-reference with transcript")
-- **Context window management** — Intelligent model-aware transcript fitting for
-  AI chat and actions. Automatically allocates token budgets based on each
-  model's context window (8K to 1M tokens), reserves space for responses, trims
-  conversation history, and fits transcripts using configurable strategies
-  (smart, truncate, tail, head+tail). Use `/context` in chat to see your current
-  budget breakdown
-- **AI Action Builder** — Visual template editor (AI menu) with 8 presets for
-  creating reusable post-transcription AI processing instructions. Save
-  templates that combine custom system prompts, model parameters, processing
-  goals, and document attachments
-- **TreeView queue panel** — Hierarchical file queue with folder grouping,
-  drag-and-drop, in-line status indicators (⭐ pending, ⏳ running, ✓ completed, ✗
-  failed), and collapsible folder nodes
-- **Folder transcription with cost estimation** — Add entire folders via File,
-  then Add Folder (Ctrl+Shift+O) with automatic cost estimation for cloud
-  providers displayed in a confirmation dialog before processing begins
-- **Budget limits** — Set per-provider and per-model spending limits to control
-  cloud transcription costs. Configure in the Setup Wizard or Settings with
-  always-confirm option for paid providers
-- **Custom job naming** — Rename any file or folder in the queue with F2 or
-  right-click, then Rename. Custom names appear throughout the queue, transcript
-  panel, and exports
-- **Queue filter & search** — Real-time search bar above the queue panel filters
-  files by name, custom name, provider, or status as you type
-- **Batch operations** — Clear Completed (remove finished jobs), Retry All
-  Failed (re-queue failed jobs), and Retry Selected from the queue toolbar and
-  context menus
-- **Queue context menus** — Right-click files for Rename, Retry, Cancel, Remove,
-  Properties; right-click folders for Rename, Remove Folder, Expand/Collapse
-- **Job properties dialog** — Right-click any file and select Properties to see
-  file path, size, provider, model, status, timestamps, custom name, and cost
-  estimate
-- **Plugin system** — Extend with custom transcription providers via `.py`
-  plugins in a configurable directory; discover, load, enable/disable from
-  Tools, then Plugins
-- **Clean shutdown & temp file cleanup** — Ordered 5-step shutdown sequence
-  ensures worker threads are joined, services stopped, and temporary files
-  cleaned up. Identifiable temp file prefixes (`bw_transcode_*`,
-  `bw_preprocess_*`, `bw_update_*`) enable targeted stale file removal, with
-  safety-net handlers as a last resort
+### Your audio stays on your computer
 
-## Quick Start
+On-device transcription with 14 Whisper model sizes means your recordings
+never leave your machine. No cloud, no internet, no data collection. API
+keys are stored in your operating system's credential vault — never in
+plain text.
 
-### Prerequisites
+### 18 transcription engines in one app
 
-- **Python 3.13+**
-- **Windows 10/11** or **macOS 12+**
-- **ffmpeg** on PATH (auto-installed on first launch if missing)
-- **NVIDIA GPU** (optional, for larger Whisper models on Windows/Linux)
-- **Apple Silicon** (optional, Metal acceleration on macOS)
+Local Whisper, Vosk, Parakeet, Windows Speech, and Azure Embedded for
+offline use. OpenAI, Google, Azure, Deepgram, AssemblyAI, Amazon, Groq,
+Gemini, Rev.ai, Speechmatics, ElevenLabs, Auphonic, and MAI-Transcribe-1
+for cloud power.
+The app recommends the best engine for your hardware automatically.
 
-### Install
+### AI that does more with your transcripts
+
+Six AI providers — OpenAI, Anthropic Claude, Azure OpenAI, Google Gemini,
+GitHub Copilot, and Ollama (free, local) — for translation, summarization,
+and interactive chat. AI Actions process your transcript automatically
+after transcription: meeting minutes, action items, executive summaries,
+and more — with no extra step required.
+
+GitHub Copilot setup is browser-first. Open **AI, then Copilot Setup** and sign
+in with GitHub in your browser. A manual token path exists under **Other
+sign-in options** only as a fallback.
+
+### Accessible from the ground up
+
+Full keyboard navigation, screen reader support (NVDA/JAWS), system
+high-contrast compliance, and a menu-bar-first interface. Accessibility is
+not an afterthought — it is the foundation.
+
+______________________________________________________________________
+
+## Key Features
+
+### Transcription
+
+- **18 providers** — 5 local (free, offline) + 13 cloud
+- **14 Whisper models** — Tiny (75 MB) through Large v3 (3 GB) with
+  hardware-aware recommendations
+- **Speaker diarization** — 10 cloud providers + cloud-free local
+  diarization via pyannote.audio, with speaker renaming and segment
+  reassignment
+- **Live microphone** — Real-time speech-to-text with voice activity
+  detection (Ctrl+Alt+L)
+- **Audio preprocessing** — 7-filter cleanup pipeline (noise gate,
+  compressor, loudness normalization, and more)
+- **Audio preview** — Pitch-preserving playback with clip-range selection
+  before transcription
+- **Batch processing** — Drag-and-drop files or folders with progress
+  tracking and background processing
+
+### AI Intelligence
+
+- **Translate** transcripts into 15+ languages (Ctrl+T), including
+  multi-language simultaneous translation
+- **Summarize** as concise paragraphs, bullet points, or formal meeting
+  minutes (Ctrl+Shift+S)
+- **AI Actions** — Automatic post-transcription processing with 6 built-in
+  presets (Meeting Minutes, Action Items, Executive Summary, Interview
+  Notes, Lecture Notes, Q&A Extraction) or custom templates
+- **Interactive chat** — Conversation with your transcript via the AI Chat
+  Panel (Ctrl+Shift+C) with 28 slash commands
+- **Document attachments** — Enrich AI actions with glossaries, style
+  guides, and reference documents
+- **Custom vocabulary** — Domain-specific terms for more accurate AI output
+- **10 prompt templates** — 4 translation, 4 summarization, 2 analysis
+
+### Workflow & Automation
+
+- **Watch folder** — Monitor a directory for new audio files and
+  auto-transcribe
+- **Scheduled transcription** — Timed and recurring jobs with DND-aware
+  rules
+- **Do Not Disturb** — Detects Focus Assist (Windows) / DND (macOS) and
+  pauses work automatically
+- **7 export formats** — Plain text, Markdown, HTML, Word, SRT, VTT, JSON
+  with auto-export option
+- **System tray** — Background processing with desktop notifications
+- **Budget limits** — Per-provider spending caps with cost estimation and
+  confirmation dialogs
+- **Plugin system** — Extend with custom transcription providers
+
+### Setup & Usability
+
+- **9-page setup wizard** — Guided first-run experience: hardware scan,
+  model download, provider setup, AI configuration, budget, and preferences
+- **Basic & Advanced modes** — Streamlined interface for everyday use;
+  full control when you need it
+- **On-demand SDK installer** — Provider SDKs download automatically on
+  first use, keeping the installer small (~40 MB)
+- **Self-update** — Check for new versions from the Help menu
+- **Cross-platform** — Windows 10+ and macOS 12+ with GPU auto-detection
+  (NVIDIA CUDA / Apple Silicon Metal)
+
+______________________________________________________________________
+
+## Transcription Providers
+
+### Local (Free, Offline)
+
+| Provider           | Description                                              |
+| ------------------ | -------------------------------------------------------- |
+| **Local Whisper**  | On-device AI, 14 model sizes, GPU-accelerated            |
+| **Vosk**           | Lightweight offline ASR, 20+ languages, low-end hardware |
+| **Parakeet**       | NVIDIA NeMo, high-accuracy English                       |
+| **Windows Speech** | Built-in SAPI5 + WinRT, zero setup                       |
+| **Azure Embedded** | Microsoft neural models, offline                         |
+
+### Cloud (Paid, Online)
+
+| Provider              | Rate/min | Highlights                            |
+| --------------------- | -------- | ------------------------------------- |
+| **Gemini**            | $0.0002  | Cheapest cloud, multimodal AI         |
+| **Groq Whisper**      | $0.003   | 188x real-time speed                  |
+| **ElevenLabs Scribe** | $0.005   | 99+ languages, best-in-class accuracy |
+| **OpenAI Whisper**    | $0.006   | Fast, reliable                        |
+| **Auphonic**          | ~$0.01   | Audio post-production + transcription |
+| **AssemblyAI**        | $0.011   | Speaker labels, auto-chapters         |
+| **Deepgram Nova-3**   | $0.013   | Smart formatting, streaming           |
+| **Azure Speech**      | $0.017   | 100+ languages                        |
+| **Speechmatics**      | $0.017   | 50+ languages, streaming              |
+| **Rev.ai**            | $0.020   | Human-hybrid option                   |
+| **Google Speech**     | $0.024   | Diarization, enhanced models          |
+| **Amazon Transcribe** | $0.024   | S3 integration, medical vocabularies  |
+| **MAI-Transcribe-1**  | $0.006   | Microsoft AI LLM Speech, 25 languages |
+
+______________________________________________________________________
+
+## System Requirements
+
+| Component  | Minimum                | Recommended              |
+| ---------- | ---------------------- | ------------------------ |
+| OS         | Windows 10 / macOS 12+ | Windows 11 / macOS 14+   |
+| RAM        | 4 GB                   | 8 GB+                    |
+| Disk Space | 500 MB (app only)      | 5 GB+ (with AI models)   |
+| GPU        | Not required           | NVIDIA with 4+ GB VRAM   |
+| Internet   | Not required           | For cloud providers only |
+
+______________________________________________________________________
+
+## Installation
+
+### Windows Installer (Recommended)
+
+Download **BITS_Whisperer_Setup.exe** from the
+[Releases page](https://github.com/accesswatch/bits-whisperer/releases)
+and run it. The setup wizard will guide you through first-time configuration.
+
+### Quick Start
+
+1. Install and open BITS Whisperer.
+1. Complete the setup wizard in **Basic** mode unless you need advanced
+  controls.
+1. Add one audio file with **File, then Add Files**.
+1. Press **F5** to start transcription.
+1. Review the transcript and export it.
+
+### From Source
 
 ```bash
 git clone https://github.com/accesswatch/bits-whisperer.git
 cd bits-whisperer
 pip install -e ".[dev]"
-```
-
-### Run
-
-```bash
-bits-whisperer
-# or
 python -m bits_whisperer
 ```
 
-## Architecture
+Requires Python 3.13+.
 
-```text
-src/bits_whisperer/
-  __main__.py              # Entry point
-  app.py                   # wx.App subclass
-  core/                    # Business logic
-    transcription_service.py  # Job queue & orchestration
-    provider_manager.py       # Provider registry & routing
-    audio_preprocessor.py     # 7-filter ffmpeg preprocessing
-    audio_player.py           # Audio preview playback (ffmpeg + sounddevice)
-    dependency_checker.py     # Startup dependency verification & install
-    device_probe.py           # Hardware detection (CPU/RAM/GPU)
-    diarization.py            # Cloud-free local speaker diarization (pyannote)
-    model_manager.py          # Whisper model download/cache
-    sdk_installer.py          # On-demand provider SDK installer
-    wheel_installer.py        # PyPI wheel downloader/extractor (frozen builds)
-    settings.py               # Persistent settings (JSON-backed)
-    transcoder.py             # ffmpeg audio normalisation
-    updater.py                # GitHub Releases self-update
-    job.py                    # Job data model
-    ai_service.py             # AI translation & summarization (OpenAI/Anthropic/Azure/Gemini/Copilot)
-    live_transcription.py     # Real-time microphone transcription
-    plugin_manager.py         # Plugin discovery, loading & lifecycle
-    copilot_service.py        # GitHub Copilot SDK integration & agent management
-    context_manager.py       # Context window management & token budgeting
-    document_reader.py       # Document text extraction (DOCX/PDF/XLSX/RTF/TXT)
-  providers/               # 17 provider adapters (strategy pattern)
-    base.py              # TranscriptionProvider ABC
-    local_whisper.py     # faster-whisper (local, free)
-    openai_whisper.py    # OpenAI Whisper API
-    google_speech.py     # Google Cloud Speech-to-Text
-    gemini_provider.py   # Google Gemini
-    azure_speech.py      # Microsoft Azure Speech Services
-    azure_embedded.py    # Microsoft Azure Embedded Speech (offline)
-    aws_transcribe.py    # Amazon Transcribe
-    deepgram_provider.py # Deepgram Nova-2
-    assemblyai_provider.py  # AssemblyAI
-    groq_whisper.py      # Groq LPU Whisper
-    rev_ai_provider.py   # Rev.ai
-    speechmatics_provider.py # Speechmatics
-    elevenlabs_provider.py   # ElevenLabs Scribe
-    windows_speech.py    # Windows SAPI5 + WinRT (offline)
-    vosk_provider.py     # Vosk offline speech (Kaldi-based)
-    parakeet_provider.py # NVIDIA Parakeet (NeMo ASR, English)
-    auphonic_provider.py # Auphonic audio post-production + transcription
-  export/                  # Output formatters
-    base.py, plain_text.py, markdown.py
-    html_export.py, word_export.py
-    srt.py, vtt.py, json_export.py
-  storage/                 # Persistence
-    database.py          # SQLite (WAL mode) for jobs
-    key_store.py         # OS credential store via keyring (20 entries)
-  ui/                      # WXPython UI
-    main_frame.py        # Menu bar, splitter, status bar, tray integration
-    queue_panel.py       # File queue list
-    transcript_panel.py  # Transcript viewer/editor with speaker management
-    settings_dialog.py   # Tabbed settings (7 simple + 2 advanced)
-    progress_dialog.py   # Batch progress
-    model_manager_dialog.py  # Model management
-    add_provider_dialog.py   # Cloud provider onboarding
-    setup_wizard.py      # First-run setup wizard (8 pages)
-    tray_icon.py         # System tray (TaskBarIcon)
-    live_transcription_dialog.py  # Live microphone transcription dialog
-    ai_settings_dialog.py  # AI provider configuration dialog (5 providers)
-    copilot_setup_dialog.py  # Copilot CLI installation & auth wizard
-    copilot_chat_panel.py    # Interactive AI transcript chat panel
-    slash_commands.py        # Chat slash command registry & handlers (28 commands)
-    agent_builder_dialog.py  # AI Action Builder — post-transcription template editor
-    audio_player_dialog.py   # Audio preview dialog with clip selection
-  utils/
-    accessibility.py     # a11y helpers
-    constants.py         # App-wide constants & model registry
-    platform_utils.py    # Cross-platform helpers (file open, disk space, CPU/GPU detection)
-```
+______________________________________________________________________
+
+## Essential Keyboard Shortcuts
+
+| Action              | Shortcut     |
+| ------------------- | ------------ |
+| Add files           | Ctrl+O       |
+| Add folder          | Ctrl+Shift+O |
+| Start transcription | F5           |
+| Export transcript   | Ctrl+E       |
+| Find in transcript  | Ctrl+F       |
+| Translate           | Ctrl+T       |
+| Summarize           | Ctrl+Shift+S |
+| AI Chat             | Ctrl+Shift+C |
+| Live microphone     | Ctrl+Alt+L   |
+| Settings            | Ctrl+,       |
+| Manage models       | Ctrl+M       |
+| All shortcuts       | Ctrl+Shift+K |
+
+Press **Alt** to open the menu bar. Every menu item has a keyboard mnemonic.
+
+______________________________________________________________________
+
+## Documentation
+
+| Document                               | Description                  |
+| -------------------------------------- | ---------------------------- |
+| [Getting Started](GETTING_STARTED.md)  | First-time user walkthrough |
+| [User Guide](USER_GUIDE.md)            | Full end-user guide         |
+| [Changelog](CHANGELOG.md)              | Version history             |
+| [Product Requirements](PRD.md)         | Full technical specification |
+
+______________________________________________________________________
 
 ## Supported Audio Formats
 
 MP3, WAV, OGG, Opus, FLAC, M4A, AAC, WebM, WMA, AIFF, AMR, MP4
 
-## Keyboard Shortcuts
-
-| Action                  | Shortcut       |
-| ----------------------- | -------------- |
-| Add Files               | Ctrl+O         |
-| Add Folder              | Ctrl+Shift+O   |
-| Start Transcription     | F5             |
-| Pause / Resume          | F6             |
-| Cancel Selected         | Delete         |
-| Clear Queue             | Ctrl+Shift+Del |
-| Rename Selected         | F2             |
-| Clear Completed         | (Queue menu)   |
-| Retry All Failed        | (Queue menu)   |
-| Export Transcript       | Ctrl+E         |
-| Find Next in Transcript | F3             |
-| Settings                | Ctrl+,         |
-| Manage Models           | Ctrl+M         |
-| Toggle Advanced Mode    | Ctrl+Shift+A   |
-| Live Transcription      | Ctrl+L         |
-| Translate Transcript    | Ctrl+T         |
-| Translate to Multiple   | (AI menu)      |
-| Summarize Transcript    | Ctrl+Shift+S   |
-| Audio Preview           | Ctrl+Shift+P   |
-| Preview Selected (Queue)| Ctrl+Alt+P     |
-| Copilot Chat Panel      | Ctrl+Shift+C   |
-| AI Action Builder       | (AI menu)      |
-| Add Cloud Provider      | (Tools menu)   |
-| Check for Updates       | (Help menu)    |
-| Setup Wizard            | (Help menu)    |
-| Learn More about BITS   | (Help menu)    |
-| View Log                | (Tools menu)   |
-| About                   | F1             |
-| Exit / Minimize to Tray | Alt+F4         |
-
-## Development
-
-```bash
-# Install dev dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest tests/ -v
-
-# Format code
-black src/ tests/
-
-# Lint
-ruff check src/ tests/
-
-# Type check
-pyright src/
-```
-
-## Building & Packaging
-
-### PyInstaller (Portable)
-
-```bash
-# Standard build from current venv
-python build_installer.py
-
-# Lean build — clean venv, minimal output (~40 MB)
-python build_installer.py --lean
-
-# Single-file .exe (slower startup)
-python build_installer.py --onefile
-```
-
-Output: `dist/BITS Whisperer/`
-
-### Windows Installer (Inno Setup)
-
-After building with PyInstaller, compile the Inno Setup script to create a
-professional Windows installer:
-
-```bash
-# Build the app first
-python build_installer.py --lean
-
-# Then compile the installer (requires Inno Setup 6+)
-iscc installer.iss
-```
-
-Output: `dist/BITS_Whisperer_Setup.exe`
-
-The installer includes Start Menu shortcuts, optional desktop shortcut, license
-agreement, uninstaller, and auto-launches the app after installation.
-
-## Transcription Providers
-
-| Provider              | Type  | Rate/min | API Key | Highlights                                                |
-| --------------------- | ----- | -------- | ------- | --------------------------------------------------------- |
-| Local Whisper         | Local | Free     | No      | Offline, private, GPU-accelerated                         |
-| Windows Speech        | Local | Free     | No      | SAPI5 + WinRT, offline (Windows only)                     |
-| Vosk                  | Local | Free     | No      | Lightweight offline, 20+ languages, very low-end hardware |
-| Parakeet              | Local | Free     | No      | NVIDIA NeMo high-accuracy English ASR                     |
-| Azure Embedded Speech | Local | Free     | No      | Microsoft neural models, offline                          |
-| OpenAI Whisper        | Cloud | $0.006   | Yes     | Fast, reliable, verbose timestamps                        |
-| ElevenLabs Scribe     | Cloud | $0.005   | Yes     | 99+ languages, best-in-class accuracy                     |
-| Groq Whisper          | Cloud | $0.003   | Yes     | 188x real-time on LPU hardware                            |
-| AssemblyAI            | Cloud | $0.011   | Yes     | Speaker labels, auto-chapters                             |
-| Deepgram Nova-2       | Cloud | $0.013   | Yes     | Smart formatting, fast streaming                          |
-| Azure Speech          | Cloud | $0.017   | Yes     | 100+ languages, continuous recog.                         |
-| Google Speech         | Cloud | $0.024   | Yes     | Diarization, enhanced models                              |
-| Google Gemini         | Cloud | $0.0002  | Yes     | Cheapest cloud, multimodal AI                             |
-| Amazon Transcribe     | Cloud | $0.024   | Yes     | S3 integration, medical vocabularies                      |
-| Rev.ai                | Cloud | $0.020   | Yes     | Human-hybrid option, high accuracy                        |
-| Speechmatics          | Cloud | $0.017   | Yes     | 50+ languages, real-time streaming                        |
-| Auphonic              | Cloud | ~$0.01   | Yes     | Audio post-production + configurable speech recognition   |
-
-## Speaker Diarization
-
-BITS Whisperer supports **speaker diarization** (identifying who spoke when)
-through two approaches:
-
-### Cloud Provider Diarization
-
-10 cloud providers support built-in diarization — enable "Include speaker
-labels" in transcription settings:
-
-| Provider          | Diarization | Max Speakers | Notes                        |
-| ----------------- | ----------- | ------------ | ---------------------------- |
-| Azure Speech      | Yes         | Configurable | Uses ConversationTranscriber |
-| Google Speech     | Yes         | Configurable | Via diarization_config       |
-| Deepgram          | Yes         | Auto         | Nova-2 speaker detection     |
-| AssemblyAI        | Yes         | Auto         | speaker_labels feature       |
-| Amazon Transcribe | Yes         | Configurable | ShowSpeakerLabels            |
-| ElevenLabs        | Yes         | Auto         | Built-in diarize parameter   |
-| Rev.ai            | Yes         | Auto         | Automatic speaker detection  |
-| Speechmatics      | Yes         | Auto         | Speaker change detection     |
-| Google Gemini     | Yes         | Auto         | Multimodal speaker detection |
-| Auphonic          | No          | n/a          | Post-production only         |
-
-### Cloud-Free Local Diarization
-
-For privacy-first workflows, enable **local diarization** using pyannote.audio:
-
-1. Install pyannote.audio: `pip install pyannote.audio`
-1. Set up a HuggingFace auth token (for gated models)
-1. Enable in Settings: Diarization > Use local diarization
-1. Works as post-processing — applies to ANY provider's output
-
-### Speaker Editing (Post-Transcription)
-
-After transcription, the transcript panel provides "magical" speaker management:
-
-- **Manage Speakers** button — Opens a dialog showing all detected speakers with
-  editable name fields. Rename "Speaker 1" to "Alice", "Speaker 2" to "Bob",
-  etc.
-- **Right-click context menu** — Click any transcript line and assign it to a
-  different speaker or create a new one
-- **Speaker notation** — Clear `[timestamp]  SpeakerName: text` format for easy
-  reading and safe find/replace
-- **Instant updates** — All speaker renames are applied globally and the
-  transcript refreshes immediately
-
-## Provider-Specific Settings
-
-When adding a cloud provider via **Tools > Add Provider**, each provider shows
-its unique configurable options:
-
-| Provider      | Configurable Settings                                                                        |
-| ------------- | -------------------------------------------------------------------------------------------- |
-| Auphonic      | Leveler, loudness, noise/hum reduction, silence/filler cutting, speech engine, output format |
-| Deepgram      | Model (nova-2/nova/enhanced/base), smart format, punctuation, paragraphs                     |
-| AssemblyAI    | Punctuation, formatting, auto chapters, content safety, sentiment                            |
-| Google Speech | Recognition model, max speaker count                                                         |
-| Azure         | Custom endpoint ID                                                                           |
-| AWS           | Max speaker labels                                                                           |
-| Speechmatics  | Operating point (enhanced/standard)                                                          |
-| ElevenLabs    | Timestamp granularity (segment/word)                                                         |
-| OpenAI        | Model, temperature                                                                           |
-| Groq          | Model (v3-turbo/v3/distil)                                                                   |
-| Gemini        | Model (2.0-flash/1.5-flash/1.5-pro)                                                          |
-
-## Auphonic Integration
-
-Auphonic provides professional cloud-based audio post-production with built-in
-speech recognition. BITS Whisperer integrates two Auphonic components:
-
-- **AuphonicProvider** — Transcription provider that uses Auphonic's production
-  workflow: audio upload, then audio algorithms (leveler, loudness, denoising,
-  filtering), then Whisper speech recognition, then transcript download
-- **AuphonicService** — Standalone service for audio post-production without
-  transcription (preprocessing step)
-
-### Auphonic Capabilities
-
-| Feature                  | Description                                                 |
-| ------------------------ | ----------------------------------------------------------- |
-| Adaptive Leveler         | Corrects level differences between speakers                 |
-| Loudness Normalization   | Target LUFS (-16 podcast, -23 broadcast)                    |
-| Noise & Hum Reduction    | Automatic detection, configurable amount                    |
-| Filtering                | High-pass, auto-EQ, bandwidth extension                     |
-| Silence & Filler Cutting | Remove silences, filler words, coughs (configurable)        |
-| Speech Recognition       | Built-in Whisper or Google/Amazon/Speechmatics (selectable) |
-| Hum Reduction            | 50/60 Hz hum removal                                        |
-| Crosstalk Detection      | Detect overlapping speakers                                 |
-| Multitrack               | Process multi-speaker recordings per-track                  |
-| Output Formats           | MP3, AAC, FLAC, WAV, Opus, Vorbis, video                    |
-| Presets                  | Save and reuse processing configurations                    |
-| Publishing               | Export to Dropbox, SoundCloud, YouTube, FTP, S3             |
-| Webhooks                 | HTTP POST callbacks on completion                           |
-
-### Auphonic Authentication
-
-Generate an API token at <https://auphonic.com/accounts/settings/#api-key> and
-enter it in **Settings, then Providers and Keys, then Auphonic API Token**. The
-token is stored securely in Windows Credential Manager.
-
-### Auphonic Pricing
-
-| Plan         | Free Credits   | Cost      |
-| ------------ | -------------- | --------- |
-| Free         | 2 hours/month  | $0        |
-| Starter      | 9 hours/month  | $11/month |
-| Professional | 45 hours/month | $49/month |
-
-## Audio Preprocessing
-
-Enable via **View, then Advanced Mode, then Settings, then Audio Processing**
-tab:
-
-| Filter                   | Default | Purpose                          |
-| ------------------------ | ------- | -------------------------------- |
-| High-pass (80 Hz)        | On      | Remove low-frequency rumble      |
-| Low-pass (8 kHz)         | On      | Cut high-frequency hiss          |
-| Noise gate (-40 dB)      | On      | Suppress background noise        |
-| De-esser (5 kHz)         | On      | Reduce sibilance                 |
-| Compressor               | On      | Even out volume levels           |
-| Loudness norm (EBU R128) | On      | Standardise loudness to -16 LUFS |
-| Silence trim             | On      | Remove leading/trailing silence  |
+______________________________________________________________________
 
 ## License
 
-MIT — Copyright (c) 2025 Blind Information Technology Solutions (BITS). See
-[LICENSE](LICENSE).
+MIT — Copyright (c) 2025 Blind Information Technology Solutions (BITS).
 
 Developed by **Blind Information Technology Solutions (BITS)**.

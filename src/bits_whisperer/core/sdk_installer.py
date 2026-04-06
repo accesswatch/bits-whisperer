@@ -257,6 +257,13 @@ _SDK_REGISTRY: Final[dict[str, SDKInfo]] = {
         test_import="comtypes",
         install_size_mb=0,
     ),
+    "mai_transcribe": SDKInfo(
+        provider_key="mai_transcribe",
+        display_name="MAI-Transcribe-1 (Azure LLM Speech)",
+        pip_packages=[],
+        test_import="httpx",
+        install_size_mb=0,
+    ),
     "vosk": SDKInfo(
         provider_key="vosk",
         display_name="Vosk Offline Speech",
@@ -592,8 +599,7 @@ def ensure_sdk(provider_key: str, parent_window=None) -> bool:
 
     if success:
         accessible_message_box(
-            f"{info.display_name} SDK installed successfully!\n\n"
-            "The provider is now ready to use.",
+            f"{info.display_name} SDK installed successfully!\n\nThe provider is now ready to use.",
             "Installation Complete",
             wx.OK | wx.ICON_INFORMATION,
             parent_window,

@@ -3,7 +3,7 @@
 ; ================================================================
 ;
 ; BITS Whisperer is an accessible, privacy-first desktop application
-; for audio transcription. It supports 17 transcription providers
+; for audio transcription. It supports 18 transcription providers
 ; (cloud and on-device), full keyboard and screen reader support
 ; (NVDA, JAWS, Narrator), and runs on Windows 10 and later (64-bit).
 ;
@@ -20,7 +20,7 @@
 #define MyAppURL "https://github.com/accesswatch/bits-whisperer"
 #define MyAppExeName "BITS Whisperer.exe"
 #define MyAppCopyright "Copyright (C) 2025 Blind Information Technology Solutions (BITS)"
-#define MyAppDescription "Accessible audio transcription with 17 providers"
+#define MyAppDescription "Accessible audio transcription with 18 providers"
 #define MyAppContact "https://github.com/accesswatch/bits-whisperer/issues"
 
 [Setup]
@@ -50,7 +50,7 @@ PrivilegesRequiredOverridesAllowed=dialog
 ; License and info pages
 LicenseFile=LICENSE
 InfoBeforeFile=docs\ANNOUNCEMENT.md
-InfoAfterFile=CHANGELOG.md
+InfoAfterFile=docs\CHANGELOG.md
 
 ; Output settings
 OutputDir=dist
@@ -111,7 +111,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 ; ----------------------------------------------------------------
 [Messages]
 WelcomeLabel1=Welcome to {#MyAppName}
-WelcomeLabel2=This wizard will install {#MyAppName} v{#MyAppVersion} on your computer.%n%n{#MyAppName} is an accessible, privacy-first audio transcription application built by Blind Information Technology Solutions (BITS). It supports 17 transcription providers — including free on-device engines that require no internet connection.%n%nKey features:%n  - Full keyboard and screen reader support (NVDA, JAWS, Narrator)%n  - On-device transcription (Whisper, Vosk, Parakeet) — no cloud required%n  - 12 cloud providers (OpenAI, Google, Azure, AWS, and more)%n  - 7 export formats (Text, Markdown, HTML, Word, SRT, VTT, JSON)%n  - Batch processing with drag-and-drop%n%nIt is recommended that you close all other applications before continuing.
+WelcomeLabel2=This wizard will install {#MyAppName} v{#MyAppVersion} on your computer.%n%n{#MyAppName} is an accessible, privacy-first audio transcription application built by Blind Information Technology Solutions (BITS). It supports 18 transcription providers — including free on-device engines that require no internet connection.%n%nKey features:%n  - Full keyboard and screen reader support (NVDA, JAWS, Narrator)%n  - On-device transcription (Whisper, Vosk, Parakeet) — no cloud required%n  - 13 cloud providers (OpenAI, Google, Azure, AWS, and more)%n  - Local AI chat via Ollama (Llama, Mistral, Gemma, and more)%n  - Do Not Disturb detection — auto-pause during Focus Assist%n  - 7 export formats (Text, Markdown, HTML, Word, SRT, VTT, JSON)%n  - Batch processing with drag-and-drop%n%nIt is recommended that you close all other applications before continuing.
 FinishedHeadingLabel=Installation Complete
 FinishedLabel={#MyAppName} has been successfully installed on your computer.%n%nOn first launch, a Setup Wizard will guide you through:%n  - Hardware detection (CPU, RAM, GPU)%n  - Choosing Basic or Advanced mode%n  - Model recommendations and downloads%n  - Cloud provider configuration (optional)%n%nYour API keys are stored securely in Windows Credential Manager and never leave your machine.
 ClickFinish=Click Finish to exit Setup. Check "Launch {#MyAppName}" below to start immediately.
@@ -138,7 +138,7 @@ Source: "dist\BITS Whisperer\*"; DestDir: "{app}"; Flags: ignoreversion recurses
 Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Documentation
-Source: "CHANGELOG.md"; DestDir: "{app}\docs"; Flags: ignoreversion
+Source: "docs\CHANGELOG.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "docs\USER_GUIDE.html"; DestDir: "{app}\docs"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "docs\USER_GUIDE.md"; DestDir: "{app}\docs"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "docs\README.html"; DestDir: "{app}\docs"; Flags: ignoreversion skipifsourcedoesntexist
@@ -248,11 +248,13 @@ begin
                '  - Downloaded transcription models (may be several GB)' + #13#10 +
                '  - Saved transcripts and job history' + #13#10 +
                '  - Application settings and preferences' + #13#10 +
+               '  - Scheduler and feature flag cache' + #13#10 +
                '  - Log files' + #13#10
       else
         Msg := Msg + 'This will delete:' + #13#10 +
                '  - Saved transcripts and job history' + #13#10 +
                '  - Application settings and preferences' + #13#10 +
+               '  - Scheduler and feature flag cache' + #13#10 +
                '  - Log files' + #13#10;
 
       Msg := Msg + #13#10 +
@@ -289,5 +291,6 @@ begin
     Space + 'BITS Whisperer stores user data in:' + NewLine +
     Space + Space + ExpandConstant('{localappdata}\BITS Whisperer') + NewLine +
     Space + 'API keys are stored securely in Windows Credential Manager.' + NewLine +
-    Space + 'On-device models will be downloaded separately on first use.' + NewLine;
+    Space + 'On-device models will be downloaded separately on first use.' + NewLine +
+    Space + 'Ollama models are managed by the Ollama daemon (ollama.com).' + NewLine;
 end;

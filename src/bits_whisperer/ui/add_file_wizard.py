@@ -24,7 +24,8 @@ from bits_whisperer.utils.accessibility import (
     set_accessible_help,
     set_accessible_name,
 )
-from bits_whisperer.utils.constants import DATA_DIR, WHISPER_MODELS
+from bits_whisperer.utils.constants import DATA_DIR
+from bits_whisperer.utils.constants import get_transcription_models as get_models_for_provider
 
 if TYPE_CHECKING:
     from bits_whisperer.ui.main_frame import MainFrame
@@ -56,45 +57,8 @@ _COMMON_LANGUAGES: list[tuple[str, str]] = [
 ]
 
 
-def get_models_for_provider(provider_key: str) -> list[tuple[str, str]]:
-    """Return a list of ``(model_id, display_label)`` pairs for *provider_key*.
-
-    Args:
-        provider_key: Provider identifier (e.g. ``local_whisper``).
-
-    Returns:
-        List of ``(id, label)`` tuples.  Empty list means the provider
-        only has a single implicit model.
-    """
-    if provider_key in ("local_whisper",):
-        return [(m.id, f"{m.name} — {m.description[:60]}") for m in WHISPER_MODELS]
-    if provider_key == "openai_whisper":
-        return [("whisper-1", "Whisper-1")]
-    if provider_key == "groq_whisper":
-        return [
-            ("whisper-large-v3", "Whisper Large v3"),
-            ("whisper-large-v3-turbo", "Whisper Large v3 Turbo"),
-            ("distil-whisper-large-v3-en", "Distil Whisper Large v3 (English)"),
-        ]
-    if provider_key == "deepgram":
-        return [
-            ("nova-2", "Nova-2 (best)"),
-            ("nova", "Nova"),
-            ("enhanced", "Enhanced"),
-            ("base", "Base"),
-        ]
-    if provider_key == "assemblyai":
-        return [
-            ("best", "Best"),
-            ("nano", "Nano (faster, lower cost)"),
-        ]
-    if provider_key == "gemini":
-        return [
-            ("gemini-2.0-flash", "Gemini 2.0 Flash"),
-            ("gemini-1.5-flash", "Gemini 1.5 Flash"),
-            ("gemini-1.5-pro", "Gemini 1.5 Pro"),
-        ]
-    return []
+# ``get_models_for_provider`` is now in ``utils.constants`` and imported above.
+# Re-export for any external callers that may reference this module.
 
 
 class AddFileWizard(wx.Dialog):
@@ -116,7 +80,7 @@ class AddFileWizard(wx.Dialog):
             parent,
             title="Add Files to Transcribe",
             size=(580, 520),
-            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL,
         )
         set_accessible_name(self, "Add files to transcribe dialog")
         self.SetMinSize((480, 420))
@@ -130,6 +94,7 @@ class AddFileWizard(wx.Dialog):
 
         self._build_ui()
         self._apply_defaults()
+        wx.CallAfter(self._provider_choice.SetFocus)
 
     # ------------------------------------------------------------------ #
     # UI construction                                                      #
@@ -237,7 +202,7 @@ class AddFileWizard(wx.Dialog):
         set_accessible_name(self._language_choice, "Audio language")
         set_accessible_help(
             self._language_choice,
-            "Select the language spoken in the audio. " "Auto-Detect works for most files.",
+            "Select the language spoken in the audio. Auto-Detect works for most files.",
         )
         label_control(lang_lbl, self._language_choice)
         grid.Add(lang_lbl, 0, wx.ALIGN_CENTER_VERTICAL)
@@ -339,7 +304,7 @@ class AddFileWizard(wx.Dialog):
         cost_sizer.Add(self._cost_label, 0, wx.ALL, 4)
 
         self._budget_label = wx.StaticText(settings_panel, label="")
-        self._budget_label.SetForegroundColour(wx.Colour(200, 80, 0))
+        self._budget_label.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT))
         set_accessible_name(self._budget_label, "Budget warning")
         self._budget_label.Hide()
         cost_sizer.Add(self._budget_label, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
@@ -602,7 +567,7 @@ class AddFileWizard(wx.Dialog):
 
         if exceeds:
             self._budget_label.SetLabel(
-                f"\u26a0 Over budget! Limit: ${limit:.2f} — " f"Estimated: ${total_cost:.4f}"
+                f"\u26a0 Over budget! Limit: ${limit:.2f} — Estimated: ${total_cost:.4f}"
             )
             self._budget_label.Show()
         elif limit > 0:

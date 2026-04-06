@@ -198,6 +198,32 @@ class CopilotService:
         self._conversation_history: list[CopilotMessage] = []
         self._transcript_context: str = ""
         self._is_running = False
+        self._status_callbacks: list[Callable[[str, str], None]] = []
+
+    def add_status_listener(self, callback: Callable[[str, str], None]) -> None:
+        """Register a callback for SDK lifecycle status changes.
+
+        The callback receives ``(status, detail)`` where *status* is one of
+        ``"starting"``, ``"connected"``, ``"disconnected"``, ``"error"``
+        and *detail* is a human-readable message.
+
+        Args:
+            callback: Function called with ``(status, detail)``.
+        """
+        self._status_callbacks.append(callback)
+
+    def _notify_status(self, status: str, detail: str) -> None:
+        """Fire all registered status callbacks.
+
+        Args:
+            status: Status key (starting, connected, disconnected, error).
+            detail: Human-readable description.
+        """
+        for cb in self._status_callbacks:
+            try:
+                cb(status, detail)
+            except Exception:
+                logger.debug("Status callback error", exc_info=True)
 
     # ------------------------------------------------------------------ #
     # Availability checks                                                  #
@@ -295,6 +321,10 @@ class CopilotService:
         try:
             client_kwargs: dict[str, Any] = {
                 "auto_start": self._settings.auto_start_cli,
+                "editorInfo": {
+                    "name": "BITS Whisperer",
+                    "version": "1.0.0",
+                },
             }
 
             # Auth — prefer stored token, fall back to logged-in user
@@ -312,8 +342,7 @@ class CopilotService:
                 logger.info("Copilot auth: using logged-in CLI user")
             else:
                 logger.warning(
-                    "Copilot auth: no token and use_logged_in_user=False — "
-                    "authentication may fail"
+                    "Copilot auth: no token and use_logged_in_user=False — authentication may fail"
                 )
 
             # The SDK bundles its own CLI binary; only override if
@@ -326,15 +355,21 @@ class CopilotService:
             log_kwargs = {k: ("***" if "token" in k else v) for k, v in client_kwargs.items()}
             logger.info("Creating CopilotClient with options: %s", log_kwargs)
 
+            self._notify_status("starting", "Connecting to GitHub Copilot...")
             self._client = CopilotClient(client_kwargs)
+            client = self._client
+            if client is None:
+                raise RuntimeError("Copilot client could not be created")
             logger.debug("CopilotClient created, calling start()...")
-            self._run_async(self._client.start())
+            self._run_async(client.start())
             self._is_running = True
             logger.info("Copilot client started successfully")
+            self._notify_status("connected", "Connected to GitHub Copilot")
             return True
 
         except Exception as exc:
             logger.exception("Failed to start Copilot client: %s", exc)
+            self._notify_status("error", f"Copilot connection failed: {exc}")
             return False
 
     def stop(self) -> None:
@@ -367,6 +402,7 @@ class CopilotService:
 
         self._conversation_history.clear()
         logger.info("Copilot client stopped and resources cleaned up")
+        self._notify_status("disconnected", "Copilot disconnected")
 
     @property
     def is_running(self) -> bool:
@@ -378,13 +414,40 @@ class CopilotService:
     # ------------------------------------------------------------------ #
 
     async def _create_session(self) -> Any:
-        """Create a new Copilot session with configured options."""
+        """Create a new Copilot session with configured options.
+
+        Uses SDK v0.2.1 features: ``on_permission_request``, ``infinite_sessions``,
+        ``reasoning_effort``, ``on_user_input_request``, and session hooks.
+        """
         if not self._client:
             raise RuntimeError("Copilot client not started")
+
+        from copilot.session import PermissionHandler
 
         session_kwargs: dict[str, Any] = {
             "model": self._settings.default_model,
             "streaming": self._settings.streaming,
+            "on_permission_request": PermissionHandler.approve_all,
+        }
+
+        # Reasoning effort (SDK v0.2.1) — for models that support it
+        if self._settings.reasoning_effort:
+            session_kwargs["reasoning_effort"] = self._settings.reasoning_effort
+
+        # Infinite sessions (SDK v0.2.1) — automatic context compaction
+        session_kwargs["infinite_sessions"] = {
+            "enabled": self._settings.infinite_sessions,
+        }
+
+        # User input requests (SDK v0.2.1) — agent can ask clarifying questions
+        if self._settings.enable_user_input_requests:
+            session_kwargs["on_user_input_request"] = self._handle_user_input_request
+
+        # Session hooks (SDK v0.2.1) — lifecycle logging
+        session_kwargs["hooks"] = {
+            "on_session_start": self._on_session_start_hook,
+            "on_session_end": self._on_session_end_hook,
+            "on_error_occurred": self._on_error_hook,
         }
 
         # System message with transcript context
@@ -572,6 +635,10 @@ class CopilotService:
             logger.debug("No active session — creating a new one")
             self._session = await self._create_session()
 
+        session = self._session
+        if session is None:
+            raise RuntimeError("Copilot session is not available")
+
         if self._settings.streaming and on_delta:
             # Streaming mode — collect deltas via event handler
             logger.debug("Sending message in streaming mode (len=%d)", len(message))
@@ -611,9 +678,9 @@ class CopilotService:
                         type(event.data).__name__,
                     )
 
-            unsubscribe = self._session.on(_handle_event)
+            unsubscribe = session.on(_handle_event)
             try:
-                await self._session.send({"prompt": message})
+                await session.send({"prompt": message})
                 await asyncio.wait_for(done_event.wait(), timeout=120)
             except TimeoutError:
                 logger.error("Copilot streaming response timed out after 120s")
@@ -634,7 +701,7 @@ class CopilotService:
         else:
             # Non-streaming mode — use send_and_wait
             logger.debug("Sending message in non-streaming mode (len=%d)", len(message))
-            response = await self._session.send_and_wait({"prompt": message})
+            response = await session.send_and_wait({"prompt": message})
             text = ""
             if response and hasattr(response, "data"):
                 text = getattr(response.data, "content", "") or ""

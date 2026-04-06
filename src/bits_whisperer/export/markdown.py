@@ -67,9 +67,7 @@ class MarkdownFormatter(ExportFormatter):
                     lines.append("")
 
                 if include_timestamps:
-                    lines.append(
-                        f"> *{format_timestamp(seg.start)} — " f"{format_timestamp(seg.end)}*"
-                    )
+                    lines.append(f"> *{format_timestamp(seg.start)} — {format_timestamp(seg.end)}*")
 
                 text = seg.text
                 if include_confidence and seg.confidence > 0:

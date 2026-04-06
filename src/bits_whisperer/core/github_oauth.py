@@ -335,7 +335,7 @@ class GitHubDeviceFlow:
             elif error == "access_denied":
                 logger.warning("User denied authorization")
                 raise DeviceFlowDeniedError(
-                    "Authorization was denied. You may have clicked Cancel " "in the browser."
+                    "Authorization was denied. You may have clicked Cancel in the browser."
                 )
 
             elif error == "incorrect_client_credentials":

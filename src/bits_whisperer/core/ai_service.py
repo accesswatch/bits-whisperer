@@ -7,6 +7,9 @@ Supports multiple LLM providers:
 - Google Gemini (Gemini 2.0 Flash, Gemini 2.5 Pro)
 - GitHub Copilot (via Copilot SDK — GPT-4o, Claude, etc.)
 - Ollama (local models from Hugging Face / Ollama library — Llama, Mistral, Gemma, etc.)
+  Two Ollama backends:
+  * **http** (default) — native REST via ``OllamaHTTPAdapter`` with httpx
+  * **cli** / **manual** — OpenAI-compatible ``/v1`` endpoint via ``openai`` SDK
 
 Each provider is accessed through a unified interface that handles
 prompt construction, API calls, and response parsing.
@@ -21,11 +24,57 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
 if TYPE_CHECKING:
     from bits_whisperer.core.settings import AISettings
     from bits_whisperer.storage.key_store import KeyStore
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Retry decorator for transient API failures
+# ---------------------------------------------------------------------------
+
+# Exception types that signal transient failures worth retrying.
+# Each SDK defines its own; we check dynamically to avoid hard imports.
+_TRANSIENT_BASES: tuple[type[BaseException], ...] = (TimeoutError, ConnectionError, OSError)
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    """Return True if *exc* is a transient API error worth retrying."""
+    if isinstance(exc, _TRANSIENT_BASES):
+        return True
+    # OpenAI SDK: openai.RateLimitError, openai.APITimeoutError,
+    #             openai.APIConnectionError, openai.InternalServerError
+    # Anthropic:  anthropic.RateLimitError, anthropic.APITimeoutError,
+    #             anthropic.APIConnectionError, anthropic.InternalServerError
+    # Google:     google.api_core.exceptions.ResourceExhausted,
+    #             google.api_core.exceptions.ServiceUnavailable
+    name = type(exc).__name__
+    return name in {
+        "RateLimitError",
+        "APITimeoutError",
+        "APIConnectionError",
+        "InternalServerError",
+        "ResourceExhausted",
+        "ServiceUnavailable",
+        "TooManyRequests",
+    }
+
+
+ai_retry = retry(
+    retry=retry_if_exception_type(_is_retryable),  # type: ignore[arg-type]
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=15),
+    reraise=True,
+)
 
 # ---------------------------------------------------------------------------
 # Data models
@@ -182,19 +231,23 @@ class OpenAIAIProvider(AIProvider):
         try:
             from openai import OpenAI
 
+            from bits_whisperer.utils.constants import DEFAULT_SYSTEM_PROMPT
+
             client = OpenAI(api_key=self._api_key)
-            response = client.chat.completions.create(
-                model=self._model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a helpful assistant that processes transcripts.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                max_tokens=max_tokens,
-                temperature=temperature,
-            )
+
+            @ai_retry
+            def _call() -> Any:
+                return client.chat.completions.create(
+                    model=self._model,
+                    messages=[
+                        {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+
+            response = _call()
             text = response.choices[0].message.content or ""
             tokens = response.usage.total_tokens if response.usage else 0
             return AIResponse(
@@ -244,16 +297,12 @@ class OpenAIAIProvider(AIProvider):
             from openai import OpenAI
 
             client = OpenAI(api_key=self._api_key)
+            from bits_whisperer.utils.constants import DEFAULT_SYSTEM_PROMPT
+
             api_messages: list[dict[str, str]] = []
-            if system_message:
-                api_messages.append({"role": "system", "content": system_message})
-            else:
-                api_messages.append(
-                    {
-                        "role": "system",
-                        "content": "You are a helpful assistant that processes transcripts.",
-                    }
-                )
+            api_messages.append(
+                {"role": "system", "content": system_message or DEFAULT_SYSTEM_PROMPT}
+            )
             api_messages.extend(messages)
 
             if on_delta:
@@ -313,12 +362,17 @@ class AnthropicAIProvider(AIProvider):
             from anthropic import Anthropic
 
             client = Anthropic(api_key=self._api_key)
-            response = client.messages.create(
-                model=self._model,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                messages=[{"role": "user", "content": prompt}],
-            )
+
+            @ai_retry
+            def _call() -> Any:
+                return client.messages.create(
+                    model=self._model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+
+            response = _call()
             text = response.content[0].text if response.content else ""
             tokens_in = response.usage.input_tokens if response.usage else 0
             tokens_out = response.usage.output_tokens if response.usage else 0
@@ -442,23 +496,27 @@ class AzureOpenAIProvider(AIProvider):
         try:
             from openai import AzureOpenAI
 
+            from bits_whisperer.utils.constants import DEFAULT_SYSTEM_PROMPT
+
             client = AzureOpenAI(
                 api_key=self._api_key,
                 api_version="2024-06-01",
                 azure_endpoint=self._endpoint,
             )
-            response = client.chat.completions.create(
-                model=self._deployment,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a helpful assistant that processes transcripts.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                max_tokens=max_tokens,
-                temperature=temperature,
-            )
+
+            @ai_retry
+            def _call() -> Any:
+                return client.chat.completions.create(
+                    model=self._deployment,
+                    messages=[
+                        {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+
+            response = _call()
             text = response.choices[0].message.content or ""
             tokens = response.usage.total_tokens if response.usage else 0
             return AIResponse(
@@ -520,16 +578,12 @@ class AzureOpenAIProvider(AIProvider):
                 api_version="2024-06-01",
                 azure_endpoint=self._endpoint,
             )
+            from bits_whisperer.utils.constants import DEFAULT_SYSTEM_PROMPT
+
             api_messages: list[dict[str, str]] = []
-            if system_message:
-                api_messages.append({"role": "system", "content": system_message})
-            else:
-                api_messages.append(
-                    {
-                        "role": "system",
-                        "content": "You are a helpful assistant that processes transcripts.",
-                    }
-                )
+            api_messages.append(
+                {"role": "system", "content": system_message or DEFAULT_SYSTEM_PROMPT}
+            )
             api_messages.extend(messages)
 
             if on_delta:
@@ -595,20 +649,25 @@ class GeminiAIProvider(AIProvider):
     ) -> AIResponse:
         """Generate text using Google Gemini API."""
         try:
-            from google import genai
+            import google.genai as genai
+
+            from bits_whisperer.utils.constants import DEFAULT_SYSTEM_PROMPT
 
             client = genai.Client(api_key=self._api_key)
-            response = client.models.generate_content(
-                model=self._model,
-                contents=prompt,
-                config={
-                    "max_output_tokens": max_tokens,
-                    "temperature": temperature,
-                    "system_instruction": (
-                        "You are a helpful assistant that processes transcripts."
-                    ),
-                },
-            )
+
+            @ai_retry
+            def _call() -> Any:
+                return client.models.generate_content(
+                    model=self._model,
+                    contents=prompt,
+                    config={
+                        "max_output_tokens": max_tokens,
+                        "temperature": temperature,
+                        "system_instruction": DEFAULT_SYSTEM_PROMPT,
+                    },
+                )
+
+            response = _call()
             text = response.text or ""
             tokens = 0
             if response.usage_metadata:
@@ -640,7 +699,7 @@ class GeminiAIProvider(AIProvider):
     def validate_key(self, api_key: str) -> bool:
         """Validate Gemini API key with a minimal generation call."""
         try:
-            from google import genai
+            import google.genai as genai
 
             client = genai.Client(api_key=api_key)
             client.models.generate_content(
@@ -663,7 +722,9 @@ class GeminiAIProvider(AIProvider):
     ) -> AIResponse:
         """Multi-turn chat with native Gemini streaming."""
         try:
-            from google import genai
+            import google.genai as genai
+
+            from bits_whisperer.utils.constants import DEFAULT_SYSTEM_PROMPT
 
             client = genai.Client(api_key=self._api_key)
             # Build Gemini-format contents
@@ -676,12 +737,7 @@ class GeminiAIProvider(AIProvider):
                 "max_output_tokens": max_tokens,
                 "temperature": temperature,
             }
-            if system_message:
-                config["system_instruction"] = system_message
-            else:
-                config["system_instruction"] = (
-                    "You are a helpful assistant that processes transcripts."
-                )
+            config["system_instruction"] = system_message or DEFAULT_SYSTEM_PROMPT
 
             if on_delta:
                 full_text = ""
@@ -783,11 +839,12 @@ class CopilotAIProvider(AIProvider):
                 await client.start()
                 logger.debug("CopilotClient started")
                 try:
-                    sys_msg = "You are a helpful assistant that processes transcripts."
+                    from bits_whisperer.utils.constants import DEFAULT_SYSTEM_PROMPT
+
                     session = await client.create_session(
                         {
                             "model": self._model,
-                            "system_message": sys_msg,  # type: ignore[typeddict-item]
+                            "system_message": DEFAULT_SYSTEM_PROMPT,  # type: ignore[typeddict-item]
                         }
                     )
                     logger.debug("Session created, sending prompt...")
@@ -831,8 +888,7 @@ class CopilotAIProvider(AIProvider):
                 provider="copilot",
                 model=self._model,
                 error=(
-                    "GitHub Copilot SDK not installed. "
-                    "Install with: pip install github-copilot-sdk"
+                    "GitHub Copilot SDK not installed. Install with: pip install github-copilot-sdk"
                 ),
             )
         except Exception as exc:
@@ -942,6 +998,8 @@ class OllamaAIProvider(AIProvider):
         try:
             from openai import OpenAI
 
+            from bits_whisperer.utils.constants import DEFAULT_SYSTEM_PROMPT
+
             client = OpenAI(
                 base_url=f"{self._endpoint}/v1",
                 api_key="ollama",  # Ollama ignores the key but openai lib requires it
@@ -949,10 +1007,7 @@ class OllamaAIProvider(AIProvider):
             response = client.chat.completions.create(
                 model=self._model,
                 messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a helpful assistant that processes transcripts.",
-                    },
+                    {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
                     {"role": "user", "content": prompt},
                 ],
                 max_tokens=max_tokens,
@@ -1007,20 +1062,16 @@ class OllamaAIProvider(AIProvider):
         try:
             from openai import OpenAI
 
+            from bits_whisperer.utils.constants import DEFAULT_SYSTEM_PROMPT
+
             client = OpenAI(
                 base_url=f"{self._endpoint}/v1",
                 api_key="ollama",
             )
             api_messages: list[dict[str, str]] = []
-            if system_message:
-                api_messages.append({"role": "system", "content": system_message})
-            else:
-                api_messages.append(
-                    {
-                        "role": "system",
-                        "content": "You are a helpful assistant that processes transcripts.",
-                    }
-                )
+            api_messages.append(
+                {"role": "system", "content": system_message or DEFAULT_SYSTEM_PROMPT}
+            )
             api_messages.extend(messages)
 
             if on_delta:
@@ -1104,6 +1155,114 @@ class OllamaAIProvider(AIProvider):
 
 
 # ---------------------------------------------------------------------------
+# Ollama native HTTP provider (via OllamaHTTPAdapter)
+# ---------------------------------------------------------------------------
+
+
+class OllamaNativeAIProvider(AIProvider):
+    """AI provider that uses the native ``OllamaHTTPAdapter`` for chat.
+
+    This avoids the OpenAI SDK dependency for Ollama and gives direct
+    access to the ``/api/chat`` streaming endpoint, progress callbacks,
+    and cancel tokens.
+    """
+
+    def __init__(
+        self,
+        model: str = "llama3.2",
+        endpoint: str = "http://localhost:11434",
+        cli_path: str = "",
+        cli_fallback: bool = True,
+    ) -> None:
+        self._model = model
+        self._endpoint = endpoint
+        self._cli_path = cli_path
+        self._cli_fallback = cli_fallback
+        self._adapter: Any = None
+
+    def _get_adapter(self) -> Any:
+        """Lazily create the OllamaHTTPAdapter."""
+        if self._adapter is None:
+            from bits_whisperer.core.ollama_adapter import OllamaHTTPAdapter
+
+            self._adapter = OllamaHTTPAdapter(
+                endpoint=self._endpoint,
+                cli_path=self._cli_path,
+                cli_fallback=self._cli_fallback,
+            )
+        return self._adapter
+
+    def generate(
+        self,
+        prompt: str,
+        *,
+        max_tokens: int = 4096,
+        temperature: float = 0.3,
+    ) -> AIResponse:
+        """Generate text using the native Ollama ``/api/generate`` endpoint."""
+        try:
+            adapter = self._get_adapter()
+            text = adapter.generate(
+                prompt,
+                self._model,
+                system_message="You are a helpful assistant that processes transcripts.",
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            return AIResponse(text=text, provider="ollama", model=self._model)
+        except Exception as exc:
+            logger.exception("OllamaNative generation failed")
+            return AIResponse(text="", provider="ollama", model=self._model, error=str(exc))
+
+    def validate_key(self, api_key: str) -> bool:
+        """Validate Ollama connectivity via health check."""
+        try:
+            adapter = self._get_adapter()
+            status = adapter.health_check()
+            return status.reachable
+        except Exception:
+            return False
+
+    def chat_stream(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        system_message: str = "",
+        max_tokens: int = 4096,
+        temperature: float = 0.3,
+        on_delta: Callable[[str], None] | None = None,
+    ) -> AIResponse:
+        """Multi-turn chat with native Ollama ``/api/chat`` streaming."""
+        try:
+            adapter = self._get_adapter()
+            sys_msg = system_message or ("You are a helpful assistant that processes transcripts.")
+            full_text = adapter.chat_stream(
+                messages,
+                self._model,
+                system_message=sys_msg,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                stream_cb=on_delta,
+            )
+            return AIResponse(text=full_text, provider="ollama", model=self._model)
+        except Exception as exc:
+            logger.exception("OllamaNative chat_stream failed")
+            return AIResponse(text="", provider="ollama", model=self._model, error=str(exc))
+
+    def list_models(self) -> list[str]:
+        """List downloaded Ollama models via the native adapter.
+
+        Returns:
+            List of model name strings.
+        """
+        try:
+            adapter = self._get_adapter()
+            return [m.model_id for m in adapter.list_models()]
+        except Exception:
+            return []
+
+
+# ---------------------------------------------------------------------------
 # AI Service — main entry point
 # ---------------------------------------------------------------------------
 
@@ -1175,6 +1334,15 @@ class AIService:
         elif provider_id == "ollama":
             model = self._settings.ollama_custom_model or self._settings.ollama_model
             endpoint = self._settings.ollama_endpoint or "http://localhost:11434"
+            mode = self._settings.ollama_mode or "http"
+            if mode == "http":
+                return OllamaNativeAIProvider(
+                    model=model,
+                    endpoint=endpoint,
+                    cli_path=self._settings.ollama_cli_path,
+                    cli_fallback=True,
+                )
+            # "cli" or "manual" mode — use the OpenAI-compat layer
             return OllamaAIProvider(model=model, endpoint=endpoint)
 
         return None
@@ -1204,7 +1372,7 @@ class AIService:
             "azure_openai": lambda: self._settings.azure_openai_deployment or "",
             "gemini": lambda: self._settings.gemini_model,
             "copilot": lambda: self._settings.copilot_model,
-            "ollama": lambda: (self._settings.ollama_custom_model or self._settings.ollama_model),
+            "ollama": lambda: self._settings.ollama_custom_model or self._settings.ollama_model,
         }
         getter = model_map.get(pid)
         return getter() if getter else ""
@@ -1244,8 +1412,15 @@ class AIService:
         # Ollama is available if the local server is reachable
         try:
             endpoint = self._settings.ollama_endpoint or "http://localhost:11434"
-            provider = OllamaAIProvider(endpoint=endpoint)
-            if provider.validate_key(""):
+            mode = self._settings.ollama_mode or "http"
+            reachable = False
+            if mode == "http":
+                provider = OllamaNativeAIProvider(endpoint=endpoint)
+                reachable = provider.validate_key("")
+            else:
+                provider_compat = OllamaAIProvider(endpoint=endpoint)
+                reachable = provider_compat.validate_key("")
+            if reachable:
                 available.append({"id": "ollama", "name": "Ollama (Local)"})
         except Exception:
             pass
@@ -1407,7 +1582,7 @@ class AIService:
         if vocab:
             vocab_str = ", ".join(vocab)
             prompt_text = (
-                f"Important vocabulary/terms to use correctly: " f"{vocab_str}\n\n{prompt_text}"
+                f"Important vocabulary/terms to use correctly: {vocab_str}\n\n{prompt_text}"
             )
 
         return provider.generate(
@@ -1421,6 +1596,7 @@ class AIService:
         messages: list[dict[str, str]],
         *,
         transcript_context: str = "",
+        system_prompt: str = "",
         on_delta: Callable[[str], None] | None = None,
         on_complete: Callable[[AIResponse], None] | None = None,
         on_error: Callable[[str], None] | None = None,
@@ -1434,6 +1610,7 @@ class AIService:
         Args:
             messages: Conversation history ``[{"role": ..., "content": ...}]``.
             transcript_context: Full transcript text for context injection.
+            system_prompt: Custom system prompt; uses default when empty.
             on_delta: Called with each streamed text chunk.
             on_complete: Called with the final ``AIResponse`` on success.
             on_error: Called with an error string on failure.
@@ -1450,12 +1627,10 @@ class AIService:
                         )
                     return
 
-                # Build system message with transcript context
-                system_msg = (
-                    "You are a helpful, knowledgeable assistant for analyzing "
-                    "audio transcripts. Answer questions clearly and concisely. "
-                    "When referencing the transcript, cite relevant quotes."
-                )
+                # Use caller-supplied prompt, or fall back to the default
+                from bits_whisperer.utils.constants import DEFAULT_SYSTEM_PROMPT
+
+                system_msg = system_prompt or DEFAULT_SYSTEM_PROMPT
 
                 # Use context window manager for model-aware fitting
                 from bits_whisperer.core.context_manager import create_context_manager
@@ -1532,3 +1707,99 @@ class AIService:
         }
         name = names.get(pid, pid)
         return f"{name} ({model})" if model else name
+
+    def list_ollama_models(self) -> list[str]:
+        """List models downloaded in the local Ollama instance.
+
+        Uses the native HTTP adapter when ``ollama_mode`` is ``"http"``,
+        otherwise falls back to the OpenAI-compat provider's
+        ``list_models`` method.
+
+        Returns:
+            List of model name strings (empty on error or if Ollama
+            is unreachable).
+        """
+        endpoint = self._settings.ollama_endpoint or "http://localhost:11434"
+        mode = self._settings.ollama_mode or "http"
+        try:
+            if mode == "http":
+                provider = OllamaNativeAIProvider(
+                    endpoint=endpoint,
+                    cli_path=self._settings.ollama_cli_path,
+                )
+                return provider.list_models()
+            compat = OllamaAIProvider(endpoint=endpoint)
+            return compat.list_models()
+        except Exception:
+            return []
+
+    def get_provider_for_chat(
+        self,
+        provider_id: str,
+        model: str = "",
+    ) -> AIProvider | None:
+        """Create an AI provider for a specific provider/model combination.
+
+        This is used by the chat panel to select provider + model
+        per conversation rather than relying on the global default.
+
+        Args:
+            provider_id: Provider identifier (e.g. ``"ollama"``).
+            model: Model override. If empty, uses the settings default.
+
+        Returns:
+            AIProvider instance, or None if not available.
+        """
+        if provider_id == "ollama":
+            mdl = model or self._settings.ollama_custom_model or self._settings.ollama_model
+            endpoint = self._settings.ollama_endpoint or "http://localhost:11434"
+            mode = self._settings.ollama_mode or "http"
+            if mode == "http":
+                return OllamaNativeAIProvider(
+                    model=mdl,
+                    endpoint=endpoint,
+                    cli_path=self._settings.ollama_cli_path,
+                    cli_fallback=True,
+                )
+            return OllamaAIProvider(model=mdl, endpoint=endpoint)
+
+        if provider_id == "openai":
+            api_key = self._key_store.get_key("openai")
+            if not api_key:
+                return None
+            return OpenAIAIProvider(api_key, model or self._settings.openai_model)
+
+        if provider_id == "anthropic":
+            api_key = self._key_store.get_key("anthropic")
+            if not api_key:
+                return None
+            return AnthropicAIProvider(api_key, model or self._settings.anthropic_model)
+
+        if provider_id == "azure_openai":
+            api_key = self._key_store.get_key("azure_openai")
+            endpoint = (
+                self._key_store.get_key("azure_openai_endpoint")
+                or self._settings.azure_openai_endpoint
+            )
+            deployment = model or (
+                self._key_store.get_key("azure_openai_deployment")
+                or self._settings.azure_openai_deployment
+            )
+            if not api_key or not endpoint or not deployment:
+                return None
+            return AzureOpenAIProvider(api_key, endpoint, deployment)
+
+        if provider_id == "gemini":
+            api_key = self._key_store.get_key("gemini")
+            if not api_key:
+                return None
+            return GeminiAIProvider(api_key, model or self._settings.gemini_model)
+
+        if provider_id == "copilot":
+            token = self._key_store.get_key("copilot_github_token") or ""
+            return CopilotAIProvider(
+                github_token=token,
+                model=model or self._settings.copilot_model,
+            )
+
+        return None

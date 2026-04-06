@@ -79,7 +79,7 @@ def _download_vosk_model(download_name: str, target_dir: Path) -> Path:
     except Exception as exc:
         zip_path.unlink(missing_ok=True)
         raise RuntimeError(
-            f"Failed to extract Vosk model '{download_name}'.\n\n" f"Error: {exc}"
+            f"Failed to extract Vosk model '{download_name}'.\n\nError: {exc}"
         ) from exc
     finally:
         zip_path.unlink(missing_ok=True)
@@ -163,9 +163,7 @@ class VoskProvider(TranscriptionProvider):
                     "Go to Settings, then Providers, then Vosk and click "
                     "'Install SDK' to download it automatically."
                 ) from None
-            raise RuntimeError(
-                "vosk is not installed. " "Install it with: pip install vosk"
-            ) from None
+            raise RuntimeError("vosk is not installed. Install it with: pip install vosk") from None
 
         # Resolve model info
         model_info = get_vosk_model_by_id(model)

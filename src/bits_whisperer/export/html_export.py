@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 from pathlib import Path
 
 from bits_whisperer.core.job import TranscriptionResult
@@ -96,30 +97,23 @@ class HTMLFormatter(ExportFormatter):
                         f"{format_timestamp(seg.end)}]</span> "
                     )
                 if include_speakers and seg.speaker:
-                    parts.append(f'<span class="speaker">{_esc(seg.speaker)}:</span> ')
-                parts.append(f"<span>{_esc(seg.text)}</span>")
+                    parts.append(f'<span class="speaker">{html.escape(seg.speaker)}:</span> ')
+                parts.append(f"<span>{html.escape(seg.text)}</span>")
                 if include_confidence and seg.confidence > 0:
                     parts.append(f' <span class="confidence">({seg.confidence:.0%})</span>')
                 parts.append("</div>")
                 seg_parts.append("".join(parts))
         else:
-            seg_parts.append(f"<p>{_esc(result.full_text)}</p>")
+            seg_parts.append(f"<p>{html.escape(result.full_text)}</p>")
 
-        html = _HTML_TEMPLATE.format(
-            title=_esc(result.audio_file),
-            provider=_esc(result.provider),
-            model=_esc(result.model),
-            language=_esc(result.language),
+        html_doc = _HTML_TEMPLATE.format(
+            title=html.escape(result.audio_file),
+            provider=html.escape(result.provider),
+            model=html.escape(result.model),
+            language=html.escape(result.language),
             duration=format_timestamp(result.duration_seconds),
-            date=_esc(result.created_at),
+            date=html.escape(result.created_at),
             segments_html="\n".join(seg_parts),
         )
-        output_path.write_text(html, encoding="utf-8")
+        output_path.write_text(html_doc, encoding="utf-8")
         return output_path
-
-
-def _esc(text: str) -> str:
-    """HTML-escape a string."""
-    return (
-        text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
-    )

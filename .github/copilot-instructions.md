@@ -5,17 +5,23 @@ Purpose: Actionable guidance for AI coding agents working on the BITS Whisperer 
 ## Project Overview
 
 **BITS Whisperer** is a consumer-grade WXPython desktop application for audio transcription.
-- **Hybrid**: 17 providers — cloud services (OpenAI, Google, Azure, Deepgram,
-  AssemblyAI, AWS, Groq, Gemini, Rev.ai, Speechmatics, ElevenLabs, Auphonic)
+- **Hybrid**: 18 providers — cloud services (OpenAI, Google, Azure, Deepgram,
+  AssemblyAI, AWS, Groq, Gemini, Rev.ai, Speechmatics, ElevenLabs, Auphonic,
+  MAI-Transcribe-1)
   + on-device Whisper (faster-whisper) + on-device Vosk (Kaldi) + on-device
   Parakeet (NVIDIA NeMo) + Windows built-in (SAPI5/WinRT, Azure Embedded)
 - **AI services**: Translation (15+ languages) and summarization via OpenAI,
-  Anthropic Claude, Azure OpenAI, Google Gemini, or Ollama; interactive
-  transcript Q&A via GitHub Copilot SDK with custom agents
+  Anthropic Claude, Azure OpenAI, Google Gemini, or Ollama (native HTTP
+  adapter); interactive transcript Q&A via GitHub Copilot SDK with custom
+  agents
 - **Live transcription**: Real-time microphone transcription using
   faster-whisper with energy-based VAD
 - **Audio preview**: Pitch-preserving playback with clip-range selection
   before transcription
+- **Do Not Disturb**: Windows Focus Assist / macOS DND detection with
+  configurable pause/resume behaviour
+- **Scheduled transcription**: Timed and recurring transcription jobs
+  with DND-aware rules
 - **Plugin system**: Extensible architecture for custom transcription
   providers via `.py` plugins
 - **Auphonic integration**: Cloud audio post-production with configurable
@@ -28,7 +34,7 @@ Purpose: Actionable guidance for AI coding agents working on the BITS Whisperer 
   credential store
 - **Cross-platform**: Windows 10+ and macOS 12+ support; Apple Silicon
   Metal GPU detection
-- **First-run wizard**: 8-page setup wizard for hardware scan, model
+- **First-run wizard**: 9-page setup wizard for hardware scan, model
   recommendations, downloads, provider setup, AI/Copilot setup, and
   preferences
 
@@ -49,8 +55,8 @@ Purpose: Actionable guidance for AI coding agents working on the BITS Whisperer 
 - Ask the human before large architectural changes or file deletions.
 
 ## 2. Code Style
-- Python 3.13+; use `black` (line-length 100) and `ruff` as configured
-  in `pyproject.toml`.
+- Python 3.13+; use `ruff format` (line-length 100) and `ruff check`
+  as configured in `pyproject.toml`.
 - **Line length**: 100 characters maximum. Never exceed this.
 - **Ruff rules**: E, F, W, I, UP, B, SIM, C4, RET, TCH, PIE, PLC,
   PLE, PLW, RUF, PERF, LOG, S (security/bandit), T20 (no print),
@@ -73,7 +79,7 @@ Purpose: Actionable guidance for AI coding agents working on the BITS Whisperer 
 ```bash
 pip install -e ".[dev]"
 pytest tests/ -v --strict-markers
-black --check src/ tests/
+ruff format --check src/ tests/
 ruff check src/ tests/
 ```
 
@@ -84,7 +90,7 @@ src/bits_whisperer/
   app.py                   # wx.App subclass
   core/                    # Business logic
     transcription_service.py  # Job queue & orchestration
-    provider_manager.py       # Provider registry & routing
+    provider_manager.py       # Provider registry, routing & flag gating
     audio_preprocessor.py     # 7-filter ffmpeg preprocessing
     audio_player.py           # Audio preview playback
     dependency_checker.py     # Startup dependency verification
@@ -104,7 +110,15 @@ src/bits_whisperer/
     context_manager.py        # Context window management
     document_reader.py        # Document text extraction
     feature_flags.py          # Remote feature flag service
-  providers/               # 17 provider adapters (strategy pattern)
+    watch_folder.py           # Watch folder auto-transcription service
+    ollama_adapter.py         # Native Ollama HTTP REST adapter
+    dnd_monitor.py            # Do Not Disturb / Focus Assist detection
+    scheduler_service.py      # Scheduled transcription service
+    beta_service.py           # Beta invitation verification & status
+    registration_service.py   # Product registration & licensing
+    member_verification.py    # OTP-based BITS member email verification
+    github_oauth.py           # GitHub OAuth device flow (RFC 8628)
+  providers/               # 18 provider adapters (strategy pattern)
     base.py              # TranscriptionProvider ABC
     local_whisper.py     # faster-whisper (local, free)
     openai_whisper.py    # OpenAI Whisper API
@@ -123,30 +137,38 @@ src/bits_whisperer/
     vosk_provider.py     # Vosk offline speech (Kaldi-based)
     parakeet_provider.py # NVIDIA Parakeet (NeMo ASR)
     auphonic_provider.py # Auphonic post-production + transcription
+    mai_transcribe_provider.py  # MAI-Transcribe-1 (Azure LLM Speech)
   export/                  # Output formatters
     base.py, plain_text.py, markdown.py
     html_export.py, word_export.py
     srt.py, vtt.py, json_export.py
   storage/                 # Persistence
     database.py          # SQLite (WAL mode) for jobs
-    key_store.py         # OS credential store via keyring (22 entries)
+    key_store.py         # OS credential store via keyring (33 entries)
   ui/                      # WXPython UI
     main_frame.py        # Menu bar, splitter, status bar, tray
     queue_panel.py       # File queue list
     transcript_panel.py  # Transcript viewer/editor
     settings_dialog.py   # Tabbed settings
     progress_dialog.py   # Batch progress
-    model_manager_dialog.py  # Model management
+    model_manager_dialog.py  # Model management (TreeCtrl, multi-provider)
     add_provider_dialog.py   # Cloud provider onboarding
-    setup_wizard.py      # First-run setup wizard (8 pages)
+    setup_wizard.py      # First-run setup wizard (9 pages)
     tray_icon.py         # System tray (TaskBarIcon)
     live_transcription_dialog.py  # Live microphone transcription
-    ai_settings_dialog.py  # AI provider configuration
+    ai_settings_dialog.py  # AI provider configuration (6 providers)
     copilot_setup_dialog.py  # Copilot auth wizard
     copilot_chat_panel.py    # Interactive AI chat panel
     slash_commands.py        # Chat slash command registry
     agent_builder_dialog.py  # AI agent configuration builder
     audio_player_dialog.py   # Audio preview with clip selection
+    watch_folder_dialog.py   # Watch folder settings dialog
+    add_file_wizard.py       # Add file wizard with AI action selection
+    whats_new_dialog.py      # What's New / release notes dialog
+    beta_settings_dialog.py  # Beta programme settings dialog
+    keyboard_shortcuts_dialog.py  # Keyboard shortcuts reference dialog
+    welcome_dialog.py        # Welcome / activation dialog (5 tabs, mode-gated)
+    license_dialog.py        # Licence management (register, purchase, revoke)
   utils/
     accessibility.py     # a11y helpers
     constants.py         # App-wide constants & model registry
@@ -176,7 +198,7 @@ Run these checks in order after every edit:
 
 ```bash
 # Gate 1: Formatting — must produce zero reformats
-black --check src/ tests/
+ruff format --check src/ tests/
 
 # Gate 2: Linting — must produce zero errors
 ruff check src/ tests/
@@ -192,7 +214,7 @@ pytest tests/ -v --tb=short --strict-markers
 ```
 
 ### Rules for AI agents
-1. **Run all three gates** (`black --check`, `ruff check`, `pytest`)
+1. **Run all three gates** (`ruff format --check`, `ruff check`, `pytest`)
    after completing edits. Do not mark work as done until all pass.
 2. **Fix violations immediately** — do not leave lint or test
    failures for the user to clean up.
@@ -200,8 +222,8 @@ pytest tests/ -v --tb=short --strict-markers
    ignore unless the pattern is intentional and project-wide.
 4. **Test new functionality** — add tests for any new public method
    or class. Place tests in the appropriate `tests/test_*.py` file.
-5. **Run `black` (not just `--check`)** if formatting is off — the
-   formatter is authoritative.
+5. **Run `ruff format`** (not just `--check`) if formatting is off —
+   the formatter is authoritative.
 6. **Check `get_errors` after edits** to catch type errors the linter
    may miss.
 7. **Resolve Problems pane errors** — before committing, run
@@ -215,13 +237,13 @@ cloning, developers should run:
 pip install pre-commit
 pre-commit install
 ```
-This runs black, ruff, pyright, codespell, markdownlint, and
+This runs ruff (format + lint), pyright, codespell, markdownlint, and
 pre-commit-hooks automatically before each commit.
 
 ### CI pipeline
 GitHub Actions CI (`.github/workflows/ci.yml`) runs on every push and
 PR to `main`:
-- **Lint job**: black, ruff, pyright
+- **Lint job**: ruff (format + lint), pyright
 - **Security job**: pip-audit (dependency vulnerability scanning)
 - **Test job**: pytest with coverage on Ubuntu + Windows, Python 3.13
 - **Quality gate**: blocks merge if lint or test fails
@@ -229,10 +251,11 @@ PR to `main`:
 ### VS Code workspace settings
 The `.vscode/` directory configures the recommended development
 environment:
-- `settings.json`: Ruff as sole linter (flake8/pylint disabled),
-  Black formatter with format-on-save, 100-char ruler, spell checker.
-- `extensions.json`: Recommends Ruff, Black Formatter, Python, Pylance,
-  EditorConfig, Code Spell Checker. Blocks flake8 and pylint extensions.
+- `settings.json`: Ruff as sole linter and formatter (flake8/pylint/Black
+  disabled), format-on-save, 100-char ruler, spell checker.
+- `extensions.json`: Recommends Ruff, Python, Pylance,
+  EditorConfig, Code Spell Checker. Blocks flake8, pylint, and
+  Black Formatter extensions.
 
 ## 8. Editing Policy
 - Atomic commits with brief intent messages.
@@ -258,7 +281,7 @@ When adding features, providers, settings, or changing architecture:
    This generates `docs/README.html`, `docs/ANNOUNCEMENT.html`, and
    `docs/PRD.html`.
 3. **Provider count consistency** — when adding/removing providers,
-   update the count in ALL docs (currently 17 providers, 22 API key
+   update the count in ALL docs (currently 18 providers, 33 API key
    entries in KeyStore).
 4. **Architecture tree consistency** — when adding/removing/renaming
    source files, update the architecture tree in `README.md`,
@@ -292,7 +315,21 @@ changes.
 `live_transcription`, `ai_translate`, `ai_summarize`, `ai_chat`,
 `agent_builder`, `audio_preview`, `diarization`, `plugins`,
 `copilot`, `self_updater`, `budget_tracking`,
-`multi_language_translate`.
+`multi_language_translate`, `watch_folder`, `alpha_testing`.
+
+**Ollama / infrastructure flags**:
+`ollama_native`, `ollama_cli_fallback`, `ollama_model_catalog`,
+`model_manager_treeview`, `dnd_monitor`, `scheduler`.
+
+**Provider flags** (convention `provider_<key>`):
+`provider_local_whisper`, `provider_openai_whisper`,
+`provider_google_speech`, `provider_azure_speech`,
+`provider_azure_embedded`, `provider_deepgram`,
+`provider_assemblyai`, `provider_aws_transcribe`,
+`provider_gemini`, `provider_groq_whisper`, `provider_rev_ai`,
+`provider_speechmatics`, `provider_elevenlabs`,
+`provider_auphonic`, `provider_vosk`, `provider_parakeet`,
+`provider_windows_speech`, `provider_mai_transcribe`.
 
 ### Adding a new feature flag
 1. Add the flag to `feature_flags.json` in the repo root.
@@ -300,6 +337,10 @@ changes.
    `main_frame.py` to gate the UI element.
 3. Add tests in `tests/test_feature_flags.py`.
 4. Run all verification gates.
+
+For provider flags, use the convention `provider_<key>` where
+`<key>` matches the provider identifier in `ProviderManager`.
+Set `change_category` to `"provider"` in `FeatureChange`.
 
 ### Disabling a feature for staged rollout
 1. Set `"enabled": false` in `feature_flags.json`.
@@ -323,7 +364,7 @@ changes.
 2. Register in `AIService._get_provider()`.
 3. Add key entry in `storage/key_store.py`
 4. Add tests in `tests/test_gemini_copilot.py` or a new test file.
-5. Update key count in docs (currently 22).
+5. Update key count in docs (currently 30).
 6. Run all verification gates.
 
 ### Adding new UI

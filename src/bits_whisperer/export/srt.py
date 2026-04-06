@@ -61,7 +61,7 @@ class SRTFormatter(ExportFormatter):
             # Fallback: single cue spanning full duration
             lines.append("1")
             lines.append(
-                f"{format_timestamp_srt(0)} --> " f"{format_timestamp_srt(result.duration_seconds)}"
+                f"{format_timestamp_srt(0)} --> {format_timestamp_srt(result.duration_seconds)}"
             )
             lines.append(result.full_text)
             lines.append("")

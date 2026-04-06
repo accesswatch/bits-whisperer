@@ -162,6 +162,7 @@ class GoogleSpeechProvider(TranscriptionProvider):
             "language_code": lang_code,
             "enable_word_time_offsets": include_timestamps,
             "enable_automatic_punctuation": True,
+            "model": model or self._model,
         }
         if include_diarization:
             diarization_config = speech.SpeakerDiarizationConfig(

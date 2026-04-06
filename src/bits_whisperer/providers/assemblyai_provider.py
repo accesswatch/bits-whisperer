@@ -152,6 +152,9 @@ class AssemblyAIProvider(TranscriptionProvider):
         if include_diarization:
             config_kwargs["speaker_labels"] = True
 
+        if model and model != "best":
+            config_kwargs["speech_model"] = model
+
         config = aai.TranscriptionConfig(**config_kwargs)
 
         # Acquire lock to protect global aai.settings.api_key (SDK limitation)

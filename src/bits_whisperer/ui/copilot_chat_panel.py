@@ -10,7 +10,7 @@ Supported providers:
 - Anthropic (Claude Sonnet, Claude Haiku)
 - Azure OpenAI
 - Google Gemini
-- GitHub Copilot (via Copilot SDK — enhanced with tools)
+- GitHub Copilot (GitHub account sign-in)
 - Ollama (local models)
 
 Features:
@@ -37,6 +37,7 @@ from bits_whisperer.ui.slash_commands import (
     parse_slash_command,
 )
 from bits_whisperer.utils.accessibility import (
+    accessible_message_box,
     announce_status,
     announce_to_screen_reader,
     label_control,
@@ -44,6 +45,14 @@ from bits_whisperer.utils.accessibility import (
     safe_call_after,
     set_accessible_help,
     set_accessible_name,
+)
+from bits_whisperer.utils.constants import (
+    ANTHROPIC_AI_MODELS,
+    COPILOT_AI_MODELS,
+    DEFAULT_SYSTEM_PROMPT,
+    GEMINI_AI_MODELS,
+    OPENAI_AI_MODELS,
+    SYSTEM_PROMPT_PRESETS,
 )
 
 if TYPE_CHECKING:
@@ -93,6 +102,12 @@ class CopilotChatPanel(wx.Panel):
         self._transcript_context: str = ""
         self._available_providers: list[dict[str, str]] = []
 
+        # Per-session model override (not persisted to settings)
+        self._session_model: str = ""
+
+        # Per-session system prompt override (not persisted to settings)
+        self._session_system_prompt: str = DEFAULT_SYSTEM_PROMPT
+
         # Slash command registry
         self._slash_registry: SlashCommandRegistry = build_default_registry()
         self._autocomplete_popup: _SlashAutocompletePopup | None = None
@@ -128,10 +143,10 @@ class CopilotChatPanel(wx.Panel):
         header_sizer.Add(self._status_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
 
         # Clear button
-        clear_btn = wx.Button(self, label="Clea&r")
-        set_accessible_name(clear_btn, "Clear conversation")
-        clear_btn.Bind(wx.EVT_BUTTON, self._on_clear)
-        header_sizer.Add(clear_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+        self._clear_btn = wx.Button(self, label="Clea&r")
+        set_accessible_name(self._clear_btn, "Clear conversation")
+        self._clear_btn.Bind(wx.EVT_BUTTON, self._on_clear)
+        header_sizer.Add(self._clear_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
 
         main_sizer.Add(header_sizer, 0, wx.EXPAND | wx.ALL, 4)
 
@@ -159,7 +174,60 @@ class CopilotChatPanel(wx.Panel):
         refresh_btn.Bind(wx.EVT_BUTTON, self._on_refresh_providers)
         provider_sizer.Add(refresh_btn, 0, wx.RIGHT, 4)
 
+        # Open Manage Models button
+        mm_btn = wx.Button(self, label="&Manage Models\u2026")
+        set_accessible_name(mm_btn, "Manage AI and transcription models")
+        set_accessible_help(
+            mm_btn,
+            "Open Manage Models to download or organize AI models",
+        )
+        mm_btn.Bind(wx.EVT_BUTTON, self._on_open_model_manager)
+        provider_sizer.Add(mm_btn, 0, wx.RIGHT, 4)
+
         main_sizer.Add(provider_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 4)
+
+        # ── Model picker ────────────────────────────────────────────── #
+        model_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        model_label = wx.StaticText(self, label="&Model:")
+        set_accessible_name(model_label, "AI model")
+        model_sizer.Add(model_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 8)
+
+        self._model_choice = wx.Choice(self)
+        label_control(model_label, self._model_choice)
+        set_accessible_name(self._model_choice, "AI model")
+        set_accessible_help(
+            self._model_choice,
+            "Choose which model to use for this chat session. "
+            "Models depend on the selected provider.",
+        )
+        self._model_choice.Bind(wx.EVT_CHOICE, self._on_model_changed)
+        model_sizer.Add(self._model_choice, 1, wx.LEFT | wx.RIGHT, 4)
+
+        main_sizer.Add(model_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 4)
+
+        # ── System prompt preset picker ──────────────────────────────── #
+        prompt_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        prompt_label = wx.StaticText(self, label="&Persona:")
+        set_accessible_name(prompt_label, "AI persona")
+        prompt_sizer.Add(prompt_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 8)
+
+        preset_names = [p.name for p in SYSTEM_PROMPT_PRESETS]
+        self._prompt_choice = wx.Choice(self, choices=preset_names)
+        label_control(prompt_label, self._prompt_choice)
+        set_accessible_name(self._prompt_choice, "AI persona")
+        set_accessible_help(
+            self._prompt_choice,
+            "Choose how the AI assistant behaves. "
+            "General Assistant works for most tasks. "
+            "Select Custom to write your own instructions.",
+        )
+        self._prompt_choice.SetSelection(0)
+        self._prompt_choice.Bind(wx.EVT_CHOICE, self._on_prompt_preset_changed)
+        prompt_sizer.Add(self._prompt_choice, 1, wx.LEFT | wx.RIGHT, 4)
+
+        main_sizer.Add(prompt_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 4)
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.TOP, 4)
 
         # ── Chat display ────────────────────────────────────────────── #
@@ -177,7 +245,7 @@ class CopilotChatPanel(wx.Panel):
         set_accessible_name(self._chat_display, "Conversation history")
         set_accessible_help(
             self._chat_display,
-            "Shows the conversation with the AI assistant. " "New messages appear at the bottom.",
+            "Shows the conversation with the AI assistant. New messages appear at the bottom.",
         )
         main_sizer.Add(self._chat_display, 1, wx.EXPAND | wx.ALL, 4)
 
@@ -193,12 +261,24 @@ class CopilotChatPanel(wx.Panel):
             ("&Topics", "What are the main topics discussed in this transcript?"),
             ("S&peakers", "Identify and describe each speaker in this transcript."),
             ("&Action Items", "Extract all action items and follow-ups from this transcript."),
-            ("&Translate", "Translate this transcript to Spanish, preserving speaker labels."),
+            ("&Translate", self._build_translate_prompt()),
         ]
 
+        _quick_help = {
+            "Summarize": "Generate a concise summary of the transcript",
+            "Key Points": "Extract key points and action items as bullets",
+            "Topics": "Identify main topics discussed in the transcript",
+            "Speakers": "Identify and describe each speaker",
+            "Action Items": "Extract action items and follow-ups",
+            "Translate": "Translate the transcript to your chosen language",
+        }
         for label, prompt in quick_actions:
             btn = wx.Button(self, label=label, size=(-1, -1))
-            set_accessible_name(btn, f"Quick action: {label.replace('&', '')}")
+            clean = label.replace("&", "")
+            set_accessible_name(btn, f"Quick action: {clean}")
+            help_text = _quick_help.get(clean, "")
+            if help_text:
+                set_accessible_help(btn, help_text)
             btn.Bind(
                 wx.EVT_BUTTON,
                 lambda e, p=prompt: self._send_quick_action(p),
@@ -225,6 +305,8 @@ class CopilotChatPanel(wx.Panel):
         self._input_text.Bind(wx.EVT_TEXT_ENTER, self._on_send)
         self._input_text.Bind(wx.EVT_KEY_DOWN, self._on_input_key)
         self._input_text.Bind(wx.EVT_TEXT, self._on_input_text_changed)
+        self._chat_display.Bind(wx.EVT_CONTEXT_MENU, self._on_display_context_menu)
+        self._input_text.Bind(wx.EVT_CONTEXT_MENU, self._on_input_context_menu)
         input_sizer.Add(self._input_text, 1, wx.EXPAND | wx.RIGHT, 4)
 
         self._send_btn = wx.Button(self, label="&Send")
@@ -235,13 +317,18 @@ class CopilotChatPanel(wx.Panel):
         main_sizer.Add(input_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
 
         self.SetSizer(main_sizer)
+        self._update_interaction_state()
 
     # ------------------------------------------------------------------ #
     # Provider management                                                  #
     # ------------------------------------------------------------------ #
 
     def _refresh_providers(self) -> None:
-        """Populate the provider picker with available AI providers."""
+        """Populate the provider picker with available AI providers.
+
+        Filters to only show providers that have at least one
+        downloaded/available model or a configured API key.
+        """
         self._settings = AppSettings.load()
 
         def _load() -> list[dict[str, str]]:
@@ -257,7 +344,30 @@ class CopilotChatPanel(wx.Panel):
             if not providers:
                 self._provider_choice.Append("No providers configured")
                 self._provider_choice.SetSelection(0)
-                self._status_label.SetLabel("Configure a provider in Settings")
+                self._model_choice.Clear()
+                self._model_choice.Append("Set up an AI provider first")
+                self._model_choice.SetSelection(0)
+                self._status_label.SetLabel(
+                    "No AI providers are ready yet — open Copilot Setup, AI Provider "
+                    "Settings, or Manage Models"
+                )
+                announce_to_screen_reader(
+                    "No AI providers are ready. Open Copilot Setup, AI Provider Settings, "
+                    "or Manage Models."
+                )
+                self._chat_display.SetValue(
+                    "AI Transcript Chat\n"
+                    + "\u2501" * 36
+                    + "\n\n"
+                    + "No AI providers are ready yet.\n\n"
+                    + "To get started:\n"
+                    + "  •  Open AI > Copilot Setup to sign in with GitHub\n"
+                    + "  •  Open Tools > AI Provider Settings to use another provider\n"
+                    + "  \u2022  Open Manage Models to download local models\n\n"
+                    + "Once a provider is ready, come back here and ask a question "
+                    + "about your transcript.\n\n"
+                )
+                self._update_interaction_state()
                 return
 
             current = self._settings.ai.selected_provider
@@ -269,6 +379,7 @@ class CopilotChatPanel(wx.Panel):
             self._provider_choice.SetSelection(sel_idx)
             self._on_provider_changed(None)  # update status
             self._show_welcome()
+            self._update_interaction_state()
 
         # Run in background to avoid blocking on Ollama connectivity check
         def _bg() -> None:
@@ -288,9 +399,11 @@ class CopilotChatPanel(wx.Panel):
         if not pid:
             return
 
-        # Update the persisted setting so AIService uses the right provider
-        self._settings.ai.selected_provider = pid
-        self._settings.save()
+        # Reset per-session model override when switching providers
+        self._session_model = ""
+
+        # Populate model list for the selected provider
+        self._populate_models(pid)
 
         # Update status with provider + model info
         from bits_whisperer.core.ai_service import AIService
@@ -315,12 +428,198 @@ class CopilotChatPanel(wx.Panel):
         self._status_label.SetLabel(f"Ready \u2014 {display}{ctx_hint}")
         announce_to_screen_reader(f"Provider set to {display}")
 
+    def _populate_models(self, provider_id: str) -> None:
+        """Populate the model dropdown for the given provider.
+
+        For Ollama, queries the actual downloaded models from the server.
+        For other providers, uses static model registries.
+
+        Args:
+            provider_id: Provider identifier.
+        """
+        _provider_models: dict[str, list] = {
+            "openai": OPENAI_AI_MODELS,
+            "anthropic": ANTHROPIC_AI_MODELS,
+            "gemini": GEMINI_AI_MODELS,
+            "copilot": COPILOT_AI_MODELS,
+        }
+
+        self._model_choice.Clear()
+
+        if provider_id == "ollama":
+            # Query actual downloaded models from Ollama server
+            self._model_choice.Append("Loading\u2026")
+            self._model_choice.SetSelection(0)
+
+            def _fetch_ollama() -> list[str]:
+                try:
+                    from bits_whisperer.core.ai_service import AIService
+
+                    svc = AIService(self._main_frame.key_store, self._settings.ai)
+                    return svc.list_ollama_models()
+                except Exception:
+                    return []
+
+            def _populate_ollama(model_ids: list[str]) -> None:
+                self._model_choice.Clear()
+                if not model_ids:
+                    self._model_choice.Append("No models \u2014 choose Manage Models")
+                    self._model_choice.SetSelection(0)
+                    return
+                default = self._settings.ai.default_chat_model or self._settings.ai.ollama_model
+                sel_idx = 0
+                for i, mid in enumerate(model_ids):
+                    self._model_choice.Append(mid)
+                    if mid == default:
+                        sel_idx = i
+                self._model_choice.SetSelection(sel_idx)
+                self._session_model = self._model_choice.GetString(sel_idx)
+                self._update_provider_status()
+
+            def _bg() -> None:
+                ids = _fetch_ollama()
+                safe_call_after(_populate_ollama, ids)
+
+            threading.Thread(target=_bg, daemon=True, name="ollama-models").start()
+            return
+
+        models = _provider_models.get(provider_id, [])
+        if not models:
+            self._model_choice.Append("Default")
+            self._model_choice.SetSelection(0)
+            self._update_provider_status()
+            return
+
+        # Get the currently persisted model for this provider
+        current_model = ""
+        ai = self._settings.ai
+        if provider_id == "openai":
+            current_model = ai.openai_model
+        elif provider_id == "anthropic":
+            current_model = ai.anthropic_model
+        elif provider_id == "gemini":
+            current_model = ai.gemini_model
+        elif provider_id == "copilot":
+            current_model = ai.copilot_model
+
+        sel_idx = 0
+        for i, m in enumerate(models):
+            self._model_choice.Append(m.id)
+            if m.id == current_model:
+                sel_idx = i
+        self._model_choice.SetSelection(sel_idx)
+        self._session_model = self._model_choice.GetString(sel_idx)
+        self._update_provider_status()
+
+    def _on_model_changed(self, _event: wx.CommandEvent) -> None:
+        """Handle model selection change in the chat panel.
+
+        Stores the selection as a per-session override (not persisted).
+        """
+        idx = self._model_choice.GetSelection()
+        if idx == wx.NOT_FOUND:
+            return
+        model_name = self._model_choice.GetString(idx)
+        if model_name in ("Default", "Loading\u2026", "No models \u2014 choose Manage Models"):
+            self._update_interaction_state()
+            return
+        self._session_model = model_name
+        announce_to_screen_reader(f"Model set to {model_name}")
+        self._update_interaction_state()
+
+    def _on_prompt_preset_changed(self, _event: wx.CommandEvent) -> None:
+        """Handle system prompt preset selection change.
+
+        When "Custom" is selected, opens a text dialog so the user
+        can type their own instructions.
+        """
+        idx = self._prompt_choice.GetSelection()
+        if idx == wx.NOT_FOUND:
+            return
+        preset = SYSTEM_PROMPT_PRESETS[idx]
+
+        if preset.id == "custom":
+            dlg = wx.TextEntryDialog(
+                self,
+                "Enter your custom system prompt.\n\n"
+                "This tells the AI how to behave when answering questions.",
+                "Custom AI Persona",
+                self._session_system_prompt,
+                style=wx.OK | wx.CANCEL | wx.TE_MULTILINE,
+            )
+            dlg.SetSize((500, 300))
+            set_accessible_name(dlg, "Custom AI persona instructions")
+            if dlg.ShowModal() == wx.ID_OK:
+                custom_text = dlg.GetValue().strip()
+                if custom_text:
+                    self._session_system_prompt = custom_text
+                    announce_to_screen_reader("Custom persona set")
+                else:
+                    # User left it blank — revert to General
+                    self._prompt_choice.SetSelection(0)
+                    self._session_system_prompt = DEFAULT_SYSTEM_PROMPT
+                    announce_to_screen_reader("Persona reset to General Assistant")
+            else:
+                # Cancelled — revert to previous selection
+                self._prompt_choice.SetSelection(0)
+            dlg.Destroy()
+        else:
+            self._session_system_prompt = preset.prompt
+            announce_to_screen_reader(f"Persona set to {preset.name}")
+
+    def _update_provider_status(self) -> None:
+        """Update the status label with the current provider and model."""
+        pid = self._get_selected_provider_id()
+        if not pid or not self._available_providers:
+            return
+
+        from bits_whisperer.core.ai_service import AIService
+
+        svc = AIService(self._main_frame.key_store, self._settings.ai)
+        display = svc.get_provider_display_name()
+        if self._transcript_context:
+            from bits_whisperer.core.context_manager import create_context_manager
+
+            ctx_mgr = create_context_manager(self._settings.ai)
+            model_id = svc._get_model_id()
+            prepared = ctx_mgr.prepare_chat_context(
+                model=model_id,
+                provider=pid,
+                system_prompt="",
+                transcript=self._transcript_context,
+            )
+            budget_info = ctx_mgr.format_budget_summary(prepared.budget)
+            ctx_hint = f" \u2022 {budget_info}"
+        else:
+            ctx_hint = ""
+        self._status_label.SetLabel(f"Ready \u2014 {display}{ctx_hint}")
+        announce_to_screen_reader(f"Provider set to {display}")
+
+    def _on_open_model_manager(self, _event: wx.CommandEvent) -> None:
+        """Open the Manage Models dialog."""
+        try:
+            on_model_manager = getattr(self._main_frame, "_on_model_manager", None)
+            if callable(on_model_manager):
+                on_model_manager(None)
+            else:
+                raise AttributeError("Manage Models handler not available")
+        except Exception:
+            logger.exception("Failed to open Manage Models")
+            announce_to_screen_reader("Could not open Manage Models")
+
     def _get_selected_provider_id(self) -> str:
         """Return the ID of the currently selected provider."""
         idx = self._provider_choice.GetSelection()
         if idx == wx.NOT_FOUND or idx >= len(self._available_providers):
             return self._settings.ai.selected_provider
         return self._available_providers[idx]["id"]
+
+    def _get_selected_model_id(self) -> str:
+        """Return the model ID from the chat model dropdown."""
+        idx = self._model_choice.GetSelection()
+        if idx == wx.NOT_FOUND:
+            return ""
+        return self._model_choice.GetString(idx)
 
     # ------------------------------------------------------------------ #
     # Service management (Copilot-specific)                                #
@@ -338,6 +637,10 @@ class CopilotChatPanel(wx.Panel):
 
         logger.info("Connecting chat panel to CopilotService")
         self._copilot_service = copilot_service
+
+        # Listen for SDK lifecycle status changes
+        copilot_service.add_status_listener(self._on_copilot_status)
+
         if copilot_service.is_running:
             logger.info("Chat panel connected (service already running)")
         else:
@@ -355,8 +658,8 @@ class CopilotChatPanel(wx.Panel):
 
                         if not is_sdk_available("copilot_sdk"):
                             announce_to_screen_reader(
-                                "Copilot SDK not installed yet. "
-                                "It will install automatically when needed."
+                                "Copilot is still being prepared. "
+                                "It will finish automatically when needed."
                             )
                         else:
                             announce_to_screen_reader("Copilot connection failed. Check setup.")
@@ -364,6 +667,30 @@ class CopilotChatPanel(wx.Panel):
                 safe_call_after(_update)
 
             threading.Thread(target=_start, daemon=True).start()
+
+    def _on_copilot_status(self, status: str, detail: str) -> None:
+        """Handle SDK lifecycle status change notifications.
+
+        Updates the status label so the user can see connection state.
+
+        Args:
+            status: Status key (starting, connected, disconnected, error).
+            detail: Human-readable description.
+        """
+
+        def _update() -> None:
+            if status == "connected":
+                self._status_label.SetLabel("Ready \u2014 Copilot")
+                announce_to_screen_reader(detail)
+            elif status == "starting":
+                self._status_label.SetLabel("Connecting\u2026")
+            elif status == "error":
+                self._status_label.SetLabel(f"Error \u2014 {detail}")
+                announce_to_screen_reader(detail)
+            elif status == "disconnected":
+                self._status_label.SetLabel("Disconnected")
+
+        safe_call_after(_update)
 
     def set_transcript_context(self, text: str) -> None:
         """Set the transcript text for context in conversations.
@@ -441,6 +768,28 @@ class CopilotChatPanel(wx.Panel):
             )
 
         self._chat_display.SetValue(welcome + "\n\n")
+
+    def _build_translate_prompt(self) -> str:
+        """Build the quick translate prompt using the saved target language."""
+        target_language = self._settings.ai.translation_target_language or "Spanish"
+        return f"Translate this transcript to {target_language}, preserving speaker labels."
+
+    def _update_interaction_state(self) -> None:
+        """Enable or disable message controls based on readiness."""
+        has_provider = bool(self._available_providers)
+        model_name = self._get_selected_model_id() if has_provider else ""
+        can_send = (
+            has_provider
+            and model_name
+            not in {
+                "Loading\u2026",
+                "No models \u2014 choose Manage Models",
+                "Set up an AI provider first",
+            }
+            and not self._is_streaming
+        )
+        self._send_btn.Enable(can_send)
+        self._input_text.Enable(has_provider and not self._is_streaming)
 
     # ------------------------------------------------------------------ #
     # Message sending                                                      #
@@ -546,6 +895,13 @@ class CopilotChatPanel(wx.Panel):
             )
             return
 
+        if not self._available_providers:
+            announce_status(
+                self._main_frame,
+                "Set up an AI provider before sending a message.",
+            )
+            return
+
         # Intercept slash commands
         parsed = parse_slash_command(message)
         if parsed:
@@ -578,7 +934,7 @@ class CopilotChatPanel(wx.Panel):
             else:
                 self._append_message(
                     "System",
-                    f"Unknown command '/{name}'.\n" "Type /help to see all available commands.",
+                    f"Unknown command '/{name}'.\nType /help to see all available commands.",
                 )
             return
 
@@ -630,7 +986,7 @@ class CopilotChatPanel(wx.Panel):
         self._append_message("You", message)
         self._input_text.SetValue("")
         self._is_streaming = True
-        self._send_btn.Disable()
+        self._update_interaction_state()
 
         # Track in conversation history
         self._conversation_history.append({"role": "user", "content": message})
@@ -686,7 +1042,13 @@ class CopilotChatPanel(wx.Panel):
 
             safe_call_after(_err)
 
-        self._copilot_service.send_message(
+        service = self._copilot_service
+        if service is None:
+            self._append_text("\n[Copilot is not connected yet.]\n\n")
+            self._finalize_response()
+            return
+
+        service.send_message(
             message,
             on_delta=on_delta,
             on_complete=on_complete,
@@ -710,12 +1072,32 @@ class CopilotChatPanel(wx.Panel):
 
         settings = AppSettings.load()
         settings.ai.selected_provider = self._get_selected_provider_id()
+
+        # Use per-session model override (not persisted to disk)
+        chat_model = self._session_model or self._get_selected_model_id()
+        if chat_model and chat_model not in (
+            "Default",
+            "Loading\u2026",
+            "No models \u2014 choose Manage Models",
+        ):
+            pid = settings.ai.selected_provider
+            if pid == "openai":
+                settings.ai.openai_model = chat_model
+            elif pid == "anthropic":
+                settings.ai.anthropic_model = chat_model
+            elif pid == "gemini":
+                settings.ai.gemini_model = chat_model
+            elif pid == "copilot":
+                settings.ai.copilot_model = chat_model
+            elif pid == "ollama":
+                settings.ai.ollama_model = chat_model
+
         ai_service = AIService(self._main_frame.key_store, settings.ai)
 
         if not ai_service.is_configured():
             self._append_text(
-                "\n[No AI provider configured. Go to Tools \u2192 "
-                "AI Provider Settings to add an API key.]\n\n"
+                "\n[No AI provider is ready yet. Open AI > Copilot Setup to sign in with "
+                "GitHub, or open Tools > AI Provider Settings to use another provider.]\n\n"
             )
             self._finalize_response()
             return
@@ -749,6 +1131,7 @@ class CopilotChatPanel(wx.Panel):
         ai_service.chat(
             self._conversation_history,
             transcript_context=self._transcript_context,
+            system_prompt=self._session_system_prompt,
             on_delta=on_delta,
             on_complete=on_complete,
             on_error=on_error,
@@ -797,7 +1180,7 @@ class CopilotChatPanel(wx.Panel):
     def _finalize_response(self) -> None:
         """Finalize a streaming response — re-enable input."""
         self._is_streaming = False
-        self._send_btn.Enable()
+        self._update_interaction_state()
         self._input_text.SetFocus()
 
     def _scroll_to_bottom(self) -> None:
@@ -805,11 +1188,103 @@ class CopilotChatPanel(wx.Panel):
         self._chat_display.ShowPosition(self._chat_display.GetLastPosition())
 
     # ------------------------------------------------------------------ #
+    # Context menus                                                        #
+    # ------------------------------------------------------------------ #
+
+    def _on_display_context_menu(self, _event: wx.ContextMenuEvent) -> None:
+        """Right-click context menu for the chat display."""
+        menu = wx.Menu()
+        has_text = self._chat_display.GetValue() != ""
+        has_selection = self._chat_display.GetStringSelection() != ""
+
+        sel_item = menu.Append(wx.ID_ANY, "Select &All\tCtrl+A")
+        self.Bind(wx.EVT_MENU, lambda e: self._chat_display.SelectAll(), sel_item)
+        sel_item.Enable(has_text)
+
+        copy_item = menu.Append(wx.ID_ANY, "&Copy\tCtrl+C")
+        self.Bind(
+            wx.EVT_MENU,
+            lambda e: self._copy_display_selection(),
+            copy_item,
+        )
+        copy_item.Enable(has_selection)
+
+        copy_all = menu.Append(wx.ID_ANY, "Copy A&ll")
+        self.Bind(wx.EVT_MENU, lambda e: self._copy_all_display(), copy_all)
+        copy_all.Enable(has_text)
+
+        menu.AppendSeparator()
+
+        clear_item = menu.Append(wx.ID_ANY, "C&lear Conversation")
+        self.Bind(wx.EVT_MENU, self._on_clear, clear_item)
+        clear_item.Enable(has_text)
+
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def _on_input_context_menu(self, _event: wx.ContextMenuEvent) -> None:
+        """Right-click context menu for the message input."""
+        menu = wx.Menu()
+        has_text = self._input_text.GetValue() != ""
+        has_selection = self._input_text.GetStringSelection() != ""
+
+        cut_item = menu.Append(wx.ID_ANY, "Cu&t\tCtrl+X")
+        self.Bind(wx.EVT_MENU, lambda e: self._input_text.Cut(), cut_item)
+        cut_item.Enable(has_selection)
+
+        copy_item = menu.Append(wx.ID_ANY, "&Copy\tCtrl+C")
+        self.Bind(wx.EVT_MENU, lambda e: self._input_text.Copy(), copy_item)
+        copy_item.Enable(has_selection)
+
+        paste_item = menu.Append(wx.ID_ANY, "&Paste\tCtrl+V")
+        self.Bind(wx.EVT_MENU, lambda e: self._input_text.Paste(), paste_item)
+
+        menu.AppendSeparator()
+
+        sel_item = menu.Append(wx.ID_ANY, "Select &All\tCtrl+A")
+        self.Bind(wx.EVT_MENU, lambda e: self._input_text.SelectAll(), sel_item)
+        sel_item.Enable(has_text)
+
+        clear_item = menu.Append(wx.ID_ANY, "C&lear")
+        self.Bind(wx.EVT_MENU, lambda e: self._input_text.SetValue(""), clear_item)
+        clear_item.Enable(has_text)
+
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def _copy_display_selection(self) -> None:
+        """Copy selected text from the chat display."""
+        text = self._chat_display.GetStringSelection()
+        if text and wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(wx.TextDataObject(text))
+            wx.TheClipboard.Close()
+            announce_status(self._main_frame, "Selection copied to clipboard")
+
+    def _copy_all_display(self) -> None:
+        """Copy all text from the chat display."""
+        text = self._chat_display.GetValue()
+        if text and wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(wx.TextDataObject(text))
+            wx.TheClipboard.Close()
+            announce_status(self._main_frame, "Conversation copied to clipboard")
+
+    # ------------------------------------------------------------------ #
     # Clear / Reset                                                        #
     # ------------------------------------------------------------------ #
 
     def _on_clear(self, _event: wx.CommandEvent) -> None:
         """Clear the conversation history and reset the chat."""
+        has_content = bool(self._conversation_history or self._chat_display.GetValue().strip())
+        if has_content:
+            result = accessible_message_box(
+                "Clear the current conversation and start fresh?",
+                "Clear Conversation",
+                wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
+                self,
+            )
+            if result != wx.YES:
+                announce_status(self._main_frame, "Clear cancelled")
+                return
         self._conversation_history.clear()
         if self._copilot_service:
             self._copilot_service.clear_conversation()

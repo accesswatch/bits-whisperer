@@ -19,6 +19,8 @@ from bits_whisperer.core.settings import AppSettings
 from bits_whisperer.utils.accessibility import (
     accessible_message_box,
     announce_status,
+    announce_to_screen_reader,
+    label_control,
     safe_call_after,
     set_accessible_help,
     set_accessible_name,
@@ -50,7 +52,7 @@ class LiveTranscriptionDialog(wx.Dialog):
             parent,
             title="Live Transcription",
             size=(700, 500),
-            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL,
         )
         set_accessible_name(self, "Live Transcription")
         self.SetMinSize((500, 350))
@@ -84,6 +86,7 @@ class LiveTranscriptionDialog(wx.Dialog):
             "Choose the microphone to use for live transcription",
         )
         self._device_choice.SetSelection(0)
+        label_control(device_label, self._device_choice)
         device_row.Add(self._device_choice, 1, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
 
         # Model selector
@@ -96,6 +99,7 @@ class LiveTranscriptionDialog(wx.Dialog):
         model_names = [f"{m.name}" for m in WHISPER_MODELS]
         self._model_choice = wx.Choice(self, choices=model_names)
         set_accessible_name(self._model_choice, "Select Whisper model for live transcription")
+        label_control(model_label, self._model_choice)
         # Select the model from settings
         current_model = self._settings.live_transcription.model
         for i, m in enumerate(WHISPER_MODELS):
@@ -158,6 +162,7 @@ class LiveTranscriptionDialog(wx.Dialog):
             self._text_ctrl,
             "Real-time transcript of spoken words. Text appears as you speak.",
         )
+        label_control(transcript_label, self._text_ctrl)
         font = wx.Font(
             11,
             wx.FONTFAMILY_DEFAULT,
@@ -251,6 +256,7 @@ class LiveTranscriptionDialog(wx.Dialog):
         self._model_choice.Enable(False)
         self._status_label.SetLabel("Status: Listening...")
         self._text_ctrl.AppendText("[Live transcription started]\n\n")
+        announce_to_screen_reader("Live transcription started. Listening.")
 
     def _on_pause(self, _event: wx.CommandEvent) -> None:
         """Toggle pause/resume."""
@@ -261,10 +267,12 @@ class LiveTranscriptionDialog(wx.Dialog):
             self._service.resume()
             self._pause_btn.SetLabel("&Pause")
             self._status_label.SetLabel("Status: Listening...")
+            announce_to_screen_reader("Live transcription resumed")
         else:
             self._service.pause()
             self._pause_btn.SetLabel("&Resume")
             self._status_label.SetLabel("Status: Paused")
+            announce_to_screen_reader("Live transcription paused")
 
     def _on_stop(self, _event: wx.CommandEvent) -> None:
         """Stop live transcription."""
@@ -279,6 +287,7 @@ class LiveTranscriptionDialog(wx.Dialog):
         self._pause_btn.SetLabel("&Pause")
         self._status_label.SetLabel("Status: Stopped")
         self._text_ctrl.AppendText("\n[Live transcription stopped]\n")
+        announce_to_screen_reader("Live transcription stopped")
 
     def _on_copy(self, _event: wx.CommandEvent) -> None:
         """Copy full transcript to clipboard."""

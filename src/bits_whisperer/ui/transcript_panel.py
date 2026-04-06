@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_FONT_SIZE = 11
+
 # Lazy formatter cache — populated on first export to keep startup fast
 _FORMATTERS: dict[str, ExportFormatter] = {}
 
@@ -75,6 +77,7 @@ class TranscriptPanel(wx.Panel):
         self._current_job: Job | None = None
         self._last_search_pos: int = -1  # Track position for Find Next
         self._segment_line_map: dict[int, int] = {}  # line_number -> segment_index
+        self._font_size: int = _DEFAULT_FONT_SIZE
 
         self._build_ui()
 
@@ -103,10 +106,18 @@ class TranscriptPanel(wx.Panel):
 
         self._copy_btn = wx.Button(self, label="&Copy")
         set_accessible_name(self._copy_btn, "Copy transcript to clipboard")
+        set_accessible_help(
+            self._copy_btn,
+            "Copy the full transcript text to the clipboard",
+        )
         toolbar.Add(self._copy_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
 
         self._export_btn = wx.Button(self, label="E&xport…")
         set_accessible_name(self._export_btn, "Export transcript to file")
+        set_accessible_help(
+            self._export_btn,
+            "Export the transcript to a file in your chosen format",
+        )
         toolbar.Add(self._export_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
 
         # AI action buttons
@@ -139,8 +150,7 @@ class TranscriptPanel(wx.Panel):
         set_accessible_name(self._manage_speakers_btn, "Manage and rename speakers")
         set_accessible_help(
             self._manage_speakers_btn,
-            "Rename speakers or assign display names. Right-click a line "
-            "to reassign its speaker.",
+            "Rename speakers or assign display names. Right-click a line to reassign its speaker.",
         )
         speaker_bar.Add(self._manage_speakers_btn, 0, wx.ALIGN_CENTER_VERTICAL)
 
@@ -154,6 +164,17 @@ class TranscriptPanel(wx.Panel):
         set_accessible_name(self._meta_label, "Transcript metadata")
         sizer.Add(self._meta_label, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 5)
 
+        # -- Statistics bar --
+        self._stats_label = wx.StaticText(self, label="")
+        self._stats_label.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT))
+        set_accessible_name(self._stats_label, "Transcript statistics")
+        set_accessible_help(
+            self._stats_label,
+            "Word count, character count, and segment count for the current transcript.",
+        )
+        sizer.Add(self._stats_label, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 5)
+        self._stats_label.Hide()
+
         # -- Text display --
         self._text_ctrl = wx.TextCtrl(
             self,
@@ -165,7 +186,7 @@ class TranscriptPanel(wx.Panel):
             "Full transcript of the selected audio file. Use Ctrl+A to select all.",
         )
         font = wx.Font(
-            11,
+            self._font_size,
             wx.FONTFAMILY_DEFAULT,
             wx.FONTSTYLE_NORMAL,
             wx.FONTWEIGHT_NORMAL,
@@ -228,15 +249,19 @@ class TranscriptPanel(wx.Panel):
         self._search_ctrl.Bind(wx.EVT_TEXT_ENTER, self._on_search)
         self._search_ctrl.Bind(wx.EVT_TEXT, self._on_search_text_changed)
         self._text_ctrl.Bind(wx.EVT_CONTEXT_MENU, self._on_text_context_menu)
+        self._ai_action_text.Bind(wx.EVT_CONTEXT_MENU, self._on_ai_text_context_menu)
         self._manage_speakers_btn.Bind(wx.EVT_BUTTON, self._on_manage_speakers)
         self._ai_action_copy_btn.Bind(wx.EVT_BUTTON, self._on_copy_ai_result)
 
-        # F3 = Find Next (bound at panel level so it works globally)
+        # F3 = Find Next, Shift+F3 = Find Previous (panel-level accelerators)
         find_next_id = wx.NewIdRef()
+        find_prev_id = wx.NewIdRef()
         self.Bind(wx.EVT_MENU, self._on_find_next, id=find_next_id)
+        self.Bind(wx.EVT_MENU, self._on_find_previous, id=find_prev_id)
         accel = wx.AcceleratorTable(
             [
                 wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_F3, find_next_id),
+                wx.AcceleratorEntry(wx.ACCEL_SHIFT, wx.WXK_F3, find_prev_id),
             ]
         )
         self.SetAcceleratorTable(accel)
@@ -296,6 +321,17 @@ class TranscriptPanel(wx.Panel):
         self._text_ctrl.SetValue("\n".join(lines))
         self._text_ctrl.SetInsertionPoint(0)
 
+        # Update statistics bar
+        full_text = "\n".join(lines)
+        word_count = len(full_text.split())
+        char_count = len(full_text)
+        seg_count = len(result.segments) if result.segments else 0
+        stats_parts = [f"{word_count:,} words", f"{char_count:,} characters"]
+        if seg_count:
+            stats_parts.append(f"{seg_count} segments")
+        self._stats_label.SetLabel("  |  ".join(stats_parts))
+        self._stats_label.Show()
+
         # Show/hide speaker bar
         if unique_speakers:
             names_str = ", ".join(sorted(unique_speakers))
@@ -326,6 +362,39 @@ class TranscriptPanel(wx.Panel):
         self._translate_btn.Enable(has_transcript)
         self._summarize_btn.Enable(has_transcript)
         self._search_ctrl.Enable(has_transcript)
+
+    def focus_search(self) -> None:
+        """Set keyboard focus to the search control (Ctrl+F)."""
+        self._search_ctrl.SetFocus()
+
+    def adjust_font_size(self, delta: int) -> None:
+        """Change the transcript font size by *delta* points.
+
+        Args:
+            delta: Positive to increase, negative to decrease.
+        """
+        new_size = max(6, min(36, self._font_size + delta))
+        if new_size == self._font_size:
+            return
+        self._font_size = new_size
+        font = self._text_ctrl.GetFont()
+        font.SetPointSize(self._font_size)
+        self._text_ctrl.SetFont(font)
+        self._ai_action_text.SetFont(font)
+        from bits_whisperer.utils.accessibility import announce_to_screen_reader
+
+        announce_to_screen_reader(f"Font size {self._font_size}")
+
+    def reset_font_size(self) -> None:
+        """Reset transcript font size to the default."""
+        self._font_size = _DEFAULT_FONT_SIZE
+        font = self._text_ctrl.GetFont()
+        font.SetPointSize(self._font_size)
+        self._text_ctrl.SetFont(font)
+        self._ai_action_text.SetFont(font)
+        from bits_whisperer.utils.accessibility import announce_to_screen_reader
+
+        announce_to_screen_reader(f"Font size reset to {self._font_size}")
 
     def _show_ai_action_results(self, job: Job) -> None:
         """Show or hide the AI action result section based on job state.
@@ -475,6 +544,41 @@ class TranscriptPanel(wx.Panel):
             return
         self._find_next(query)
 
+    def _on_find_previous(self, _event: wx.CommandEvent) -> None:
+        """Shift+F3 — find previous occurrence of the current search query."""
+        query = self._search_ctrl.GetValue().strip()
+        if not query:
+            return
+        self._find_previous(query)
+
+    def _find_previous(self, query: str) -> None:
+        """Find the previous occurrence of *query* before ``_last_search_pos``.
+
+        Wraps around to the end when the beginning is reached.
+        """
+        text = self._text_ctrl.GetValue()
+        text_lower = text.lower()
+        query_lower = query.lower()
+
+        # Search backwards from before the current match
+        end = self._last_search_pos - len(query) + 1 if self._last_search_pos >= 0 else len(text)
+        end = max(end, 0)
+        pos = text_lower.rfind(query_lower, 0, end)
+
+        if pos < 0 and end < len(text):
+            # Wrap around to end
+            pos = text_lower.rfind(query_lower)
+
+        if pos >= 0:
+            self._last_search_pos = pos + len(query) - 1
+            self._text_ctrl.SetSelection(pos, pos + len(query))
+            self._text_ctrl.ShowPosition(pos)
+        else:
+            self._last_search_pos = -1
+            from bits_whisperer.utils.accessibility import announce_status
+
+            announce_status(self._main_frame, f"'{query}' not found in transcript")
+
     def _find_next(self, query: str) -> None:
         """Find the next occurrence of *query* after ``_last_search_pos``.
 
@@ -492,7 +596,7 @@ class TranscriptPanel(wx.Panel):
             pos = text_lower.find(query_lower, 0)
 
         if pos >= 0:
-            self._last_search_pos = pos
+            self._last_search_pos = pos + len(query) - 1
             self._text_ctrl.SetSelection(pos, pos + len(query))
             self._text_ctrl.ShowPosition(pos)
         else:
@@ -531,11 +635,19 @@ class TranscriptPanel(wx.Panel):
             "  Ctrl+Shift+S — Summarize with AI"
         )
 
-    @staticmethod
-    def _fmt_ts(seconds: float) -> str:
-        m = int(seconds // 60)
+    def _fmt_ts(self, seconds: float) -> str:
+        """Format a timestamp according to the user's ``timestamp_format`` setting."""
+        fmt = self._main_frame.app_settings.transcription.timestamp_format
+        if fmt == "seconds":
+            return f"{seconds:.1f}s"
+        h = int(seconds // 3600)
+        m = int((seconds % 3600) // 60)
         s = int(seconds % 60)
-        return f"{m:02d}:{s:02d}"
+        if fmt == "hh:mm:ss":
+            return f"{h:02d}:{m:02d}:{s:02d}"
+        # Default: mm:ss (legacy)
+        total_m = int(seconds // 60)
+        return f"{total_m:02d}:{s:02d}"
 
     # ------------------------------------------------------------------ #
     # Speaker management                                                   #
@@ -578,60 +690,141 @@ class TranscriptPanel(wx.Panel):
         dlg.Destroy()
 
     def _on_text_context_menu(self, _event: wx.ContextMenuEvent) -> None:
-        """Right-click context menu for speaker reassignment."""
-        if not self._current_job or not self._current_job.result:
-            return
-
-        result = self._current_job.result
-        if not result.segments:
-            return
-
-        # Find which segment the cursor is on
-        pos = self._text_ctrl.GetInsertionPoint()
-        col_line = self._text_ctrl.PositionToXY(pos)
-        if col_line is None:
-            return
-        _, _, line_no = col_line
-        seg_idx = self._segment_line_map.get(line_no)
-        if seg_idx is None:
-            return
-
-        # Collect unique display names
-        speaker_map = getattr(result, "speaker_map", {}) or {}
-        display_names: list[str] = []
-        id_by_name: dict[str, str] = {}
-        seen: set[str] = set()
-        for seg in result.segments:
-            if seg.speaker and seg.speaker not in seen:
-                name = speaker_map.get(seg.speaker, seg.speaker)
-                display_names.append(name)
-                id_by_name[name] = seg.speaker
-                seen.add(seg.speaker)
-
+        """Right-click context menu for transcript text."""
         menu = wx.Menu()
+        has_transcript = bool(self._current_job and self._current_job.result)
+        has_selection = self._text_ctrl.GetStringSelection() != ""
 
-        if display_names:
-            assign_menu = wx.Menu()
-            for name in display_names:
-                item = assign_menu.Append(wx.ID_ANY, name)
-                self.Bind(
-                    wx.EVT_MENU,
-                    lambda e, spk=id_by_name[name], idx=seg_idx: (
-                        self._assign_speaker_to_segment(idx, spk)
-                    ),
-                    item,
-                )
-            menu.AppendSubMenu(assign_menu, "Assign to Speaker")
+        # ── Text operations ──
+        sel_item = menu.Append(wx.ID_ANY, "Select &All\tCtrl+A")
+        self.Bind(wx.EVT_MENU, lambda e: self._text_ctrl.SelectAll(), sel_item)
+        sel_item.Enable(has_transcript)
 
-        new_item = menu.Append(wx.ID_ANY, "New Speaker...")
+        copy_item = menu.Append(wx.ID_ANY, "&Copy\tCtrl+C")
         self.Bind(
             wx.EVT_MENU,
-            lambda e, idx=seg_idx: self._new_speaker_for_segment(idx),
-            new_item,
+            lambda e: self._copy_selected_text(),
+            copy_item,
         )
+        copy_item.Enable(has_selection)
+
+        copy_all = menu.Append(wx.ID_ANY, "Copy A&ll")
+        self.Bind(wx.EVT_MENU, lambda e: self._on_copy(None), copy_all)
+        copy_all.Enable(has_transcript)
+
+        menu.AppendSeparator()
+
+        find_item = menu.Append(wx.ID_ANY, "&Find…\tCtrl+F")
+        self.Bind(wx.EVT_MENU, lambda e: self._search_ctrl.SetFocus(), find_item)
+        find_item.Enable(has_transcript)
+
+        menu.AppendSeparator()
+
+        # ── Transcript actions ──
+        export_item = menu.Append(wx.ID_ANY, "&Export…")
+        self.Bind(wx.EVT_MENU, lambda e: self._on_export(None), export_item)
+        export_item.Enable(has_transcript)
+
+        translate_item = menu.Append(wx.ID_ANY, "&Translate")
+        self.Bind(wx.EVT_MENU, lambda e: self._on_translate(None), translate_item)
+        translate_item.Enable(has_transcript)
+
+        summarize_item = menu.Append(wx.ID_ANY, "&Summarize")
+        self.Bind(wx.EVT_MENU, lambda e: self._on_summarize(None), summarize_item)
+        summarize_item.Enable(has_transcript)
+
+        # ── Speaker reassignment (only when segments + cursor on a segment) ──
+        if has_transcript:
+            result = self._current_job.result  # type: ignore[union-attr]
+            if result and result.segments:
+                pos = self._text_ctrl.GetInsertionPoint()
+                col_line = self._text_ctrl.PositionToXY(pos)
+                seg_idx = None
+                if col_line is not None:
+                    _, _, line_no = col_line
+                    seg_idx = self._segment_line_map.get(line_no)
+
+                if seg_idx is not None:
+                    menu.AppendSeparator()
+
+                    speaker_map = getattr(result, "speaker_map", {}) or {}
+                    display_names: list[str] = []
+                    id_by_name: dict[str, str] = {}
+                    seen: set[str] = set()
+                    for seg in result.segments:
+                        if seg.speaker and seg.speaker not in seen:
+                            name = speaker_map.get(seg.speaker, seg.speaker)
+                            display_names.append(name)
+                            id_by_name[name] = seg.speaker
+                            seen.add(seg.speaker)
+
+                    if display_names:
+                        assign_menu = wx.Menu()
+                        for name in display_names:
+                            item = assign_menu.Append(wx.ID_ANY, name)
+                            self.Bind(
+                                wx.EVT_MENU,
+                                lambda e, spk=id_by_name[name], idx=seg_idx: (
+                                    self._assign_speaker_to_segment(idx, spk)
+                                ),
+                                item,
+                            )
+                        menu.AppendSubMenu(assign_menu, "Assign to Speaker")
+
+                    new_item = menu.Append(wx.ID_ANY, "New Speaker...")
+                    self.Bind(
+                        wx.EVT_MENU,
+                        lambda e, idx=seg_idx: self._new_speaker_for_segment(idx),
+                        new_item,
+                    )
 
         self.PopupMenu(menu)
         menu.Destroy()
+
+    def _on_ai_text_context_menu(self, _event: wx.ContextMenuEvent) -> None:
+        """Right-click context menu for AI action output text."""
+        menu = wx.Menu()
+        has_text = self._ai_action_text.GetValue() != ""
+        has_selection = self._ai_action_text.GetStringSelection() != ""
+
+        sel_item = menu.Append(wx.ID_ANY, "Select &All\tCtrl+A")
+        self.Bind(wx.EVT_MENU, lambda e: self._ai_action_text.SelectAll(), sel_item)
+        sel_item.Enable(has_text)
+
+        copy_item = menu.Append(wx.ID_ANY, "&Copy\tCtrl+C")
+        self.Bind(
+            wx.EVT_MENU,
+            lambda e: self._copy_selected_ai_text(),
+            copy_item,
+        )
+        copy_item.Enable(has_selection)
+
+        copy_all = menu.Append(wx.ID_ANY, "Copy A&ll")
+        self.Bind(wx.EVT_MENU, lambda e: self._on_copy_ai_result(None), copy_all)
+        copy_all.Enable(has_text)
+
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def _copy_selected_text(self) -> None:
+        """Copy the current text selection to the clipboard."""
+        text = self._text_ctrl.GetStringSelection()
+        if text and wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(wx.TextDataObject(text))
+            wx.TheClipboard.Close()
+            from bits_whisperer.utils.accessibility import announce_status
+
+            announce_status(self._main_frame, "Selection copied to clipboard")
+
+    def _copy_selected_ai_text(self) -> None:
+        """Copy the current AI text selection to the clipboard."""
+        text = self._ai_action_text.GetStringSelection()
+        if text and wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(wx.TextDataObject(text))
+            wx.TheClipboard.Close()
+            from bits_whisperer.utils.accessibility import announce_status
+
+            announce_status(self._main_frame, "Selection copied to clipboard")
 
     def _assign_speaker_to_segment(self, seg_idx: int, speaker_id: str) -> None:
         """Reassign a segment to a different speaker.
@@ -704,7 +897,7 @@ class SpeakerRenameDialog(wx.Dialog):
             parent,
             title="Manage Speakers",
             size=(420, min(200 + len(speaker_ids) * 36, 500)),
-            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL,
         )
         set_accessible_name(self, "Rename speakers")
         self.SetMinSize((360, 200))

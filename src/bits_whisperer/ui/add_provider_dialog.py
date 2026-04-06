@@ -66,7 +66,7 @@ _CLOUD_PROVIDERS: list[tuple[str, str, str, str, str, list[tuple[str, str, str]]
         "Google Gemini",
         "gemini",
         "https://makersuite.google.com/app/apikey",
-        "Most affordable cloud option at $0.0002 per minute. " "Powered by Google's Gemini models.",
+        "Most affordable cloud option at $0.0002 per minute. Powered by Google's Gemini models.",
         [],
     ),
     (
@@ -92,7 +92,7 @@ _CLOUD_PROVIDERS: list[tuple[str, str, str, str, str, list[tuple[str, str, str]]
         "ElevenLabs (Scribe)",
         "elevenlabs",
         "https://elevenlabs.io/app/settings/api-keys",
-        "Ultra-reliable with 99+ language support. " "$0.005 per minute. Excellent accuracy.",
+        "Ultra-reliable with 99+ language support. $0.005 per minute. Excellent accuracy.",
         [],
     ),
     (
@@ -153,7 +153,7 @@ _CLOUD_PROVIDERS: list[tuple[str, str, str, str, str, list[tuple[str, str, str]]
         "Rev.ai",
         "rev_ai",
         "https://www.rev.ai/access-token",
-        "High-accuracy transcription from Rev. " "$0.02 per minute. Specializes in English.",
+        "High-accuracy transcription from Rev. $0.02 per minute. Specializes in English.",
         [],
     ),
     (
@@ -161,7 +161,7 @@ _CLOUD_PROVIDERS: list[tuple[str, str, str, str, str, list[tuple[str, str, str]]
         "Speechmatics",
         "speechmatics",
         "https://portal.speechmatics.com/manage-access/",
-        "Enterprise speech recognition with 50+ languages. " "Pay-as-you-go pricing.",
+        "Enterprise speech recognition with 50+ languages. Pay-as-you-go pricing.",
         [],
     ),
 ]
@@ -233,7 +233,7 @@ _PROVIDER_SETTINGS_DEFS: dict[str, list[tuple[str, str, str, Any, Any]]] = {
         ("max_speaker_count", "Max Speakers (diarization)", "spin", 6, (2, 20)),
     ],
     "azure": [
-        ("endpoint_id", "Custom Endpoint ID", "text", "", None),
+        ("endpoint_id", "Custom Speech Model ID", "text", "", None),
     ],
     "aws_access_key": [
         ("max_speaker_labels", "Max Speaker Labels", "spin", 10, (2, 20)),
@@ -295,7 +295,7 @@ class AddProviderDialog(wx.Dialog):
             parent,
             title="Add Cloud Provider — BITS Whisperer",
             size=(620, 680),
-            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL,
         )
         set_accessible_name(self, "Add cloud transcription provider")
         self.SetMinSize((560, 560))
@@ -329,8 +329,8 @@ class AddProviderDialog(wx.Dialog):
         intro = wx.StaticText(
             self,
             label=(
-                "Select a cloud provider, enter your API key, and validate it. "
-                "Once validated, the provider will be available for transcription."
+                "Select a cloud provider, enter your API key, and test it. "
+                "Once it works, the provider will be ready for transcription."
             ),
         )
         intro.Wrap(540)
@@ -354,11 +354,11 @@ class AddProviderDialog(wx.Dialog):
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
         btn_sizer.AddStretchSpacer()
 
-        self._btn_validate = wx.Button(self, label="&Validate && Activate")
-        set_accessible_name(self._btn_validate, "Validate and activate provider")
+        self._btn_validate = wx.Button(self, label="&Test && Enable")
+        set_accessible_name(self._btn_validate, "Test and enable provider")
         set_accessible_help(
             self._btn_validate,
-            "Test your API key and activate this provider for use",
+            "Test your API key and turn this provider on for use",
         )
         self._btn_validate.Disable()
 
@@ -476,7 +476,7 @@ class AddProviderDialog(wx.Dialog):
 
         self._status_text = wx.TextCtrl(
             panel,
-            value="Select a provider and enter your API key, then click Validate.",
+            value="Select a provider, enter your API key, then click Test & Enable.",
             style=wx.TE_READONLY | wx.TE_MULTILINE | wx.BORDER_NONE,
             size=(-1, 45),
         )
@@ -551,13 +551,13 @@ class AddProviderDialog(wx.Dialog):
             if kid in activated:
                 self._prefill_lbl.SetLabel("\u2713 Already activated — re-validate to update")
             else:
-                self._prefill_lbl.SetLabel("Key found in credential store — validate to activate")
+                self._prefill_lbl.SetLabel("Key found in secure storage — test to turn it on")
         else:
             self._key_txt.SetValue("")
             self._prefill_lbl.SetLabel("")
 
         # Reset status
-        self._status_text.SetValue("Enter your API key, then click Validate && Activate.")
+        self._status_text.SetValue("Enter your API key, then click Test & Enable.")
         self._btn_validate.Enable(bool(self._key_txt.GetValue().strip()))
 
         # Build provider-specific settings
@@ -609,7 +609,7 @@ class AddProviderDialog(wx.Dialog):
             txt.Disable()
         self._progress.Show()
         self._progress.Pulse()
-        self._status_text.SetValue(f"\u2026 Validating {name} credentials\u2026")
+        self._status_text.SetValue(f"\u2026 Testing {name}\u2026")
         self.Layout()
 
         def _do_validate() -> None:
@@ -635,8 +635,8 @@ class AddProviderDialog(wx.Dialog):
                         name,
                         raw,
                         False,
-                        "Provider SDK not installed. Install it from "
-                        "Tools > Manage Models, then try again.",
+                        "This provider needs an extra component. Open Tools > Manage Models "
+                        "to install it, then try again.",
                     )
                     return
 
@@ -706,8 +706,7 @@ class AddProviderDialog(wx.Dialog):
 
             self._activated_provider = kid
             self._status_text.SetValue(
-                f"\u2713 {name} validated and activated!\n"
-                f"You can now use {name} for transcription."
+                f"\u2713 {name} is ready to use.\nYou can now use {name} for transcription."
             )
             self._prefill_lbl.SetLabel("\u2713 Activated")
 

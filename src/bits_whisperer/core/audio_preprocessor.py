@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import logging
 import os
-import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -83,7 +82,9 @@ class AudioPreprocessor:
     def __init__(self, settings: PreprocessorSettings | None = None) -> None:
         """Initialise with optional settings."""
         self._settings = settings or PreprocessorSettings()
-        self._ffmpeg = self._find_ffmpeg()
+        from bits_whisperer.utils.platform_utils import find_ffmpeg
+
+        self._ffmpeg = find_ffmpeg()
 
     @property
     def settings(self) -> PreprocessorSettings:
@@ -176,8 +177,7 @@ class AudioPreprocessor:
             if result.returncode != 0:
                 logger.error("Preprocessor ffmpeg stderr: %s", result.stderr)
                 raise RuntimeError(
-                    f"Audio preprocessing failed (exit {result.returncode}): "
-                    f"{result.stderr[:500]}"
+                    f"Audio preprocessing failed (exit {result.returncode}): {result.stderr[:500]}"
                 )
         except subprocess.TimeoutExpired:
             raise RuntimeError("Audio preprocessing timed out (10 minutes)") from None
@@ -217,7 +217,7 @@ class AudioPreprocessor:
         if s.noise_gate_enabled:
             # agate: threshold in dB, ratio high = hard gate
             filters.append(
-                f"agate=threshold={s.noise_gate_threshold_db}dB" ":ratio=10:attack=5:release=50"
+                f"agate=threshold={s.noise_gate_threshold_db}dB:ratio=10:attack=5:release=50"
             )
 
         if s.deesser_enabled:
@@ -259,17 +259,3 @@ class AudioPreprocessor:
     # ------------------------------------------------------------------ #
     # Internals                                                            #
     # ------------------------------------------------------------------ #
-
-    @staticmethod
-    def _find_ffmpeg() -> str:
-        """Locate the ffmpeg executable."""
-        path = shutil.which("ffmpeg")
-        if path:
-            return path
-        for candidate in [
-            r"C:\ffmpeg\bin\ffmpeg.exe",
-            r"C:\Program Files\ffmpeg\bin\ffmpeg.exe",
-        ]:
-            if Path(candidate).exists():
-                return candidate
-        return ""

@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project
 
 BITS Whisperer is an accessibility-first WXPython desktop app for audio
-transcription. It supports 17 transcription providers (cloud + on-device),
+transcription. It supports 18 transcription providers (cloud + on-device),
 AI translation/summarization, live microphone transcription, speaker
 diarization, a plugin system, and 7 export formats. Built by Blind
 Information Technology Solutions (BITS) for Windows 10+ and macOS 12+.
@@ -28,12 +28,12 @@ pytest tests/test_providers.py
 pytest tests/test_providers.py::TestProviderName::test_method
 
 # Lint and format
-black --check src/ tests/
+ruff format --check src/ tests/
 ruff check src/ tests/
 pyright src/
 
 # Auto-fix
-black src/ tests/
+ruff format src/ tests/
 ruff check --fix src/ tests/
 
 # Build executable (PyInstaller)
@@ -47,7 +47,8 @@ python docs/build_html_docs.py
 
 ## Code Style
 
-- **black** (line-length 100) and **ruff** configured in `pyproject.toml`.
+- **ruff** (line-length 100) for both formatting and linting, configured
+  in `pyproject.toml`.
 - **Ruff rules**: E, F, W, I, UP, B, SIM, C4, RET, TCH, PIE, PLC, PLE,
   PLW, RUF, PERF, LOG, S (security/bandit), T20 (no print), PT
   (pytest style), A (builtins), ERA (commented-out code).
@@ -70,7 +71,7 @@ python docs/build_html_docs.py
 
 ```bash
 # Gate 1: Formatting — must produce zero reformats
-black --check src/ tests/
+ruff format --check src/ tests/
 
 # Gate 2: Linting — must produce zero errors
 ruff check src/ tests/
@@ -92,7 +93,7 @@ Rules:
    ignore unless the pattern is intentional and project-wide.
 4. Test new functionality — add tests for any new public method or
    class.
-5. Run `black` (not just `--check`) if formatting is off.
+5. Run `ruff format` (not just `--check`) if formatting is off.
 
 ### Pre-commit hooks
 
@@ -103,16 +104,16 @@ pip install pre-commit
 pre-commit install
 ```
 
-Hooks: black, ruff, pyright, codespell, markdownlint, pre-commit-hooks
-(trailing whitespace, YAML/TOML/JSON validation, debug statements,
-large files, merge conflicts).
+Hooks: ruff (format + lint), pyright, codespell, markdownlint,
+pre-commit-hooks (trailing whitespace, YAML/TOML/JSON validation,
+debug statements, large files, merge conflicts).
 
 ### CI pipeline
 
 GitHub Actions CI (`.github/workflows/ci.yml`) runs on every push
 and PR to `main`:
 
-- **Lint job**: black, ruff, pyright
+- **Lint job**: ruff (format + lint), pyright
 - **Security job**: pip-audit (dependency vulnerability scanning)
 - **Test job**: pytest with coverage on Windows, Python 3.13
 - **Quality gate**: blocks merge if lint or test fails
@@ -121,14 +122,14 @@ and PR to `main`:
 
 `.vscode/settings.json` configures:
 
-- Ruff as sole linter (flake8/pylint disabled)
-- Black as formatter with format-on-save
+- Ruff as sole linter and formatter (flake8/pylint/Black disabled)
+- Format-on-save via Ruff extension
 - 100-char ruler
 - Spell checker dictionary for project terms
 
 `.vscode/extensions.json` recommends:
 
-- Ruff, Black Formatter, Python, Pylance, EditorConfig, Code Spell Checker
+- Ruff, Python, Pylance, EditorConfig, Code Spell Checker
 
 ## Architecture
 
@@ -138,22 +139,44 @@ Entry point: `src/bits_whisperer/__main__.py` -> `app.py` (wx.App)
 ### Key layers
 
 - **`core/`** — Business logic. `transcription_service.py`
-  orchestrates job queue. `provider_manager.py` routes to providers.
-  `ai_service.py` handles translation/summarization.
+  orchestrates job queue. `provider_manager.py` routes to providers
+  and accepts `feature_flag_service` and `beta_service` for
+  per-provider feature flag gating. `ai_service.py` handles
+  translation/summarization (6 providers including Ollama).
   `copilot_service.py` manages GitHub Copilot SDK.
   `feature_flags.py` provides remote feature flag service.
+  `watch_folder.py` monitors a directory for new audio files.
+  `ollama_adapter.py` provides a native HTTP REST adapter for
+  Ollama (streaming, model management, health monitoring,
+  automatic fallback). `dnd_monitor.py` detects Windows Focus
+  Assist / macOS DND status with configurable pause/resume.
+  `scheduler_service.py` runs timed and recurring transcription
+  jobs with DND-aware rules.
+  `beta_service.py` handles beta invitations and status.
+  `registration_service.py` manages product licensing.
+  `member_verification.py` manages OTP-based BITS member
+  email verification.
+  `github_oauth.py` implements GitHub OAuth device flow.
   Provider SDKs are installed on-demand at runtime via
   `sdk_installer.py`.
 - **`providers/`** — Strategy pattern. `base.py` defines
-  `TranscriptionProvider` ABC. 17 concrete adapters (cloud + local).
+  `TranscriptionProvider` ABC. 18 concrete adapters (cloud + local).
   Each provider is lazy-imported only when selected.
 - **`export/`** — Strategy pattern. `base.py` defines
   `TranscriptExporter` ABC. 7 formats: txt, md, html, docx, srt,
   vtt, json.
 - **`storage/`** — `database.py` (SQLite WAL mode for jobs),
-  `key_store.py` (OS keyring for 22 API key entries).
+  `key_store.py` (OS keyring for 33 API key entries).
 - **`ui/`** — WXPython. Menu-bar-driven design for accessibility.
-  Thread safety via `wx.CallAfter()`.
+  Thread safety via `wx.CallAfter()`. Includes `watch_folder_dialog.py`,
+  `add_file_wizard.py`, `whats_new_dialog.py`,
+  `beta_settings_dialog.py`, `keyboard_shortcuts_dialog.py`,
+  `welcome_dialog.py`, `license_dialog.py`. All
+  dialogs use `wx.TAB_TRAVERSAL` for consistent tab navigation.
+  Window state (size, position, maximized) is persisted across
+  sessions. Context menus in transcript, chat, model manager, and
+  agent builder panels. Keyboard shortcuts reference dialog
+  (Ctrl+Shift+K) accessible from Help menu.
 - **`utils/`** — `constants.py` (model registry, app constants),
   `accessibility.py` (a11y helpers), `platform_utils.py`.
 
@@ -185,7 +208,21 @@ Remote feature flag service for QA-gated feature rollout.
 `live_transcription`, `ai_translate`, `ai_summarize`, `ai_chat`,
 `agent_builder`, `audio_preview`, `diarization`, `plugins`,
 `copilot`, `self_updater`, `budget_tracking`,
-`multi_language_translate`.
+`multi_language_translate`, `watch_folder`, `alpha_testing`.
+
+**Ollama / infrastructure flags**:
+`ollama_native`, `ollama_cli_fallback`, `ollama_model_catalog`,
+`model_manager_treeview`, `dnd_monitor`, `scheduler`.
+
+**Provider flags** (naming convention `provider_<key>`):
+`provider_local_whisper`, `provider_openai_whisper`,
+`provider_google_speech`, `provider_azure_speech`,
+`provider_azure_embedded`, `provider_deepgram`,
+`provider_assemblyai`, `provider_aws_transcribe`,
+`provider_gemini`, `provider_groq_whisper`, `provider_rev_ai`,
+`provider_speechmatics`, `provider_elevenlabs`,
+`provider_auphonic`, `provider_vosk`, `provider_parakeet`,
+`provider_windows_speech`, `provider_mai_transcribe`.
 
 ### Adding a feature flag
 
@@ -193,6 +230,11 @@ Remote feature flag service for QA-gated feature rollout.
 2. Gate UI with `self.feature_flags.is_enabled("flag_name")`.
 3. Add tests in `tests/test_feature_flags.py`.
 4. Run all verification gates.
+
+For provider flags, use the naming convention `provider_<key>`
+where `<key>` matches the provider's identifier in
+`ProviderManager`. Set `change_category` to `"provider"` in the
+`FeatureChange` dataclass.
 
 ## Accessibility (Non-Negotiable for UI work)
 

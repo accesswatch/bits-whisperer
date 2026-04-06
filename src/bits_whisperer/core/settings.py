@@ -51,8 +51,14 @@ class GeneralSettings:
     start_minimized: bool = False
     check_updates_on_start: bool = True
     confirm_before_quit: bool = True
+    confirm_clear_queue: bool = True
     restore_queue_on_start: bool = False
     experience_mode: str = "basic"  # "basic" or "advanced"
+    window_width: int = 1100
+    window_height: int = 700
+    window_x: int = -1
+    window_y: int = -1
+    window_maximized: bool = False
     activated_providers: list[str] = field(default_factory=list)
 
 
@@ -193,6 +199,16 @@ class AISettings:
     ollama_endpoint: str = "http://localhost:11434"
     # HuggingFace repo ID or custom Ollama model name
     ollama_custom_model: str = ""
+    # "http" (recommended), "cli", or "manual"
+    ollama_mode: str = "http"
+    # Path to ollama CLI binary (empty = auto-detect from PATH)
+    ollama_cli_path: str = ""
+    # Model cache quota in GiB (0 = unlimited)
+    ollama_cache_quota_gib: float = 20.0
+    # Maximum concurrent model pulls
+    ollama_concurrent_pulls: int = 1
+    # Global default chat model (provider:model format, e.g. "ollama:llama3.2")
+    default_chat_model: str = ""
     translation_target_language: str = "en"
     multi_target_languages: list[str] = field(default_factory=list)
     # "concise", "detailed", "bullet_points"
@@ -270,6 +286,10 @@ class CopilotSettings:
     auto_start_cli: bool = True
     allow_transcript_tools: bool = True
     chat_panel_visible: bool = False
+    # SDK v0.2.1 public preview features
+    reasoning_effort: str = ""  # "", "low", "medium", "high", "xhigh"
+    infinite_sessions: bool = True  # automatic context compaction
+    enable_user_input_requests: bool = True  # agent can ask clarifying questions
 
 
 @dataclass
@@ -284,6 +304,46 @@ class FeatureFlagSettings:
     remote_url: str = ""  # empty = default GitHub raw URL
     refresh_hours: float = 24.0
     local_overrides: dict[str, bool] = field(default_factory=dict)
+
+
+@dataclass
+class BetaSettings:
+    """Beta programme configuration.
+
+    When ``enabled`` is ``True`` and a valid invitation code has been
+    verified, the user receives beta-channel feature flags and early
+    access release notes.
+    """
+
+    enabled: bool = False
+    show_whats_new: bool = True  # show the What's New dialog on startup
+    alpha_mode: bool = False  # alpha testing mode — bypasses registration
+
+
+@dataclass
+class DNDSettings:
+    """Do Not Disturb / Focus Assist monitoring configuration.
+
+    When enabled, the application detects system-wide DND/Focus Assist
+    status and pauses transcription automatically.
+    """
+
+    enabled: bool = True
+    poll_interval_seconds: float = 5.0
+    pause_transcription: bool = True
+    pause_live_transcription: bool = True
+    show_alert_on_pause: bool = True
+    auto_resume_on_dnd_off: bool = True
+
+
+@dataclass
+class SchedulerSettings:
+    """Background scheduler configuration for maintenance tasks."""
+
+    enabled: bool = True
+    model_cache_prune_hours: float = 24.0
+    health_check_minutes: float = 30.0
+    catalog_refresh_hours: float = 12.0
 
 
 @dataclass
@@ -346,6 +406,27 @@ class BudgetSettings:
 
 
 @dataclass
+class WatchFolderSettings:
+    """Watch folder monitoring configuration.
+
+    When enabled, the application monitors a directory for new audio
+    files and automatically queues them for transcription.
+    """
+
+    enabled: bool = False
+    folder_path: str = ""
+    poll_interval_seconds: float = 5.0
+    include_subfolders: bool = False
+    process_existing: bool = False
+    auto_export: bool = True
+    auto_export_format: str = "txt"
+    provider: str = ""  # empty = use general default
+    model: str = ""  # empty = use general default
+    language: str = ""  # empty = use general default
+    auto_start: bool = False  # start watching on app launch
+
+
+@dataclass
 class AdvancedSettings:
     """Limits, concurrency, chunking."""
 
@@ -390,7 +471,11 @@ class AppSettings:
     plugins: PluginSettings = field(default_factory=PluginSettings)
     copilot: CopilotSettings = field(default_factory=CopilotSettings)
     budget: BudgetSettings = field(default_factory=BudgetSettings)
+    watch_folder: WatchFolderSettings = field(default_factory=WatchFolderSettings)
     feature_flags: FeatureFlagSettings = field(default_factory=FeatureFlagSettings)
+    beta: BetaSettings = field(default_factory=BetaSettings)
+    dnd: DNDSettings = field(default_factory=DNDSettings)
+    scheduler: SchedulerSettings = field(default_factory=SchedulerSettings)
 
     # ------------------------------------------------------------------ #
     # Persistence                                                          #
@@ -458,9 +543,25 @@ class AppSettings:
         budget_data = data.get("budget", {})
         budget = _safe(BudgetSettings, budget_data)
 
+        # WatchFolderSettings
+        wf_data = data.get("watch_folder", {})
+        wf_settings = _safe(WatchFolderSettings, wf_data)
+
         # FeatureFlagSettings has a dict field; handle specially
         ff_data = data.get("feature_flags", {})
         ff_settings = _safe(FeatureFlagSettings, ff_data)
+
+        # BetaSettings
+        beta_data = data.get("beta", {})
+        beta_settings = _safe(BetaSettings, beta_data)
+
+        # DNDSettings
+        dnd_data = data.get("dnd", {})
+        dnd_settings = _safe(DNDSettings, dnd_data)
+
+        # SchedulerSettings
+        sched_data = data.get("scheduler", {})
+        sched_settings = _safe(SchedulerSettings, sched_data)
 
         return cls(
             general=_safe(GeneralSettings, data.get("general")),
@@ -486,5 +587,9 @@ class AppSettings:
             plugins=_safe(PluginSettings, data.get("plugins")),
             copilot=_safe(CopilotSettings, data.get("copilot")),
             budget=budget,
+            watch_folder=wf_settings,
             feature_flags=ff_settings,
+            beta=beta_settings,
+            dnd=dnd_settings,
+            scheduler=sched_settings,
         )

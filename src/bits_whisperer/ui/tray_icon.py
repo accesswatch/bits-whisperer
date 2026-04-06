@@ -26,7 +26,12 @@ ID_TRAY_SHOW = wx.NewIdRef()
 ID_TRAY_HIDE = wx.NewIdRef()
 ID_TRAY_PAUSE = wx.NewIdRef()
 ID_TRAY_RESUME = wx.NewIdRef()
+ID_TRAY_ADD_FILES = wx.NewIdRef()
+ID_TRAY_SETTINGS = wx.NewIdRef()
 ID_TRAY_QUIT = wx.NewIdRef()
+
+# Maximum tooltip length (Windows truncates at ~128 chars)
+_MAX_TOOLTIP_LEN = 120
 
 
 def _make_tray_icon() -> wx.Icon:
@@ -75,12 +80,22 @@ class TrayIcon(wx.adv.TaskBarIcon):
         self._icon = _make_tray_icon()
         self._is_processing = False
         self._progress_text = "Idle"
+        self._dnd_active = False
 
         self.SetIcon(self._icon, f"{APP_NAME} — Idle")
 
         # --- Event bindings ---
         self.Bind(wx.adv.EVT_TASKBAR_LEFT_DOWN, self._on_left_click)
         self.Bind(wx.adv.EVT_TASKBAR_LEFT_DCLICK, self._on_left_click)
+
+        # Menu item bindings (bound once, not per-popup)
+        self.Bind(wx.EVT_MENU, self._on_show_hide, id=ID_TRAY_SHOW)
+        self.Bind(wx.EVT_MENU, self._on_show_hide, id=ID_TRAY_HIDE)
+        self.Bind(wx.EVT_MENU, self._on_pause_resume, id=ID_TRAY_PAUSE)
+        self.Bind(wx.EVT_MENU, self._on_pause_resume, id=ID_TRAY_RESUME)
+        self.Bind(wx.EVT_MENU, self._on_add_files, id=ID_TRAY_ADD_FILES)
+        self.Bind(wx.EVT_MENU, self._on_settings, id=ID_TRAY_SETTINGS)
+        self.Bind(wx.EVT_MENU, self._on_quit, id=ID_TRAY_QUIT)
 
     # ------------------------------------------------------------------ #
     # Tooltip / progress updates (called from main thread)                 #
@@ -116,7 +131,26 @@ class TrayIcon(wx.adv.TaskBarIcon):
             self._progress_text = status
             self._is_processing = active > 0
 
-        self.SetIcon(self._icon, f"{APP_NAME} — {self._progress_text}")
+        tooltip = f"{APP_NAME} — {self._progress_text}"
+        if self._dnd_active:
+            tooltip += " [DND]"
+        if len(tooltip) > _MAX_TOOLTIP_LEN:
+            tooltip = tooltip[: _MAX_TOOLTIP_LEN - 1] + "\u2026"
+        self.SetIcon(self._icon, tooltip)
+
+    def set_dnd_active(self, active: bool) -> None:
+        """Update the DND flag and refresh the tooltip.
+
+        Args:
+            active: ``True`` when Do Not Disturb / Focus Assist is on.
+        """
+        self._dnd_active = active
+        tooltip = f"{APP_NAME} — {self._progress_text}"
+        if active:
+            tooltip += " [DND]"
+        if len(tooltip) > _MAX_TOOLTIP_LEN:
+            tooltip = tooltip[: _MAX_TOOLTIP_LEN - 1] + "\u2026"
+        self.SetIcon(self._icon, tooltip)
 
     def set_idle(self) -> None:
         """Reset to idle state."""
@@ -232,7 +266,7 @@ class TrayIcon(wx.adv.TaskBarIcon):
         """Build the right-click context menu for the tray icon.
 
         Returns:
-            wx.Menu with Show/Hide, Pause/Resume, and Quit items.
+            wx.Menu with Show/Hide, quick actions, Pause/Resume, and Quit.
         """
         menu = wx.Menu()
 
@@ -243,26 +277,33 @@ class TrayIcon(wx.adv.TaskBarIcon):
 
         menu.AppendSeparator()
 
+        # Quick actions
+        menu.Append(ID_TRAY_ADD_FILES, "&Add Files\tCtrl+O")
+        menu.Append(ID_TRAY_SETTINGS, "Se&ttings\tCtrl+,")
+
+        menu.AppendSeparator()
+
+        # Pause/Resume — always visible, disabled when not processing
         svc = self._main_frame.transcription_service
-        if svc.is_running:
-            if svc.is_paused:
-                menu.Append(ID_TRAY_RESUME, "&Resume Transcription")
-            else:
-                menu.Append(ID_TRAY_PAUSE, "&Pause Transcription")
+        if svc.is_running and svc.is_paused:
+            item = menu.Append(ID_TRAY_RESUME, "&Resume Transcription")
+            item.Enable(True)
+        else:
+            item = menu.Append(ID_TRAY_PAUSE, "&Pause Transcription")
+            item.Enable(svc.is_running and not svc.is_paused)
+
         menu.AppendSeparator()
 
         # Progress summary
         menu.Append(wx.ID_ANY, self._progress_text).Enable(False)
+
+        # DND status indicator
+        if self._dnd_active:
+            menu.Append(wx.ID_ANY, "Do Not Disturb active").Enable(False)
+
         menu.AppendSeparator()
 
         menu.Append(ID_TRAY_QUIT, "&Quit BITS Whisperer")
-
-        # --- Bindings ---
-        self.Bind(wx.EVT_MENU, self._on_show_hide, id=ID_TRAY_SHOW)
-        self.Bind(wx.EVT_MENU, self._on_show_hide, id=ID_TRAY_HIDE)
-        self.Bind(wx.EVT_MENU, self._on_pause_resume, id=ID_TRAY_PAUSE)
-        self.Bind(wx.EVT_MENU, self._on_pause_resume, id=ID_TRAY_RESUME)
-        self.Bind(wx.EVT_MENU, self._on_quit, id=ID_TRAY_QUIT)
 
         return menu
 
@@ -275,6 +316,16 @@ class TrayIcon(wx.adv.TaskBarIcon):
             svc.resume()
         else:
             svc.pause()
+
+    def _on_add_files(self, _event: wx.CommandEvent) -> None:
+        """Open the Add Files dialog from the tray."""
+        self.show_main_window()
+        wx.CallAfter(self._main_frame._on_add_files, _event)
+
+    def _on_settings(self, _event: wx.CommandEvent) -> None:
+        """Open the Settings dialog from the tray."""
+        self.show_main_window()
+        wx.CallAfter(self._main_frame._on_settings, _event)
 
     def _on_quit(self, _event: wx.CommandEvent) -> None:
         """Quit the application completely — bypass minimize-to-tray."""

@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "description": "Beta programme invitation codes. Codes are SHA-256 hashed for security. To add a new tester, hash their code with SHA-256 and append to the list.",
+  "codes": []
+}

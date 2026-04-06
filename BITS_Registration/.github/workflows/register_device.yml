@@ -1,0 +1,46 @@
+name: BITS Device Registration
+
+on:
+  repository_dispatch:
+    types: [register-device]
+
+permissions:
+  contents: write
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install cryptography
+
+      - name: Register device
+        env:
+          BITS_PRIVATE_KEY_BASE64: ${{ secrets.BITS_PRIVATE_KEY_BASE64 }}
+        run: |
+          python backend_scripts/register_device.py \
+            "${{ github.event.client_payload.token_hash }}" \
+            "${{ github.event.client_payload.device_id }}" \
+            "${{ github.event.client_payload.timestamp }}" \
+            "${{ github.event.client_payload.request_hash }}"
+
+      - name: Generate public manifest
+        env:
+          BITS_PRIVATE_KEY_BASE64: ${{ secrets.BITS_PRIVATE_KEY_BASE64 }}
+        run: python backend_scripts/manifest_generator.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "BITS Registration Bot"
+          git config --global user.email "registration@bits.org"
+          git add tokens.json public_manifest.json audit_log.json
+          git diff --cached --quiet || git commit -m "Device registered for hash ${{ github.event.client_payload.token_hash }}"
+          git push

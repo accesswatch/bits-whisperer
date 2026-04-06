@@ -1,0 +1,73 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.12, pytest-8.4.0, pluggy-1.6.0
+rootdir: S:\code\bw
+configfile: pyproject.toml
+plugins: anyio-4.9.0, Faker-37.4.0, hydra-core-1.3.2, asyncio-1.3.0, cov-7.0.0, mock-3.15.1, timeout-2.4.0, typeguard-4.4.4
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1351 items
+
+tests\test_accessibility_audit.py ....................s...s......s...... [  2%]
+.s..s.s...s.s....s.s....s.s.s.ss.s.                                      [  5%]
+tests\test_admin_utility.py ............................................ [  8%]
+...............                                                          [  9%]
+tests\test_attachments.py .............................................. [ 13%]
+....                                                                     [ 13%]
+tests\test_beta_registration.py ........................................ [ 16%]
+..........................................                               [ 19%]
+tests\test_constants.py ....................................             [ 22%]
+tests\test_context_manager.py .......................................... [ 25%]
+..........................................                               [ 28%]
+tests\test_core_modules.py ............................................. [ 31%]
+......                                                                   [ 32%]
+tests\test_dependency_checker.py ..                                      [ 32%]
+tests\test_export.py ................................................... [ 36%]
+..................                                                       [ 37%]
+tests\test_feature_flags.py ...................................          [ 40%]
+tests\test_gemini_copilot.py ........................................... [ 43%]
+................                                                         [ 44%]
+tests\test_job.py ................                                       [ 45%]
+tests\test_new_features.py ...........................................   [ 48%]
+tests\test_ollama_dnd_scheduler.py ..................................... [ 51%]
+.............                                                            [ 52%]
+tests\test_phase4_features.py .......................................... [ 55%]
+...................................                                      [ 58%]
+tests\test_phase5_features.py .......................................... [ 61%]
+.....                                                                    [ 61%]
+tests\test_phase6_budget.py .........................................    [ 64%]
+tests\test_phase7_features.py .......................................... [ 67%]
+.........................                                                [ 69%]
+tests\test_phase8_features.py .......................................... [ 72%]
+...................                                                      [ 74%]
+tests\test_providers.py ................................................ [ 77%]
+........................................................................ [ 83%]
+...................................                                      [ 85%]
+tests\test_sdk_updater.py ............................                   [ 87%]
+tests\test_settings.py ...........................                       [ 89%]
+tests\test_shutdown.py ........................                          [ 91%]
+tests\test_slash_commands.py ........................................... [ 94%]
+.......................................                                  [ 97%]
+tests\test_watch_folder.py .................................             [100%]
+
+============================== warnings summary ===============================
+tests/test_beta_registration.py::TestProviderManagerFeatureFlags::test_provider_enabled_when_flag_true
+  C:\py\Python313\Lib\site-packages\ctranslate2\__init__.py:8: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+    import pkg_resources
+
+tests/test_beta_registration.py::TestProviderManagerFeatureFlags::test_provider_enabled_when_flag_true
+tests/test_beta_registration.py::TestProviderManagerFeatureFlags::test_provider_enabled_when_flag_true
+tests/test_beta_registration.py::TestProviderManagerFeatureFlags::test_provider_enabled_when_flag_true
+  C:\py\Python313\Lib\site-packages\pkg_resources\__init__.py:3148: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('pyannote')`.
+  Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+    declare_namespace(pkg)
+
+tests/test_beta_registration.py::TestProviderManagerFeatureFlags::test_provider_enabled_when_flag_true
+  C:\py\Python313\Lib\site-packages\pkg_resources\__init__.py:3148: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('sphinxcontrib')`.
+  Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+    declare_namespace(pkg)
+
+tests/test_beta_registration.py::TestProviderManagerFeatureFlags::test_provider_enabled_when_flag_true
+  C:\py\Python313\Lib\importlib\__init__.py:88: DeprecationWarning: speechmatics-python is deprecated. Migrate to 'speechmatics-rt' for real-time or 'speechmatics-batch' for batch transcription. For more information, please visit https://github.com/speechmatics/speechmatics-python-sdk
+    return _bootstrap._gcd_import(name[level:], package, level)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========== 1335 passed, 16 skipped, 6 warnings in 71.64s (0:01:11) ===========

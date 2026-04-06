@@ -38,7 +38,7 @@ class AudioPlayerDialog(wx.Dialog):
             parent,
             title="Audio Preview",
             size=(700, 480),
-            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL,
         )
         set_accessible_name(self, "Audio preview dialog")
         self.SetMinSize((600, 420))

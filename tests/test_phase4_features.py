@@ -534,7 +534,7 @@ class TestAIProviderChatStream:
         provider = FakeProvider()
         messages = [{"role": "user", "content": "hi"}]
         deltas = []
-        response = provider.chat_stream(messages, on_delta=lambda d: deltas.append(d))
+        response = provider.chat_stream(messages, on_delta=deltas.append)
         assert response.text == "hello"
         assert deltas == ["hello"]
 
@@ -613,7 +613,7 @@ class TestAIServiceChat:
 
         service.chat(
             [{"role": "user", "content": "hello"}],
-            on_error=lambda e: errors.append(e),
+            on_error=errors.append,
         )
 
         # Wait for background thread

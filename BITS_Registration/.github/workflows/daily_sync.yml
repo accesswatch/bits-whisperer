@@ -1,0 +1,49 @@
+name: BITS Membership Sync (Daily)
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # Daily at midnight UTC
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install requests cryptography
+
+      - name: Expire old annual keys
+        env:
+          BITS_PRIVATE_KEY_BASE64: ${{ secrets.BITS_PRIVATE_KEY_BASE64 }}
+        run: python backend_scripts/admin_cli.py expire
+
+      - name: Sync Groups.io members
+        env:
+          BITS_PRIVATE_KEY_BASE64: ${{ secrets.BITS_PRIVATE_KEY_BASE64 }}
+          GROUPSIO_API_KEY: ${{ secrets.GROUPSIO_API_KEY }}
+          GROUPSIO_GROUP_NAME: ${{ secrets.GROUPSIO_GROUP_NAME }}
+        run: python backend_scripts/groupsio_sync.py
+
+      - name: Generate public manifest
+        env:
+          BITS_PRIVATE_KEY_BASE64: ${{ secrets.BITS_PRIVATE_KEY_BASE64 }}
+        run: python backend_scripts/manifest_generator.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "BITS Registration Bot"
+          git config --global user.email "registration@bits.org"
+          git add tokens.json public_manifest.json audit_log.json
+          git diff --cached --quiet || git commit -m "Daily sync: membership + expired keys"
+          git push

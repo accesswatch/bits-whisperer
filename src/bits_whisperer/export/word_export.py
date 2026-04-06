@@ -49,8 +49,7 @@ class WordFormatter(ExportFormatter):
             from docx.shared import Pt, RGBColor
         except ImportError as exc:
             raise ImportError(
-                "python-docx is required for Word export. "
-                "Install it with: pip install python-docx"
+                "python-docx is required for Word export. Install it with: pip install python-docx"
             ) from exc
 
         output_path = Path(output_path)

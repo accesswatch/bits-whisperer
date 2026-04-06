@@ -79,7 +79,7 @@ class LocalWhisperProvider(TranscriptionProvider):
                     "'Install SDK' to download it automatically."
                 ) from None
             raise RuntimeError(
-                "faster-whisper is not installed. " "Install it with: pip install faster-whisper"
+                "faster-whisper is not installed. Install it with: pip install faster-whisper"
             ) from None
 
         # Determine compute type based on hardware probe

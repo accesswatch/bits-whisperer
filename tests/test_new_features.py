@@ -391,6 +391,57 @@ class TestLiveTranscriptionService:
         result = LiveTranscriptionService.list_input_devices()
         assert isinstance(result, list)
 
+    def test_detect_speech_energy_fallback(self) -> None:
+        """_detect_speech uses RMS energy when silero_model is None."""
+        import numpy as np
+
+        from bits_whisperer.core.live_transcription import LiveTranscriptionService
+
+        service = LiveTranscriptionService(LiveTranscriptionSettings())
+        # Loud signal → speech detected
+        loud = np.ones(16000, dtype=np.float32) * 0.5
+        assert service._detect_speech(loud, None, np) is True
+
+        # Silent signal → no speech
+        silent = np.zeros(16000, dtype=np.float32)
+        assert service._detect_speech(silent, None, np) is False
+
+    def test_detect_speech_with_silero_model(self) -> None:
+        """_detect_speech uses silero model when provided."""
+        import numpy as np
+
+        from bits_whisperer.core.live_transcription import LiveTranscriptionService
+
+        service = LiveTranscriptionService(LiveTranscriptionSettings())
+
+        # Mock silero model that returns high confidence
+        mock_model = MagicMock()
+        mock_result = MagicMock()
+        mock_result.item.return_value = 0.9
+        mock_model.return_value = mock_result
+
+        loud = np.ones(16000, dtype=np.float32) * 0.5
+        mock_torch = MagicMock()
+        mock_torch.from_numpy.return_value = MagicMock()
+        with patch.dict("sys.modules", {"torch": mock_torch}):
+            result = service._detect_speech(loud, mock_model, np)
+        assert result is True
+
+    def test_detect_speech_silero_exception_falls_back(self) -> None:
+        """_detect_speech falls back to energy if silero raises."""
+        import numpy as np
+
+        from bits_whisperer.core.live_transcription import LiveTranscriptionService
+
+        service = LiveTranscriptionService(LiveTranscriptionSettings())
+
+        # Mock silero model that raises
+        mock_model = MagicMock(side_effect=RuntimeError("model error"))
+
+        loud = np.ones(16000, dtype=np.float32) * 0.5
+        # Should fall back to energy-based and detect speech
+        assert service._detect_speech(loud, mock_model, np) is True
+
 
 # -----------------------------------------------------------------------
 # KeyStore AI entries tests
@@ -421,7 +472,7 @@ class TestKeyStoreAIEntries:
         assert "azure_openai_deployment" in _KEY_NAMES
 
     def test_total_key_count(self) -> None:
-        """Should now have 22 key entries (15 original + 4 AI + 1 Copilot + 2 registration)."""
+        """Should have 32 key entries (16 + 4 AI + 1 Copilot + 2 reg + 1 beta)."""
         from bits_whisperer.storage.key_store import _KEY_NAMES
 
-        assert len(_KEY_NAMES) == 22
+        assert len(_KEY_NAMES) == 33

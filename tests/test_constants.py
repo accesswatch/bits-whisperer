@@ -13,6 +13,7 @@ from bits_whisperer.utils.constants import (
     WHISPER_MODELS,
     get_model_by_id,
     get_parakeet_model_by_id,
+    get_transcription_models,
     get_vosk_model_by_id,
 )
 
@@ -201,3 +202,39 @@ class TestParakeetModels:
             raise AssertionError("Should have raised FrozenInstanceError")
         except AttributeError:
             pass  # Expected — frozen dataclass
+
+
+class TestTranscriptionModelRegistry:
+    """get_transcription_models() provider model registry."""
+
+    def test_deepgram_has_nova3_first(self) -> None:
+        models = get_transcription_models("deepgram")
+        assert len(models) == 5
+        assert models[0][0] == "nova-3"
+
+    def test_deepgram_includes_nova2(self) -> None:
+        ids = [m[0] for m in get_transcription_models("deepgram")]
+        assert "nova-2" in ids
+
+    def test_assemblyai_has_four_models(self) -> None:
+        models = get_transcription_models("assemblyai")
+        assert len(models) == 4
+
+    def test_assemblyai_includes_conformer2(self) -> None:
+        ids = [m[0] for m in get_transcription_models("assemblyai")]
+        assert "conformer-2" in ids
+
+    def test_google_speech_has_five_models(self) -> None:
+        models = get_transcription_models("google_speech")
+        assert len(models) == 5
+
+    def test_google_speech_first_is_latest_long(self) -> None:
+        models = get_transcription_models("google_speech")
+        assert models[0][0] == "latest_long"
+
+    def test_google_speech_includes_chirp2(self) -> None:
+        ids = [m[0] for m in get_transcription_models("google_speech")]
+        assert "chirp_2" in ids
+
+    def test_unknown_provider_returns_empty(self) -> None:
+        assert get_transcription_models("nonexistent") == []

@@ -217,7 +217,7 @@ def _install_with_progress(parent_window) -> bool:
 
     progress = wx.ProgressDialog(
         "Installing ffmpeg",
-        "Installing ffmpeg via Windows Package Manager…\n" "This may take a minute. Please wait.",
+        "Installing ffmpeg via Windows Package Manager…\nThis may take a minute. Please wait.",
         maximum=100,
         parent=parent_window,
         style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT,
@@ -259,8 +259,7 @@ def _install_with_progress(parent_window) -> bool:
 
     if success:
         accessible_message_box(
-            "ffmpeg has been installed successfully!\n\n"
-            "Audio processing is now fully available.",
+            "ffmpeg has been installed successfully!\n\nAudio processing is now fully available.",
             "Installation Complete",
             wx.OK | wx.ICON_INFORMATION,
             parent_window,

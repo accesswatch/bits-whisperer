@@ -5,7 +5,7 @@
 
 pytest>=7.0
 pytest-cov>=4.0
-black>=23.0
+pytest-httpx>=0.30.0
 ruff>=0.1.0
 pyright>=1.1.390
 pyinstaller>=6.0

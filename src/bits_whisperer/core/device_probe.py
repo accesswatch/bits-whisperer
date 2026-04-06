@@ -122,12 +122,11 @@ class DeviceProbe:
                 reasons.append(f"Needs a GPU with {model.min_vram_gb} GB video memory")
             else:
                 reasons.append(
-                    f"Needs {model.min_vram_gb} GB video memory "
-                    f"(your GPU has {p.gpu_vram_gb} GB)"
+                    f"Needs {model.min_vram_gb} GB video memory (your GPU has {p.gpu_vram_gb} GB)"
                 )
         if model.min_cpu_cores > p.cpu_cores_physical:
             reasons.append(
-                f"Needs {model.min_cpu_cores} CPU cores " f"(you have {p.cpu_cores_physical})"
+                f"Needs {model.min_cpu_cores} CPU cores (you have {p.cpu_cores_physical})"
             )
         if not reasons:
             reasons.append("This model is too demanding for your hardware.")

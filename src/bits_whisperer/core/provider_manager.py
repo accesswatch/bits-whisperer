@@ -3,6 +3,10 @@
 Provider modules are loaded lazily — only when a user actually selects or
 configures a provider. This keeps the initial import lightweight and allows
 the installer to ship without bundling every provider SDK.
+
+Providers can be gated via remote feature flags (``provider_<key>``).
+When a provider's flag is disabled, it is excluded from discovery and
+listing — the same as if its SDK were not installed.
 """
 
 from __future__ import annotations
@@ -10,10 +14,14 @@ from __future__ import annotations
 import importlib
 import logging
 import sys
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from bits_whisperer.core.sdk_installer import is_sdk_available
 from bits_whisperer.providers.base import ProviderCapabilities, TranscriptionProvider
+
+if TYPE_CHECKING:
+    from bits_whisperer.core.beta_service import BetaService
+    from bits_whisperer.core.feature_flags import FeatureFlagService
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +83,10 @@ _PROVIDER_MODULES: Final[dict[str, tuple[str, str]]] = {
         "bits_whisperer.providers.auphonic_provider",
         "AuphonicProvider",
     ),
+    "mai_transcribe": (
+        "bits_whisperer.providers.mai_transcribe_provider",
+        "MAITranscribeProvider",
+    ),
     "vosk": (
         "bits_whisperer.providers.vosk_provider",
         "VoskProvider",
@@ -122,27 +134,61 @@ class ProviderManager:
     when ``get_provider()`` is called (or during the first listing that
     needs provider capabilities). This means the app starts quickly
     even if most SDK packages are not installed.
+
+    Args:
+        feature_flag_service: Optional feature flag service for
+            provider-level gating via ``provider_<key>`` flags.
+        beta_service: Optional beta service to determine whether
+            the user is a beta tester (uses ``is_enabled_for_beta``).
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        feature_flag_service: FeatureFlagService | None = None,
+        beta_service: BetaService | None = None,
+    ) -> None:
         self._providers: dict[str, TranscriptionProvider] = {}
         self._enabled: set[str] = set()
         self._unavailable: set[str] = set()  # SDK not installed
+        self._flag_disabled: set[str] = set()  # Disabled by feature flag
+        self._feature_flags = feature_flag_service
+        self._beta_service = beta_service
         self._discover_available()
 
     # ------------------------------------------------------------------
     # Registration
     # ------------------------------------------------------------------
 
+    def _is_provider_flag_enabled(self, key: str) -> bool:
+        """Check if the ``provider_<key>`` feature flag is enabled.
+
+        Args:
+            key: Provider identifier.
+
+        Returns:
+            ``True`` if the provider is allowed by feature flags
+            (or if no flag service is configured).
+        """
+        if self._feature_flags is None:
+            return True
+        flag_name = f"provider_{key}"
+        if self._beta_service is not None and self._beta_service.is_beta_tester:
+            return self._feature_flags.is_enabled_for_beta(flag_name)
+        return self._feature_flags.is_enabled(flag_name)
+
     def _discover_available(self) -> None:
-        """Populate the enabled set based on which SDKs are importable.
+        """Populate the enabled set based on SDK availability and feature flags.
 
         Does NOT import provider modules — uses the SDK registry check
         (which tests the *SDK* import, not the provider module itself).
         Providers whose SDK is missing are tracked in ``_unavailable``.
+        Providers disabled by feature flags are tracked in ``_flag_disabled``.
         """
         for key in _PROVIDER_MODULES:
-            if is_sdk_available(key):
+            if not self._is_provider_flag_enabled(key):
+                self._flag_disabled.add(key)
+                logger.debug("Provider '%s': disabled by feature flag", key)
+            elif is_sdk_available(key):
                 self._enabled.add(key)
             else:
                 self._unavailable.add(key)
@@ -205,6 +251,29 @@ class ProviderManager:
                 self._enabled.add(key)
                 logger.info("Provider '%s': SDK now available", key)
 
+    def refresh_feature_flags(self) -> None:
+        """Re-evaluate provider visibility after feature flag changes.
+
+        Moves providers between ``_flag_disabled`` and ``_enabled``
+        based on current feature flag state.
+        """
+        # Re-enable providers whose flag was turned on
+        for key in list(self._flag_disabled):
+            if self._is_provider_flag_enabled(key):
+                self._flag_disabled.discard(key)
+                if is_sdk_available(key):
+                    self._enabled.add(key)
+                else:
+                    self._unavailable.add(key)
+                logger.info("Provider '%s': re-enabled by feature flag", key)
+
+        # Disable providers whose flag was turned off
+        for key in list(self._enabled):
+            if not self._is_provider_flag_enabled(key):
+                self._enabled.discard(key)
+                self._flag_disabled.add(key)
+                logger.info("Provider '%s': disabled by feature flag", key)
+
     # ------------------------------------------------------------------
     # Queries
     # ------------------------------------------------------------------
@@ -230,7 +299,7 @@ class ProviderManager:
         Returns:
             TranscriptionProvider or None.
         """
-        if key in self._unavailable:
+        if key in self._unavailable or key in self._flag_disabled:
             return None
         return self._ensure_loaded(key)
 

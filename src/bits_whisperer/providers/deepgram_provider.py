@@ -21,11 +21,11 @@ logger = logging.getLogger(__name__)
 class DeepgramProvider(TranscriptionProvider):
     """Cloud transcription via the Deepgram API."""
 
-    RATE_PER_MINUTE: float = 0.0125  # USD (Nova-2)
+    RATE_PER_MINUTE: float = 0.0125  # USD (Nova-3)
 
     def __init__(self) -> None:
         """Initialize Deepgram provider with default settings."""
-        self._model: str = "nova-2"
+        self._model: str = "nova-3"
         self._smart_format: bool = True
         self._punctuate: bool = True
         self._paragraphs: bool = True
@@ -97,7 +97,7 @@ class DeepgramProvider(TranscriptionProvider):
         self,
         audio_path: str,
         language: str = "auto",
-        model: str = "nova-2",
+        model: str = "nova-3",
         include_timestamps: bool = True,
         include_diarization: bool = False,
         api_key: str = "",
@@ -108,7 +108,7 @@ class DeepgramProvider(TranscriptionProvider):
         Args:
             audio_path: Path to audio file.
             language: Language code or 'auto'.
-            model: Deepgram model (default nova-2).
+            model: Deepgram model (default nova-3).
             include_timestamps: Include timestamps.
             include_diarization: Enable diarization.
             api_key: Deepgram API key.

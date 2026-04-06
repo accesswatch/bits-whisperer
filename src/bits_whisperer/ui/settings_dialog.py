@@ -42,7 +42,7 @@ from bits_whisperer.utils.accessibility import (
     set_accessible_help,
     set_accessible_name,
 )
-from bits_whisperer.utils.constants import EXPORT_FORMATS
+from bits_whisperer.utils.constants import EXPORT_FORMATS, get_transcription_models
 
 if TYPE_CHECKING:
     from bits_whisperer.ui.main_frame import MainFrame
@@ -139,7 +139,7 @@ class SettingsDialog(wx.Dialog):
             parent,
             title="Settings — BITS Whisperer",
             size=(720, 640),
-            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL,
         )
         set_accessible_name(self, "Settings dialog")
         self.SetMinSize((640, 520))
@@ -199,8 +199,33 @@ class SettingsDialog(wx.Dialog):
 
         root.Add(self._notebook, 1, wx.ALL | wx.EXPAND, 8)
 
-        # --- Buttons: OK / Apply / Cancel ---
+        # --- Buttons: Reset / Import / Export / OK / Apply / Cancel ---
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self._btn_reset = wx.Button(self, label="&Reset to Defaults")
+        set_accessible_name(self._btn_reset, "Reset to defaults")
+        set_accessible_help(
+            self._btn_reset,
+            "Reset all settings on the current tab to their default values",
+        )
+        btn_sizer.Add(self._btn_reset, 0, wx.RIGHT, 6)
+
+        self._btn_import = wx.Button(self, label="&Import…")
+        set_accessible_name(self._btn_import, "Import settings from file")
+        set_accessible_help(
+            self._btn_import,
+            "Load settings from a previously exported JSON file",
+        )
+        btn_sizer.Add(self._btn_import, 0, wx.RIGHT, 6)
+
+        self._btn_export_settings = wx.Button(self, label="E&xport…")
+        set_accessible_name(self._btn_export_settings, "Export settings to file")
+        set_accessible_help(
+            self._btn_export_settings,
+            "Save all current settings to a JSON file for backup or sharing",
+        )
+        btn_sizer.Add(self._btn_export_settings, 0, wx.RIGHT, 6)
+
         btn_sizer.AddStretchSpacer()
 
         self._btn_ok = wx.Button(self, wx.ID_OK, "&OK")
@@ -231,6 +256,9 @@ class SettingsDialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self._on_ok, id=wx.ID_OK)
         self.Bind(wx.EVT_BUTTON, self._on_apply, id=wx.ID_APPLY)
         self.Bind(wx.EVT_BUTTON, self._on_cancel, id=wx.ID_CANCEL)
+        self._btn_reset.Bind(wx.EVT_BUTTON, self._on_reset_defaults)
+        self._btn_import.Bind(wx.EVT_BUTTON, self._on_import_settings)
+        self._btn_export_settings.Bind(wx.EVT_BUTTON, self._on_export_settings)
 
         self._btn_ok.SetDefault()
 
@@ -323,6 +351,21 @@ class SettingsDialog(wx.Dialog):
         )
         grid.Add(lbl_prov, 0, wx.ALIGN_CENTER_VERTICAL)
         grid.Add(self._provider_ch, 0, wx.EXPAND)
+
+        # Default model dropdown (populated based on provider selection)
+        lbl_model = wx.StaticText(panel, label="Default &model:")
+        self._model_ch = wx.Choice(panel, choices=[])
+        label_control(lbl_model, self._model_ch)
+        set_accessible_help(
+            self._model_ch,
+            "Which model to use by default with the selected provider",
+        )
+        grid.Add(lbl_model, 0, wx.ALIGN_CENTER_VERTICAL)
+        grid.Add(self._model_ch, 0, wx.EXPAND)
+
+        # Populate model list and bind provider change event
+        self._provider_ch.Bind(wx.EVT_CHOICE, self._on_provider_changed)
+        self._populate_model_choices(s.default_model)
 
         # Hint for Basic mode users
         if not is_advanced and len(provider_names) <= 3:
@@ -493,6 +536,40 @@ class SettingsDialog(wx.Dialog):
         )
         cs.Add(self._cb_speakers, 0, wx.ALL, 4)
 
+        # Diarization sub-settings
+        d = self._settings.diarization
+        diar_box = wx.StaticBox(panel, label="Diarization settings")
+        diar_sizer = wx.StaticBoxSizer(diar_box, wx.VERTICAL)
+
+        speaker_row = wx.BoxSizer(wx.HORIZONTAL)
+        lbl_min_spk = wx.StaticText(panel, label="Mi&n speakers:")
+        self._min_speakers_spin = wx.SpinCtrl(panel, min=1, max=20, initial=d.min_speakers)
+        set_accessible_name(self._min_speakers_spin, "Minimum speakers")
+        label_control(lbl_min_spk, self._min_speakers_spin)
+        speaker_row.Add(lbl_min_spk, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+        speaker_row.Add(self._min_speakers_spin, 0, wx.RIGHT, 16)
+        lbl_max_spk = wx.StaticText(panel, label="Ma&x speakers:")
+        self._max_speakers_spin = wx.SpinCtrl(panel, min=1, max=50, initial=d.max_speakers)
+        set_accessible_name(self._max_speakers_spin, "Maximum speakers")
+        label_control(lbl_max_spk, self._max_speakers_spin)
+        speaker_row.Add(lbl_max_spk, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+        speaker_row.Add(self._max_speakers_spin, 0)
+        diar_sizer.Add(speaker_row, 0, wx.ALL, 4)
+
+        self._cb_local_diarization = wx.CheckBox(
+            panel,
+            label="Use &local diarization (pyannote.audio)",
+        )
+        self._cb_local_diarization.SetValue(d.use_local_diarization)
+        set_accessible_name(self._cb_local_diarization, "Use local diarization")
+        set_accessible_help(
+            self._cb_local_diarization,
+            "Run speaker detection on-device using pyannote instead of the cloud provider",
+        )
+        diar_sizer.Add(self._cb_local_diarization, 0, wx.ALL, 4)
+
+        cs.Add(diar_sizer, 0, wx.EXPAND | wx.ALL, 4)
+
         self._cb_confidence = wx.CheckBox(
             panel,
             label="Include &confidence scores",
@@ -563,7 +640,7 @@ class SettingsDialog(wx.Dialog):
         label_control(lbl_prompt, self._prompt_txt)
         set_accessible_help(
             self._prompt_txt,
-            "Vocabulary hint or context for the model " "(names, acronyms, technical terms)",
+            "Vocabulary hint or context for the model (names, acronyms, technical terms)",
         )
         mg.Add(lbl_prompt, 0, wx.ALIGN_CENTER_VERTICAL)
         mg.Add(self._prompt_txt, 1, wx.EXPAND)
@@ -739,7 +816,7 @@ class SettingsDialog(wx.Dialog):
         label_control(lbl_tpl, self._tpl_txt)
         set_accessible_help(
             self._tpl_txt,
-            "Use {stem} for filename, {date} for date, " "{provider} for provider name",
+            "Use {stem} for filename, {date} for date, {provider} for provider name",
         )
         grid.Add(lbl_tpl, 0, wx.ALIGN_CENTER_VERTICAL)
         grid.Add(self._tpl_txt, 1, wx.EXPAND)
@@ -1016,7 +1093,7 @@ class SettingsDialog(wx.Dialog):
         )
         set_accessible_help(
             self._cb_budget_enabled,
-            "When enabled, you will be warned if a transcription " "exceeds your spending limit",
+            "When enabled, you will be warned if a transcription exceeds your spending limit",
         )
         sw_sizer.Add(self._cb_budget_enabled, 0, wx.ALL, 4)
 
@@ -1050,8 +1127,7 @@ class SettingsDialog(wx.Dialog):
         label_control(lbl_def, self._budget_default_spin)
         set_accessible_help(
             self._budget_default_spin,
-            "Default maximum cost in USD for any single transcription "
-            "job. Set to 0 for no limit.",
+            "Default maximum cost in USD for any single transcription job. Set to 0 for no limit.",
         )
         def_row.Add(lbl_def, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
         def_row.Add(self._budget_default_spin, 0)
@@ -1117,7 +1193,7 @@ class SettingsDialog(wx.Dialog):
             label_control(lbl, spin)
             set_accessible_help(
                 spin,
-                f"Maximum cost in USD per transcription for {pname}. " f"0 = use default limit.",
+                f"Maximum cost in USD per transcription for {pname}. 0 = use default limit.",
             )
             unit = wx.StaticText(sw, label="USD")
             grid.Add(lbl, 0, wx.ALIGN_CENTER_VERTICAL)
@@ -1731,6 +1807,35 @@ class SettingsDialog(wx.Dialog):
             open_file_or_folder(path)
 
     # ================================================================== #
+    # ------------------------------------------------------------------ #
+    # Dynamic UI helpers                                                    #
+    # ------------------------------------------------------------------ #
+
+    def _populate_model_choices(self, selected_model: str = "") -> None:
+        """Refresh the model dropdown for the currently selected provider."""
+        prov_sel = self._provider_ch.GetSelection()
+        prov_key = self._provider_keys[prov_sel] if 0 <= prov_sel < len(self._provider_keys) else ""
+
+        models = get_transcription_models(prov_key)
+        self._model_keys = [m[0] for m in models]
+        self._model_ch.Set([m[1] for m in models])
+
+        if not models:
+            self._model_ch.Disable()
+            return
+
+        self._model_ch.Enable()
+        try:
+            idx = self._model_keys.index(selected_model)
+        except ValueError:
+            idx = 0
+        self._model_ch.SetSelection(idx)
+
+    def _on_provider_changed(self, _event: wx.CommandEvent) -> None:
+        """Re-populate the model dropdown when the provider changes."""
+        self._populate_model_choices()
+
+    # ================================================================== #
     # Collect values from all tabs                                         #
     # ================================================================== #
 
@@ -1745,6 +1850,9 @@ class SettingsDialog(wx.Dialog):
         prov_sel = self._provider_ch.GetSelection()
         if 0 <= prov_sel < len(self._provider_keys):
             g.default_provider = self._provider_keys[prov_sel]
+        model_sel = self._model_ch.GetSelection()
+        if 0 <= model_sel < len(self._model_keys):
+            g.default_model = self._model_keys[model_sel]
         g.prefer_local = self._cb_prefer_local.GetValue()
         g.minimize_to_tray = self._cb_minimize_tray.GetValue()
         g.auto_export = self._cb_auto_export.GetValue()
@@ -1771,6 +1879,12 @@ class SettingsDialog(wx.Dialog):
         t.vad_filter = self._cb_vad.GetValue()
         t.vad_threshold = self._vad_thr_spin.GetValue()
         t.compute_type = _COMPUTE_TYPES[self._compute_ch.GetSelection()]
+
+        # --- Diarization ---
+        d = s.diarization
+        d.min_speakers = self._min_speakers_spin.GetValue()
+        d.max_speakers = self._max_speakers_spin.GetValue()
+        d.use_local_diarization = self._cb_local_diarization.GetValue()
 
         # --- Output ---
         o = s.output
@@ -1977,3 +2091,107 @@ class SettingsDialog(wx.Dialog):
     def _on_cancel(self, _event: wx.CommandEvent) -> None:
         """Discard changes and close."""
         self.EndModal(wx.ID_CANCEL)
+
+    # ------------------------------------------------------------------ #
+    # Reset / Import / Export                                               #
+    # ------------------------------------------------------------------ #
+
+    def _on_reset_defaults(self, _event: wx.CommandEvent) -> None:
+        """Reset all settings to factory defaults after confirmation."""
+        dlg = wx.MessageDialog(
+            self,
+            "Reset ALL settings to their default values?\n\n"
+            "This cannot be undone. API keys will not be affected.",
+            "Reset to Defaults",
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING,
+        )
+        set_accessible_name(dlg, "Confirm reset to defaults")
+        if dlg.ShowModal() != wx.ID_YES:
+            dlg.Destroy()
+            return
+        dlg.Destroy()
+
+        self._settings = AppSettings()
+        self._apply_to_app(self._settings)
+        announce_status(self._main_frame, "Settings reset to defaults")
+        # Close and re-open the dialog to reflect new values
+        self.EndModal(wx.ID_OK)
+
+    def _on_import_settings(self, _event: wx.CommandEvent) -> None:
+        """Import settings from a JSON file."""
+        dlg = wx.FileDialog(
+            self,
+            message="Import Settings",
+            wildcard="JSON files (*.json)|*.json",
+            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+        )
+        if dlg.ShowModal() != wx.ID_OK:
+            dlg.Destroy()
+            return
+        path = dlg.GetPath()
+        dlg.Destroy()
+
+        try:
+            import json as _json
+
+            with open(path, encoding="utf-8") as fh:
+                data = _json.load(fh)
+
+            imported = AppSettings._from_dict(data)
+            self._settings = imported
+            self._apply_to_app(imported)
+            announce_status(self._main_frame, f"Settings imported from {path}")
+            wx.MessageBox(
+                "Settings imported successfully. The dialog will close to apply changes.",
+                "Import Complete",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            self.EndModal(wx.ID_OK)
+        except Exception as exc:
+            logger.warning("Settings import failed: %s", exc)
+            wx.MessageBox(
+                f"Failed to import settings:\n\n{exc}",
+                "Import Error",
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
+
+    def _on_export_settings(self, _event: wx.CommandEvent) -> None:
+        """Export current settings to a JSON file."""
+        dlg = wx.FileDialog(
+            self,
+            message="Export Settings",
+            defaultFile="bits_whisperer_settings.json",
+            wildcard="JSON files (*.json)|*.json",
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+        )
+        if dlg.ShowModal() != wx.ID_OK:
+            dlg.Destroy()
+            return
+        path = dlg.GetPath()
+        dlg.Destroy()
+
+        try:
+            import json as _json
+            from dataclasses import asdict
+
+            current = self._collect_settings()
+            data = asdict(current)
+            with open(path, "w", encoding="utf-8") as fh:
+                _json.dump(data, fh, indent=2, default=str)
+            announce_status(self._main_frame, f"Settings exported to {path}")
+            wx.MessageBox(
+                f"Settings exported to:\n{path}",
+                "Export Complete",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+        except Exception as exc:
+            logger.warning("Settings export failed: %s", exc)
+            wx.MessageBox(
+                f"Failed to export settings:\n\n{exc}",
+                "Export Error",
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )

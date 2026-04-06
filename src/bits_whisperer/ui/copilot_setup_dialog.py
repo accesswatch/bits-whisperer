@@ -1,9 +1,9 @@
 """GitHub Copilot setup and authentication dialog.
 
 Guides users through a streamlined setup:
-1. Sign in with GitHub (browser OAuth or Personal Access Token)
-2. Choose subscription tier and model
-3. Prerequisites auto-detected and auto-managed
+1. Sign in with GitHub in your browser or with a GitHub access token
+2. Choose a Copilot plan and model
+3. Let the app prepare required components automatically
 
 Designed for a "magical" experience — the user clicks Sign In
 and everything else happens automatically.
@@ -72,7 +72,7 @@ class DeviceFlowDialog(wx.Dialog):
             parent,
             title="Sign in with GitHub",
             size=(460, 340),
-            style=wx.DEFAULT_DIALOG_STYLE,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.TAB_TRAVERSAL,
         )
         set_accessible_name(self, "Sign in with GitHub via browser")
         self.Centre()
@@ -80,11 +80,11 @@ class DeviceFlowDialog(wx.Dialog):
         self._client_id = client_id
         self._cancel_event = threading.Event()
         self._token: str | None = None
+        self._running = False
+        self._has_error = False
 
         self._build_ui()
-
-        # Start the device flow immediately
-        threading.Thread(target=self._run_flow, daemon=True, name="device-flow").start()
+        self._start_flow()
 
     # ------------------------------------------------------------------ #
     # UI                                                                   #
@@ -98,8 +98,7 @@ class DeviceFlowDialog(wx.Dialog):
         intro = wx.StaticText(
             self,
             label=(
-                "To sign in, enter the code below at GitHub.\n"
-                "Your browser will open automatically."
+                "To sign in, enter the code below at GitHub.\nYour browser will open automatically."
             ),
         )
         intro.Wrap(420)
@@ -120,6 +119,10 @@ class DeviceFlowDialog(wx.Dialog):
         btn_row = wx.BoxSizer(wx.HORIZONTAL)
         self._copy_btn = wx.Button(self, label="&Copy Code")
         set_accessible_name(self._copy_btn, "Copy authorization code to clipboard")
+        set_accessible_help(
+            self._copy_btn,
+            "Copy the authorization code so you can paste it on GitHub",
+        )
         self._copy_btn.Bind(wx.EVT_BUTTON, self._on_copy_code)
         self._copy_btn.Disable()
         btn_row.Add(self._copy_btn, 0, wx.RIGHT, 8)
@@ -143,14 +146,72 @@ class DeviceFlowDialog(wx.Dialog):
         set_accessible_name(self._gauge, "Authorization progress")
         sizer.Add(self._gauge, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 12)
 
-        # Cancel button
-        cancel_btn = wx.Button(self, wx.ID_CANCEL, label="Cancel")
-        set_accessible_name(cancel_btn, "Cancel sign in")
-        cancel_btn.Bind(wx.EVT_BUTTON, self._on_cancel)
-        sizer.Add(cancel_btn, 0, wx.ALIGN_CENTER | wx.ALL, 12)
+        # Action buttons
+        action_row = wx.BoxSizer(wx.HORIZONTAL)
+
+        self._retry_btn = wx.Button(self, label="&Retry")
+        set_accessible_name(self._retry_btn, "Retry GitHub sign in")
+        set_accessible_help(
+            self._retry_btn,
+            "Request a new code and try the browser sign-in again",
+        )
+        self._retry_btn.Bind(wx.EVT_BUTTON, self._on_retry)
+        self._retry_btn.Hide()
+        action_row.Add(self._retry_btn, 0, wx.RIGHT, 8)
+
+        self._close_btn = wx.Button(self, wx.ID_CLOSE, label="Cl&ose")
+        set_accessible_name(self._close_btn, "Close sign in dialog")
+        set_accessible_help(
+            self._close_btn,
+            "Close this sign-in dialog",
+        )
+        self._close_btn.Bind(wx.EVT_BUTTON, self._on_close)
+        self._close_btn.Hide()
+        action_row.Add(self._close_btn, 0, wx.RIGHT, 8)
+
+        self._cancel_btn = wx.Button(self, wx.ID_CANCEL, label="Cancel")
+        set_accessible_name(self._cancel_btn, "Cancel sign in")
+        set_accessible_help(
+            self._cancel_btn,
+            "Cancel the sign-in process and close this dialog",
+        )
+        self._cancel_btn.Bind(wx.EVT_BUTTON, self._on_cancel)
+        action_row.Add(self._cancel_btn, 0)
+        sizer.Add(action_row, 0, wx.ALIGN_CENTER | wx.ALL, 12)
 
         self.SetSizer(sizer)
         self.Bind(wx.EVT_CLOSE, self._on_cancel)
+
+    def _start_flow(self) -> None:
+        """Start a fresh device flow attempt."""
+        self._cancel_event = threading.Event()
+        self._running = True
+        self._has_error = False
+        self._code_label.SetLabel("Loading...")
+        set_accessible_name(self._code_label, "Your authorization code")
+        self._status_text.SetLabel("Requesting authorization code...")
+        self._gauge.SetValue(0)
+        self._gauge.Pulse()
+        self._copy_btn.Disable()
+        self._open_btn.Disable()
+        self._retry_btn.Hide()
+        self._close_btn.Hide()
+        self._cancel_btn.Show()
+        self.Layout()
+        threading.Thread(target=self._run_flow, daemon=True, name="device-flow").start()
+
+    def _show_error_actions(self, message: str) -> None:
+        """Show direct retry and close actions after a failed attempt."""
+        self._running = False
+        self._has_error = True
+        self._gauge.SetValue(0)
+        self._status_text.SetLabel(message)
+        self._copy_btn.Disable()
+        self._open_btn.Disable()
+        self._cancel_btn.Hide()
+        self._retry_btn.Show()
+        self._close_btn.Show()
+        self.Layout()
 
     # ------------------------------------------------------------------ #
     # Flow execution (background thread)                                   #
@@ -211,6 +272,7 @@ class DeviceFlowDialog(wx.Dialog):
             logger.info("Device flow completed — token obtained")
 
             def _success() -> None:
+                self._running = False
                 self._gauge.SetValue(100)
                 self._status_text.SetLabel("Authorized! Closing...")
                 announce_to_screen_reader("GitHub authorization successful. Signed in.")
@@ -227,39 +289,39 @@ class DeviceFlowDialog(wx.Dialog):
             logger.warning("Device flow denied: %s", exc)
 
             def _denied(e=exc) -> None:
-                self._gauge.SetValue(0)
-                self._status_text.SetLabel(str(e))
-                announce_to_screen_reader(str(e))
+                message = f"{e} Retry or close this window."
+                self._show_error_actions(message)
+                announce_to_screen_reader(message)
 
             safe_call_after(_denied)
 
         except DeviceFlowExpiredError as exc:
             logger.warning("Device flow expired: %s", exc)
 
-            def _expired(e=exc) -> None:
-                self._gauge.SetValue(0)
-                self._status_text.SetLabel(f"{e}\nClose this dialog and try again.")
-                announce_to_screen_reader(str(e))
+            def _expired() -> None:
+                message = "Sign-in timed out. Retry or close this window."
+                self._show_error_actions(message)
+                announce_to_screen_reader(message)
 
             safe_call_after(_expired)
 
         except DeviceFlowError as exc:
             logger.error("Device flow error: %s", exc)
 
-            def _error(e=exc) -> None:
-                self._gauge.SetValue(0)
-                self._status_text.SetLabel(f"Error: {e}")
-                announce_to_screen_reader(f"Error: {e}")
+            def _error() -> None:
+                message = "GitHub sign-in could not be completed. Retry or close this window."
+                self._show_error_actions(message)
+                announce_to_screen_reader(message)
 
             safe_call_after(_error)
 
         except Exception as exc:
             logger.exception("Unexpected error in device flow: %s", exc)
 
-            def _unexpected(e=exc) -> None:
-                self._gauge.SetValue(0)
-                self._status_text.SetLabel(f"Unexpected error: {e}")
-                announce_to_screen_reader(f"Unexpected error: {e}")
+            def _unexpected() -> None:
+                message = "Something went wrong while signing in. Retry or close this window."
+                self._show_error_actions(message)
+                announce_to_screen_reader(message)
 
             safe_call_after(_unexpected)
 
@@ -287,10 +349,24 @@ class DeviceFlowDialog(wx.Dialog):
 
     def _on_cancel(self, _event: wx.CommandEvent | wx.CloseEvent) -> None:
         """Cancel the device flow."""
+        if self._has_error or not self._running:
+            self.EndModal(wx.ID_CANCEL)
+            return
         self._cancel_event.set()
         # Don't EndModal here — the background thread will do it
         # after it sees the cancel event
         logger.debug("Cancel requested for device flow")
+
+    def _on_retry(self, _event: wx.CommandEvent) -> None:
+        """Start the browser sign-in flow again."""
+        if self._running:
+            return
+        announce_to_screen_reader("Retrying GitHub sign-in")
+        self._start_flow()
+
+    def _on_close(self, _event: wx.CommandEvent) -> None:
+        """Close the sign-in dialog after an error."""
+        self.EndModal(wx.ID_CANCEL)
 
     # ------------------------------------------------------------------ #
     # Public result                                                        #
@@ -316,9 +392,9 @@ class CopilotSetupDialog(wx.Dialog):
     Designed for a "magical" one-click experience:
     - If a built-in OAuth Client ID is configured, browser sign-in
       is the primary action (one click, zero fields to fill).
-    - Otherwise, Personal Access Token is primary with a direct
+        - Otherwise, a GitHub access token is primary with a direct
       link to create one on GitHub.
-    - SDK installation is automatic and invisible.
+        - Required components are prepared automatically.
     - Connection testing happens automatically after sign-in.
     """
 
@@ -327,7 +403,7 @@ class CopilotSetupDialog(wx.Dialog):
             parent,
             title="GitHub Copilot Setup",
             size=(620, 540),
-            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL,
         )
         set_accessible_name(self, "GitHub Copilot setup wizard")
         self.SetMinSize((500, 420))
@@ -341,6 +417,10 @@ class CopilotSetupDialog(wx.Dialog):
 
         self._build_ui()
         self._auto_detect()
+        if self._sign_in_btn:
+            wx.CallAfter(self._sign_in_btn.SetFocus)
+        else:
+            wx.CallAfter(self._pat_input.SetFocus)
 
     # ------------------------------------------------------------------ #
     # UI construction                                                      #
@@ -351,20 +431,20 @@ class CopilotSetupDialog(wx.Dialog):
         root = wx.BoxSizer(wx.VERTICAL)
 
         # Header
-        header = wx.StaticText(self, label="GitHub Copilot Integration")
+        header = wx.StaticText(self, label="GitHub Copilot Setup")
         font = header.GetFont()
         font.SetPointSize(font.GetPointSize() + 4)
         font.SetWeight(wx.FONTWEIGHT_BOLD)
         header.SetFont(font)
-        set_accessible_name(header, "GitHub Copilot Integration")
+        set_accessible_name(header, "GitHub Copilot Setup")
         root.Add(header, 0, wx.ALL, 12)
 
         intro = wx.StaticText(
             self,
             label=(
-                "GitHub Copilot provides AI-powered transcript analysis using "
-                "models like GPT-4o and Claude. Sign in with your GitHub "
-                "account to get started."
+                "Use GitHub Copilot to ask questions about your transcripts, "
+                "summarize them, and explore key points. Sign in with your "
+                "GitHub account to get started."
             ),
         )
         intro.Wrap(560)
@@ -398,7 +478,7 @@ class CopilotSetupDialog(wx.Dialog):
 
         Layout depends on whether a built-in OAuth Client ID is available:
         - With Client ID: "Sign In with GitHub" is primary (one click)
-        - Without: Personal Access Token is primary (paste a token)
+        - Without: GitHub access token is primary (paste a token)
         """
         auth_box = wx.StaticBox(scroll, label="Sign In")
         set_accessible_name(auth_box, "Sign in with GitHub")
@@ -406,6 +486,16 @@ class CopilotSetupDialog(wx.Dialog):
 
         if self._has_oauth_client_id:
             # ── PRIMARY: Browser sign-in (one click, zero fields) ──
+            browser_intro = wx.StaticText(
+                scroll,
+                label=(
+                    "Recommended: sign in with GitHub in your browser. "
+                    "This is the easiest way to set up Copilot."
+                ),
+            )
+            browser_intro.Wrap(520)
+            auth_sizer.Add(browser_intro, 0, wx.ALL, 8)
+
             self._sign_in_btn = wx.Button(scroll, label="&Sign In with GitHub...")
             btn_font = self._sign_in_btn.GetFont()
             btn_font.SetPointSize(btn_font.GetPointSize() + 1)
@@ -430,64 +520,88 @@ class CopilotSetupDialog(wx.Dialog):
             # Separator
             auth_sizer.Add(wx.StaticLine(scroll), 0, wx.EXPAND | wx.ALL, 6)
 
-            # SECONDARY: Personal Access Token
-            pat_intro = wx.StaticText(scroll, label="Or use a Personal Access Token instead:")
-            auth_sizer.Add(pat_intro, 0, wx.LEFT | wx.TOP, 8)
+            # SECONDARY: GitHub access token fallback
+            self._other_sign_in_pane = wx.CollapsiblePane(scroll, label="&Other sign-in options")
+            set_accessible_name(self._other_sign_in_pane, "Other sign-in options")
+            set_accessible_help(
+                self._other_sign_in_pane,
+                "Open advanced sign-in options such as a GitHub access token",
+            )
+            self._other_sign_in_pane.Bind(
+                wx.EVT_COLLAPSIBLEPANE_CHANGED,
+                self._on_toggle_other_sign_in,
+            )
+
+            other_pane = self._other_sign_in_pane.GetPane()
+            other_sizer = wx.BoxSizer(wx.VERTICAL)
+            pat_intro = wx.StaticText(
+                other_pane,
+                label=("Use a GitHub access token only if browser sign-in is not working for you."),
+            )
+            pat_intro.Wrap(500)
+            other_sizer.Add(pat_intro, 0, wx.ALL, 8)
+            self._build_token_auth_controls(other_pane, other_sizer)
+            other_pane.SetSizer(other_sizer)
+            auth_sizer.Add(self._other_sign_in_pane, 0, wx.EXPAND | wx.ALL, 8)
         else:
-            # ── PRIMARY: Personal Access Token (no OAuth App registered) ──
+            # ── PRIMARY: GitHub access token (no OAuth App registered) ──
             self._sign_in_btn = None  # No browser sign-in available
 
             pat_guide = wx.StaticText(
                 scroll,
                 label=(
-                    "To connect, create a free Personal Access Token on GitHub "
-                    "and paste it below:"
+                    "Browser sign-in is not available right now. "
+                    "Create a free GitHub access token and paste it below."
                 ),
             )
             pat_guide.Wrap(520)
             auth_sizer.Add(pat_guide, 0, wx.ALL, 8)
-
-            # Step-by-step mini guide
-            steps = wx.StaticText(
-                scroll,
-                label=(
-                    "1. Click the link below to open GitHub\n"
-                    '2. Click "Generate token" (keep defaults)\n'
-                    "3. Copy the token and paste it here"
-                ),
-            )
-            steps.Wrap(520)
-            auth_sizer.Add(steps, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
-
-            # Create token link (opens with correct scopes pre-filled)
-            create_link = wx.adv.HyperlinkCtrl(
-                scroll,
-                label="Create a Personal Access Token on GitHub",
-                url=(
-                    "https://github.com/settings/tokens/new"
-                    "?scopes=copilot"
-                    "&description=BITS+Whisperer+Copilot"
-                ),
-            )
-            set_accessible_name(
-                create_link,
-                "Open GitHub to create a Personal Access Token " "with Copilot access",
-            )
-            auth_sizer.Add(create_link, 0, wx.LEFT | wx.BOTTOM, 8)
 
             # Auth status
             self._auth_status = wx.StaticText(scroll, label="Checking sign-in status...")
             set_accessible_name(self._auth_status, "Authentication status")
             auth_sizer.Add(self._auth_status, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
 
-        # Token input row (present in both modes)
+            self._build_token_auth_controls(scroll, auth_sizer)
+
+        sizer.Add(auth_sizer, 0, wx.EXPAND | wx.ALL, 6)
+
+    def _build_token_auth_controls(self, parent: wx.Window, sizer: wx.BoxSizer) -> None:
+        """Build the manual token fallback controls."""
+        steps = wx.StaticText(
+            parent,
+            label=(
+                "1. Open GitHub\n"
+                '2. Click "Generate token" and keep the suggested settings\n'
+                "3. Copy the token and paste it here"
+            ),
+        )
+        steps.Wrap(520)
+        sizer.Add(steps, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+
+        create_link = wx.adv.HyperlinkCtrl(
+            parent,
+            label="Create a GitHub access token",
+            url=(
+                "https://github.com/settings/tokens/new"
+                "?scopes=copilot"
+                "&description=BITS+Whisperer+Copilot"
+            ),
+        )
+        set_accessible_name(
+            create_link,
+            "Open GitHub to create an access token with Copilot access",
+        )
+        sizer.Add(create_link, 0, wx.LEFT | wx.BOTTOM, 8)
+
+        # Token input row
         pat_row = wx.BoxSizer(wx.HORIZONTAL)
-        pat_label = wx.StaticText(scroll, label="GitHub &Token:")
-        self._pat_input = wx.TextCtrl(scroll, style=wx.TE_PASSWORD, size=(350, -1))
-        set_accessible_name(self._pat_input, "GitHub Personal Access Token")
+        pat_label = wx.StaticText(parent, label="GitHub access &token:")
+        self._pat_input = wx.TextCtrl(parent, style=wx.TE_PASSWORD, size=(350, -1))
+        set_accessible_name(self._pat_input, "GitHub access token fallback")
         set_accessible_help(
             self._pat_input,
-            "Paste your GitHub Personal Access Token here",
+            "Paste a GitHub access token here if you are using manual sign-in",
         )
         label_control(pat_label, self._pat_input)
 
@@ -497,49 +611,38 @@ class CopilotSetupDialog(wx.Dialog):
 
         pat_row.Add(pat_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 6)
         pat_row.Add(self._pat_input, 1)
-        auth_sizer.Add(pat_row, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
+        sizer.Add(pat_row, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
 
-        # Save & verify button for PAT
-        self._save_token_btn = wx.Button(scroll, label="Save && &Verify Token")
-        set_accessible_name(self._save_token_btn, "Save and verify the token")
+        # Save and verify button for access token
+        self._save_token_btn = wx.Button(parent, label="Save && &Verify Token")
+        set_accessible_name(self._save_token_btn, "Save and verify the access token")
         set_accessible_help(
             self._save_token_btn,
-            "Saves the token securely and verifies it works with GitHub",
+            "Saves the token securely and verifies that it works with GitHub",
         )
         self._save_token_btn.Bind(wx.EVT_BUTTON, self._on_save_verify_token)
-        auth_sizer.Add(self._save_token_btn, 0, wx.ALL, 8)
+        sizer.Add(self._save_token_btn, 0, wx.ALL, 8)
 
-        if self._has_oauth_client_id:
-            # Also show the create-token link for OAuth mode
-            pat_link = wx.adv.HyperlinkCtrl(
-                scroll,
-                label="Create a GitHub PAT",
-                url=(
-                    "https://github.com/settings/tokens/new"
-                    "?scopes=copilot"
-                    "&description=BITS+Whisperer+Copilot"
-                ),
-            )
-            set_accessible_name(pat_link, "Open GitHub PAT creation page")
-            auth_sizer.Add(pat_link, 0, wx.LEFT | wx.BOTTOM, 8)
-
-        sizer.Add(auth_sizer, 0, wx.EXPAND | wx.ALL, 6)
+    def _on_toggle_other_sign_in(self, _event: wx.CollapsiblePaneEvent) -> None:
+        """Resize the dialog when the fallback auth pane is opened or closed."""
+        self._scroll.FitInside()
+        self.Layout()
 
     def _build_model_section(self, scroll: wx.ScrolledWindow, sizer: wx.BoxSizer) -> None:
         """Build the subscription tier and model selection section."""
-        model_box = wx.StaticBox(scroll, label="Subscription && Model")
-        set_accessible_name(model_box, "Subscription tier and model selection")
+        model_box = wx.StaticBox(scroll, label="Plan && Model")
+        set_accessible_name(model_box, "Copilot plan and model selection")
         model_sizer = wx.StaticBoxSizer(model_box, wx.VERTICAL)
 
         # Tier selector
         tier_row = wx.BoxSizer(wx.HORIZONTAL)
-        tier_label = wx.StaticText(scroll, label="&Tier:")
+        tier_label = wx.StaticText(scroll, label="P&lan:")
         tier_choices = [f"{v['name']} — {v['price']}" for v in COPILOT_TIERS.values()]
         self._tier_choice = wx.Choice(scroll, choices=tier_choices)
-        set_accessible_name(self._tier_choice, "Select your Copilot subscription tier")
+        set_accessible_name(self._tier_choice, "Select your Copilot plan")
         set_accessible_help(
             self._tier_choice,
-            "Choose your GitHub Copilot plan. Higher tiers unlock more models.",
+            "Choose your GitHub Copilot plan. Higher plans unlock more models.",
         )
         label_control(tier_label, self._tier_choice)
 
@@ -592,9 +695,9 @@ class CopilotSetupDialog(wx.Dialog):
         set_accessible_name(status_box, "Copilot readiness status")
         status_sizer = wx.StaticBoxSizer(status_box, wx.VERTICAL)
 
-        # SDK status line
-        self._sdk_status = wx.StaticText(scroll, label=f"{_WAIT}  Copilot SDK: Checking...")
-        set_accessible_name(self._sdk_status, "SDK status")
+        # Copilot components status line
+        self._sdk_status = wx.StaticText(scroll, label=f"{_WAIT}  Copilot: Checking...")
+        set_accessible_name(self._sdk_status, "Copilot components status")
         status_sizer.Add(self._sdk_status, 0, wx.ALL, 4)
 
         # Auth status line (mirrors the auth section status)
@@ -642,10 +745,10 @@ class CopilotSetupDialog(wx.Dialog):
             def _update() -> None:
                 # ── SDK status ──
                 if sdk_available:
-                    self._sdk_status.SetLabel(f"{_CHECK}  Copilot SDK: Ready")
+                    self._sdk_status.SetLabel(f"{_CHECK}  Copilot: Ready")
                 else:
                     self._sdk_status.SetLabel(
-                        f"{_CROSS}  Copilot SDK: Not installed " "(will install automatically)"
+                        f"{_CROSS}  Copilot: Components not installed (will install automatically)"
                     )
 
                 # ── Auth status ──
@@ -669,7 +772,7 @@ class CopilotSetupDialog(wx.Dialog):
                 elif user_info or token:
                     if not sdk_available:
                         self._status_connection.SetLabel(
-                            f"{_WAIT}  Connection: SDK will install on first use"
+                            f"{_WAIT}  Connection: Components will install on first use"
                         )
                     else:
                         self._status_connection.SetLabel(f"{_WAIT}  Connection: Not verified")
@@ -732,11 +835,11 @@ class CopilotSetupDialog(wx.Dialog):
             self._sign_in_btn.Enable()
 
     def _on_save_verify_token(self, _event: wx.CommandEvent) -> None:
-        """Save and verify the PAT entered by the user."""
+        """Save and verify the GitHub access token entered by the user."""
         pat = self._pat_input.GetValue().strip()
         if not pat:
             accessible_message_box(
-                "Please paste your GitHub Personal Access Token first.",
+                "Please paste your GitHub access token first.",
                 "Token Required",
                 wx.OK | wx.ICON_INFORMATION,
                 self,
@@ -761,12 +864,13 @@ class CopilotSetupDialog(wx.Dialog):
                     )
                 else:
                     self._auth_status.SetLabel(
-                        "Could not verify token — check it's correct " "and has Copilot scope"
+                        "Could not verify the token. Check that you copied the full "
+                        "token and that your GitHub account has Copilot access."
                     )
                     self._status_auth.SetLabel(f"{_CROSS}  Authentication: Token invalid")
                     announce_to_screen_reader(
-                        "Token could not be verified. "
-                        "Make sure it's correct and has Copilot scope."
+                        "Token could not be verified. Make sure you copied the full "
+                        "token and that your GitHub account has Copilot access."
                     )
                 self._save_token_btn.SetLabel("Save && &Verify Token")
                 self._save_token_btn.Enable()
@@ -806,7 +910,9 @@ class CopilotSetupDialog(wx.Dialog):
         if sdk_available:
             self._status_connection.SetLabel(f"{_CHECK}  Connection: Ready")
         else:
-            self._status_connection.SetLabel(f"{_WAIT}  Connection: SDK will install on first use")
+            self._status_connection.SetLabel(
+                f"{_WAIT}  Connection: Components will install on first use"
+            )
 
         # Auto-install SDK in background if needed
         self._ensure_sdk_installed()
@@ -828,8 +934,8 @@ class CopilotSetupDialog(wx.Dialog):
             return
 
         logger.info("SDK not installed — starting automatic installation")
-        self._sdk_status.SetLabel(f"{_WAIT}  Copilot SDK: Installing automatically...")
-        announce_status(self._main_frame, "Installing GitHub Copilot SDK...")
+        self._sdk_status.SetLabel(f"{_WAIT}  Copilot: Installing required components...")
+        announce_status(self._main_frame, "Preparing GitHub Copilot...")
 
         def _install() -> None:
             try:
@@ -839,9 +945,9 @@ class CopilotSetupDialog(wx.Dialog):
                     if success:
                         sdk_ok = is_sdk_available("copilot_sdk")
                         if sdk_ok:
-                            self._sdk_status.SetLabel(f"{_CHECK}  Copilot SDK: Ready")
-                            announce_status(self._main_frame, "Copilot SDK installed")
-                            announce_to_screen_reader("Copilot SDK installed successfully")
+                            self._sdk_status.SetLabel(f"{_CHECK}  Copilot: Ready")
+                            announce_status(self._main_frame, "GitHub Copilot is ready")
+                            announce_to_screen_reader("GitHub Copilot is ready")
                             # Update connection status
                             token = self._key_store.get_key("copilot_github_token")
                             if token:
@@ -849,21 +955,22 @@ class CopilotSetupDialog(wx.Dialog):
                             logger.info("SDK auto-installed and verified")
                         else:
                             self._sdk_status.SetLabel(
-                                f"{_WAIT}  Copilot SDK: Installed — " "restart app to activate"
+                                f"{_WAIT}  Copilot: Installed — restart the app to finish setup"
                             )
                             announce_to_screen_reader(
-                                "SDK installed. Restart the application " "to use it."
+                                "Setup is nearly complete. Restart the application to use Copilot."
                             )
                             logger.warning(
-                                "SDK install OK but import fails. " "Python exe: %s",
+                                "SDK install OK but import fails. Python exe: %s",
                                 sys.executable,
                             )
                     else:
                         self._sdk_status.SetLabel(
-                            f"{_CROSS}  Copilot SDK: Install failed — "
-                            f"{error[:200] if error else 'unknown error'}"
+                            f"{_CROSS}  Copilot: Setup could not be completed automatically"
                         )
-                        announce_to_screen_reader("Copilot SDK installation failed")
+                        announce_to_screen_reader(
+                            "Copilot setup could not be completed automatically"
+                        )
                         logger.error("SDK install failed: %s", error)
 
                     self._scroll.FitInside()
@@ -873,8 +980,8 @@ class CopilotSetupDialog(wx.Dialog):
             except Exception as exc:
                 logger.exception("SDK auto-install failed: %s", exc)
 
-                def _err(e: Exception = exc) -> None:
-                    self._sdk_status.SetLabel(f"{_CROSS}  Copilot SDK: Error — {e}")
+                def _err() -> None:
+                    self._sdk_status.SetLabel(f"{_CROSS}  Copilot: Setup hit an unexpected problem")
                     self._scroll.FitInside()
                     self.Layout()
 
@@ -959,7 +1066,7 @@ class CopilotSetupDialog(wx.Dialog):
             ctx = f"{model_info.context_window:,} tokens"
             premium = "  (Premium)" if model_info.is_premium else ""
             self._copilot_pricing_label.SetLabel(
-                f"Input: {in_price}  |  Output: {out_price}" f"  |  Context: {ctx}{premium}"
+                f"Input: {in_price}  |  Output: {out_price}  |  Context: {ctx}{premium}"
             )
         else:
             self._copilot_pricing_label.SetLabel("")

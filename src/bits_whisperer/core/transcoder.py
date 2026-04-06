@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-import shutil
 import subprocess
 import tempfile
 from collections.abc import Callable
@@ -29,7 +28,9 @@ class Transcoder:
 
     def __init__(self) -> None:
         """Initialise the transcoder and locate ffmpeg."""
-        self._ffmpeg_path: str = self._find_ffmpeg()
+        from bits_whisperer.utils.platform_utils import find_ffmpeg
+
+        self._ffmpeg_path: str = find_ffmpeg()
 
     def is_available(self) -> bool:
         """Check whether ffmpeg is installed and accessible."""
@@ -176,7 +177,7 @@ class Transcoder:
             raise TranscoderError("Transcoding timed out (10 minutes)") from None
         except FileNotFoundError:
             raise TranscoderError(
-                "ffmpeg not found. Please install ffmpeg " "and ensure it is on your PATH."
+                "ffmpeg not found. Please install ffmpeg and ensure it is on your PATH."
             ) from None
 
         if progress_callback:
@@ -184,22 +185,3 @@ class Transcoder:
 
         logger.info("Transcoding complete: %s", output_path.name)
         return output_path
-
-    def _find_ffmpeg(self) -> str:
-        """Locate the ffmpeg executable.
-
-        Returns:
-            Path to ffmpeg, or empty string if not found.
-        """
-        path = shutil.which("ffmpeg")
-        if path:
-            return path
-        # Check common Windows locations
-        for candidate in [
-            r"C:\ffmpeg\bin\ffmpeg.exe",
-            r"C:\Program Files\ffmpeg\bin\ffmpeg.exe",
-        ]:
-            if Path(candidate).exists():
-                return candidate
-        logger.warning("ffmpeg not found on PATH")
-        return ""

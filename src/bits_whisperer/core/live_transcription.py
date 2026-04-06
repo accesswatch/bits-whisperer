@@ -271,8 +271,9 @@ class LiveTranscriptionService:
     def _transcription_worker(self) -> None:
         """Background thread that processes audio chunks.
 
-        Collects audio from the queue, checks for speech activity,
-        and sends audio to faster-whisper when enough has accumulated.
+        Collects audio from the queue, checks for speech activity
+        using Silero VAD (with energy-based fallback), and sends audio
+        to faster-whisper when enough has accumulated.
         """
         try:
             self._load_whisper_model()
@@ -290,6 +291,18 @@ class LiveTranscriptionService:
         chunk_seconds = self._settings.chunk_duration_seconds
         silence_threshold = self._settings.silence_threshold_seconds
 
+        # Try to load Silero VAD for better speech detection
+        silero_model = None
+        try:
+            from silero_vad import load_silero_vad
+
+            silero_model = load_silero_vad()
+            logger.info("Silero VAD loaded for live transcription")
+        except ImportError:
+            logger.debug("silero-vad not installed — using energy-based VAD fallback")
+        except Exception as exc:
+            logger.warning("Failed to load Silero VAD, using energy fallback: %s", exc)
+
         while not self._stop_event.is_set():
             # Wait if paused
             self._pause_event.wait()
@@ -299,9 +312,8 @@ class LiveTranscriptionService:
             except queue.Empty:
                 continue
 
-            # Check for speech activity (simple energy-based VAD)
-            energy = float(np.sqrt(np.mean(chunk**2)))
-            is_speech = energy > 0.01  # Threshold for speech detection
+            # Check for speech activity
+            is_speech = self._detect_speech(chunk, silero_model, np)
 
             if is_speech:
                 audio_buffer.append(chunk)
@@ -345,6 +357,34 @@ class LiveTranscriptionService:
                     self._state.total_segments += 1
                 if self._text_callback:
                     self._text_callback(text.strip(), True)
+
+    def _detect_speech(self, chunk: Any, silero_model: Any, np: Any) -> bool:
+        """Detect speech activity in an audio chunk.
+
+        Uses Silero VAD when available, falling back to RMS energy thresholding.
+
+        Args:
+            chunk: NumPy array of float32 audio samples.
+            silero_model: Loaded Silero VAD model, or None for energy fallback.
+            np: NumPy module reference.
+
+        Returns:
+            True if speech is detected in the chunk.
+        """
+        if silero_model is not None:
+            try:
+                import torch
+
+                audio_tensor = torch.from_numpy(chunk.flatten().astype(np.float32))
+                confidence = silero_model(audio_tensor, self._settings.sample_rate).item()
+                return confidence > 0.5
+            except Exception:
+                # Fall through to energy-based detection
+                pass
+
+        # Energy-based VAD fallback
+        energy = float(np.sqrt(np.mean(chunk**2)))
+        return energy > 0.01
 
     def _load_whisper_model(self) -> None:
         """Load the faster-whisper model (cached for reuse)."""

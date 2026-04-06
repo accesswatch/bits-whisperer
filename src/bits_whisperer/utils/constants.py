@@ -144,7 +144,7 @@ WHISPER_MODELS: Final[list[WhisperModelInfo]] = [
         id="tiny.en",
         name="Tiny (English)",
         description=(
-            "Lightning fast, slightly better for English-only recordings. " "Works on any computer."
+            "Lightning fast, slightly better for English-only recordings. Works on any computer."
         ),
         parameters_m=39,
         disk_size_mb=75,
@@ -377,6 +377,58 @@ def get_model_by_id(model_id: str) -> WhisperModelInfo | None:
         if m.id == model_id:
             return m
     return None
+
+
+def get_transcription_models(provider_key: str) -> list[tuple[str, str]]:
+    """Return ``(model_id, display_label)`` pairs for a transcription provider.
+
+    Args:
+        provider_key: Provider identifier (e.g. ``local_whisper``).
+
+    Returns:
+        List of ``(id, label)`` tuples.  Empty list means the provider
+        only has a single implicit model.
+    """
+    if provider_key in ("local_whisper",):
+        return [(m.id, f"{m.name} \u2014 {m.description[:60]}") for m in WHISPER_MODELS]
+    if provider_key == "openai_whisper":
+        return [("whisper-1", "Whisper-1")]
+    if provider_key == "groq_whisper":
+        return [
+            ("whisper-large-v3", "Whisper Large v3"),
+            ("whisper-large-v3-turbo", "Whisper Large v3 Turbo"),
+            ("distil-whisper-large-v3-en", "Distil Whisper Large v3 (English)"),
+        ]
+    if provider_key == "deepgram":
+        return [
+            ("nova-3", "Nova-3 (best)"),
+            ("nova-2", "Nova-2"),
+            ("nova", "Nova"),
+            ("enhanced", "Enhanced"),
+            ("base", "Base"),
+        ]
+    if provider_key == "assemblyai":
+        return [
+            ("best", "Best"),
+            ("nano", "Nano (faster, lower cost)"),
+            ("conformer-2", "Conformer-2"),
+            ("slam-1", "Slam-1"),
+        ]
+    if provider_key == "gemini":
+        return [
+            ("gemini-2.0-flash", "Gemini 2.0 Flash"),
+            ("gemini-1.5-flash", "Gemini 1.5 Flash"),
+            ("gemini-1.5-pro", "Gemini 1.5 Pro"),
+        ]
+    if provider_key == "google_speech":
+        return [
+            ("latest_long", "Latest Long (recommended)"),
+            ("latest_short", "Latest Short"),
+            ("chirp_2", "Chirp 2"),
+            ("chirp", "Chirp"),
+            ("default", "Default"),
+        ]
+    return []
 
 
 # ---------------------------------------------------------------------------
@@ -942,22 +994,22 @@ COPILOT_TIERS: Final[dict[str, dict[str, str]]] = {
     "free": {
         "name": "Copilot Free",
         "price": "Free",
-        "description": "Limited monthly completions. GPT-4o Mini included.",
+        "description": "Limited monthly usage. GPT-4o Mini is included.",
     },
     "pro": {
         "name": "Copilot Pro",
         "price": "$10/month",
-        "description": "Unlimited completions. All models including premium.",
+        "description": "Higher limits and broader model access, including premium models.",
     },
     "business": {
         "name": "Copilot Business",
         "price": "$19/user/month",
-        "description": "Organization management. All Pro features plus admin controls.",
+        "description": "Team management and admin controls on top of Pro-level access.",
     },
     "enterprise": {
         "name": "Copilot Enterprise",
         "price": "$39/user/month",
-        "description": "Enterprise features. Knowledge bases, fine-tuning, compliance.",
+        "description": "Enterprise search, compliance, and organization-wide knowledge features.",
     },
 }
 
@@ -1205,3 +1257,115 @@ def get_templates_by_category(category: str) -> list[PromptTemplate]:
         List of matching PromptTemplate instances.
     """
     return [t for t in BUILTIN_PROMPT_TEMPLATES if t.category == category]
+
+
+# ---------------------------------------------------------------------------
+# System prompt presets for the AI Chat panel
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class SystemPromptPreset:
+    """A reusable system prompt that shapes how the AI assistant behaves."""
+
+    id: str
+    name: str
+    prompt: str
+    description: str
+
+
+SYSTEM_PROMPT_PRESETS: Final[list[SystemPromptPreset]] = [
+    SystemPromptPreset(
+        id="general",
+        name="General Assistant",
+        description="Versatile transcript helper for any task.",
+        prompt=(
+            "You are a helpful, knowledgeable assistant for analyzing "
+            "audio transcripts. Answer questions clearly and concisely. "
+            "When referencing the transcript, cite relevant quotes. "
+            "Support speaker diarization labels and timestamps when present."
+        ),
+    ),
+    SystemPromptPreset(
+        id="meeting_minutes",
+        name="Meeting Minutes",
+        description="Extract attendees, agenda, decisions, and action items.",
+        prompt=(
+            "You are a professional meeting-minutes writer. Given the transcript, "
+            "produce well-structured meeting minutes. Include attendees (from speaker "
+            "labels if available), agenda items, key decisions, action items with "
+            "owners and deadlines (if mentioned), and follow-up items. Use clear "
+            "headings and bullet points."
+        ),
+    ),
+    SystemPromptPreset(
+        id="interview",
+        name="Interview Notes",
+        description="Organize Q&A pairs, key quotes, and assessment.",
+        prompt=(
+            "You are an interview analysis expert. Create structured interview notes "
+            "from the transcript. Identify questions and responses, highlight notable "
+            "strengths and concerns, include relevant quotes, and provide an objective "
+            "overall assessment when asked."
+        ),
+    ),
+    SystemPromptPreset(
+        id="accessibility",
+        name="Accessibility Review",
+        description="Focus on clarity, reading level, and plain language.",
+        prompt=(
+            "You are an accessibility and plain-language specialist. When analyzing "
+            "transcripts, focus on clarity, reading level, and inclusive language. "
+            "Suggest simplified wording where appropriate. Flag jargon and suggest "
+            "plain-language alternatives. Keep output well-structured with headings "
+            "and lists for easy screen reader navigation."
+        ),
+    ),
+    SystemPromptPreset(
+        id="lecture",
+        name="Lecture Notes",
+        description="Transform lectures into organized study notes.",
+        prompt=(
+            "You are a study-notes specialist. Transform lecture and presentation "
+            "transcripts into well-organized notes with main topics, key concepts, "
+            "definitions, examples, and a summary of takeaways. Use bullet points "
+            "and numbered lists for easy review."
+        ),
+    ),
+    SystemPromptPreset(
+        id="action_items",
+        name="Action Items",
+        description="Extract tasks, owners, and follow-ups.",
+        prompt=(
+            "You are a task extraction specialist. Analyze the transcript and "
+            "extract every action item, task, commitment, and follow-up. For each "
+            "item include what needs to be done, who is responsible (if mentioned), "
+            "the deadline or timeline (if mentioned), and priority level inferred "
+            "from context. Present them as a numbered, actionable list."
+        ),
+    ),
+    SystemPromptPreset(
+        id="custom",
+        name="Custom",
+        description="Write your own system prompt from scratch.",
+        prompt="",
+    ),
+]
+
+# Default system prompt used across all providers unless overridden
+DEFAULT_SYSTEM_PROMPT: Final[str] = SYSTEM_PROMPT_PRESETS[0].prompt
+
+
+def get_system_prompt_preset(preset_id: str) -> SystemPromptPreset | None:
+    """Look up a system prompt preset by ID.
+
+    Args:
+        preset_id: Preset identifier.
+
+    Returns:
+        SystemPromptPreset, or None if not found.
+    """
+    for p in SYSTEM_PROMPT_PRESETS:
+        if p.id == preset_id:
+            return p
+    return None

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 
 import wx
 
@@ -31,11 +32,12 @@ class ProgressDialog(wx.Dialog):
             parent,
             title="Transcription Progress",
             size=(520, 400),
-            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL,
         )
         set_accessible_name(self, "Transcription progress dialog")
         self._total = total_files
         self._completed = 0
+        self._start_time = time.monotonic()
 
         self._build_ui()
         self.CentreOnParent()
@@ -68,6 +70,16 @@ class ProgressDialog(wx.Dialog):
         set_accessible_name(self._file_gauge, "Current file progress bar")
         set_accessible_help(self._file_gauge, "Progress of the file currently being transcribed")
         sizer.Add(self._file_gauge, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 8)
+
+        # ETA and speed display
+        self._eta_label = wx.StaticText(self, label="")
+        self._eta_label.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT))
+        set_accessible_name(self._eta_label, "Estimated time remaining")
+        set_accessible_help(
+            self._eta_label,
+            "Shows elapsed time, estimated remaining time, and processing speed.",
+        )
+        sizer.Add(self._eta_label, 0, wx.LEFT | wx.RIGHT | wx.TOP | wx.EXPAND, 8)
 
         # Status list
         self._status_list = wx.ListCtrl(self, style=wx.LC_REPORT | wx.LC_HRULES)
@@ -107,12 +119,13 @@ class ProgressDialog(wx.Dialog):
         if job.status in (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED):
             elapsed = ""
             if job.started_at and job.completed_at:
-                # Compute elapsed if both timestamps are available
-                elapsed = "—"
+                secs = (job.completed_at - job.started_at).total_seconds()
+                elapsed = self._fmt_seconds(secs)
             self._status_list.SetItem(idx, 2, elapsed)
             self._completed += 1
             self._overall_gauge.SetValue(self._completed)
             self._overall_label.SetLabel(f"Overall: {self._completed} / {self._total} files")
+            self._update_eta()
 
     def all_complete(self) -> None:
         """Mark all jobs as complete."""
@@ -130,3 +143,34 @@ class ProgressDialog(wx.Dialog):
             if self._status_list.GetItemText(idx) == name:
                 return idx
         return None
+
+    def _update_eta(self) -> None:
+        """Recompute and display elapsed time, ETA, and speed."""
+        elapsed = time.monotonic() - self._start_time
+        elapsed_str = self._fmt_seconds(elapsed)
+
+        if self._completed > 0 and self._completed < self._total:
+            avg_per_file = elapsed / self._completed
+            remaining = avg_per_file * (self._total - self._completed)
+            remaining_str = self._fmt_seconds(remaining)
+            speed = f"{avg_per_file:.1f}s/file"
+            self._eta_label.SetLabel(
+                f"Elapsed: {elapsed_str}  |  Remaining: ~{remaining_str}  |  {speed}"
+            )
+        elif self._completed >= self._total:
+            self._eta_label.SetLabel(f"Total time: {elapsed_str}")
+        else:
+            self._eta_label.SetLabel(f"Elapsed: {elapsed_str}")
+
+    @staticmethod
+    def _fmt_seconds(secs: float) -> str:
+        """Format seconds as ``Xm Ys`` or ``Xs``."""
+        secs = int(secs)
+        if secs >= 3600:
+            h, remainder = divmod(secs, 3600)
+            m, s = divmod(remainder, 60)
+            return f"{h}h {m}m {s}s"
+        if secs >= 60:
+            m, s = divmod(secs, 60)
+            return f"{m}m {s}s"
+        return f"{secs}s"

@@ -66,7 +66,7 @@ class Updater:
         self._repo = repo_name
         self._current = current_version
         self._asset_pattern = asset_pattern
-        self._api_base = f"https://api.github.com/repos" f"/{repo_owner}/{repo_name}"
+        self._api_base = f"https://api.github.com/repos/{repo_owner}/{repo_name}"
         self._latest_info: UpdateInfo | None = None
 
     # ------------------------------------------------------------------ #

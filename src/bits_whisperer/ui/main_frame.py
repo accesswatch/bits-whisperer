@@ -30,6 +30,7 @@ from bits_whisperer.utils.constants import (
 
 if TYPE_CHECKING:
     from bits_whisperer.core.copilot_service import CopilotService
+    from bits_whisperer.core.job import Job
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,20 @@ ID_AGENT_BUILDER = wx.NewIdRef()
 ID_TRANSLATE_MULTI = wx.NewIdRef()
 ID_AUDIO_PREVIEW = wx.NewIdRef()
 ID_AUDIO_PREVIEW_SELECTED = wx.NewIdRef()
+ID_WATCH_FOLDER = wx.NewIdRef()
+ID_WATCH_FOLDER_SETTINGS = wx.NewIdRef()
+ID_BETA_SETTINGS = wx.NewIdRef()
+ID_WHATS_NEW = wx.NewIdRef()
+ID_KEYBOARD_SHORTCUTS = wx.NewIdRef()
+ID_FIND_TRANSCRIPT = wx.NewIdRef()
+ID_DND_STATUS = wx.NewIdRef()
+ID_FONT_INCREASE = wx.NewIdRef()
+ID_FONT_DECREASE = wx.NewIdRef()
+ID_FONT_RESET = wx.NewIdRef()
+ID_SETTINGS_IMPORT = wx.NewIdRef()
+ID_SETTINGS_EXPORT = wx.NewIdRef()
+ID_RESET_DEFAULTS = wx.NewIdRef()
+ID_LICENSE = wx.NewIdRef()
 
 # Queue batch operation IDs
 ID_CLEAR_COMPLETED = wx.NewIdRef()
@@ -113,7 +128,6 @@ class MainFrame(wx.Frame):
 
         self.database = Database()
         self.key_store = KeyStore()
-        self.registration_service = BITS_RegistrationService(self.key_store)
         self.device_probe = DeviceProbe()
         self.device_profile = self.device_probe.probe()
         self.model_manager = ModelManager()
@@ -148,8 +162,92 @@ class MainFrame(wx.Frame):
         # Non-blocking refresh — uses cache if remote is unreachable
         self.feature_flags.refresh()
 
+        # ---- Registration service (after feature flags so it picks up
+        #      remotely configurable licensing parameters) ----
+        self.registration_service = BITS_RegistrationService(
+            self.key_store,
+            feature_flag_service=self.feature_flags,
+        )
+
+        # ---- Beta service ----
+        from bits_whisperer.core.beta_service import BetaService
+
+        self._beta_service = BetaService(
+            key_store=self.key_store,
+            invitations_url=self.feature_flags.config.beta_invitations_url,
+            beta_enabled_in_settings=self.app_settings.beta.enabled,
+        )
+
+        # ---- Watch folder service ----
+        from bits_whisperer.core.watch_folder import WatchFolderService
+
+        self._watch_folder_service = WatchFolderService(
+            transcription_service=self.transcription_service,
+            app_settings=self.app_settings,
+            on_job_queued=self._on_watch_folder_job_queued,
+            on_status_change=self._on_watch_folder_status_change,
+        )
+
         # ---- Copilot service (lazy start) ----
         self._copilot_service: CopilotService | None = None
+
+        # ---- DND monitor (pauses transcription when Focus Assist active) ----
+        from bits_whisperer.core.dnd_monitor import DNDMonitor
+
+        self._dnd_monitor: DNDMonitor | None = None
+        if self._is_feature_enabled("dnd_monitor") and self.app_settings.dnd.enabled:
+            self._dnd_monitor = DNDMonitor(
+                poll_interval=self.app_settings.dnd.poll_interval_seconds,
+                on_dnd_changed=self._on_dnd_state_change,
+            )
+            self._dnd_monitor.start()
+
+        # ---- Background scheduler ----
+        from bits_whisperer.core.scheduler_service import SchedulerService
+
+        self._scheduler_service: SchedulerService | None = None
+        if self._is_feature_enabled("scheduler") and self.app_settings.scheduler.enabled:
+            from bits_whisperer.core.scheduler_service import ScheduledJob
+
+            self._scheduler_service = SchedulerService(
+                settings=self.app_settings.scheduler,
+            )
+
+            # Register maintenance jobs from settings intervals
+            sched_cfg = self.app_settings.scheduler
+
+            # 1. Ollama health check — keeps adapter aware of daemon status
+            if self._is_feature_enabled("ollama_native"):
+                self._scheduler_service.register_job(
+                    ScheduledJob(
+                        job_id="ollama_health_check",
+                        name="Ollama health check",
+                        func=self._scheduled_ollama_health_check,
+                        interval_seconds=sched_cfg.health_check_minutes * 60,
+                    )
+                )
+
+            # 2. Model cache pruning — enforces disk quota
+            self._scheduler_service.register_job(
+                ScheduledJob(
+                    job_id="model_cache_prune",
+                    name="Model cache pruning",
+                    func=self._scheduled_cache_prune,
+                    interval_seconds=sched_cfg.model_cache_prune_hours * 3600,
+                )
+            )
+
+            # 3. Feature flag / catalog refresh
+            self._scheduler_service.register_job(
+                ScheduledJob(
+                    job_id="catalog_refresh",
+                    name="Feature flag and catalog refresh",
+                    func=self._scheduled_catalog_refresh,
+                    interval_seconds=sched_cfg.catalog_refresh_hours * 3600,
+                )
+            )
+
+            self._scheduler_service.start()
 
         # ---- State flags (synced from settings) ----
         self._advanced_mode = self.app_settings.general.experience_mode == "advanced"
@@ -188,10 +286,30 @@ class MainFrame(wx.Frame):
         # Disable transcript-dependent menu items initially
         self._update_menu_state()
 
+        # ---- Auto-start watch folder if configured ----
+        if (
+            self._is_feature_enabled("watch_folder")
+            and self.app_settings.watch_folder.auto_start
+            and self.app_settings.watch_folder.enabled
+        ):
+            self._watch_folder_service.start()
+
         # ---- Deferred startup update check ----
         self._startup_timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self._on_startup_timer, self._startup_timer)
         self._startup_timer.StartOnce(3000)  # Check 3 seconds after startup
+
+        # ---- Deferred What's New check ----
+        self._whats_new_timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self._on_whats_new_timer, self._whats_new_timer)
+        self._whats_new_timer.StartOnce(4000)  # 4s — after update check
+
+        # ---- Periodic trial / licence status check ----
+        self._trial_timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self._on_trial_timer, self._trial_timer)
+        # Fire every hour (3 600 000 ms) so the status bar, title, and
+        # trial countdown stay current even if the app is left running.
+        self._trial_timer.Start(3_600_000)
 
     def _update_window_title(self) -> None:
         """Update window title based on version and membership status."""
@@ -204,7 +322,7 @@ class MainFrame(wx.Frame):
 
     def _build_menu_bar(self) -> None:
         menu_bar = wx.MenuBar()
-        ff = self.feature_flags
+        enabled = self._is_feature_enabled
 
         # -- File --
         file_menu = wx.Menu()
@@ -235,7 +353,7 @@ class MainFrame(wx.Frame):
         queue_menu.Append(ID_START, "&Start Transcription\tF5", "Begin processing the queue")
         queue_menu.Append(ID_PAUSE, "&Pause\tCtrl+P", "Pause the queue")
         queue_menu.Append(ID_CANCEL, "&Cancel Selected\tDel", "Cancel the selected job")
-        if ff.is_enabled("audio_preview"):
+        if enabled("audio_preview"):
             queue_menu.Append(
                 ID_AUDIO_PREVIEW_SELECTED,
                 "Audio &Preview Selected…\tCtrl+Alt+P",
@@ -264,9 +382,13 @@ class MainFrame(wx.Frame):
         # -- Tools --
         tools_menu = wx.Menu()
         tools_menu.Append(ID_SETTINGS, "&Settings…\tCtrl+,", "Open application settings")
-        tools_menu.Append(ID_MODELS, "&Manage Models…\tCtrl+M", "Download or remove Whisper models")
+        tools_menu.Append(
+            ID_MODELS,
+            "&Manage Models…\tCtrl+M",
+            "Download or remove transcription and AI chat models",
+        )
         tools_menu.Append(ID_HARDWARE, "&Hardware Info…", "View your computer's capabilities")
-        if ff.is_enabled("audio_preview"):
+        if enabled("audio_preview"):
             tools_menu.Append(
                 ID_AUDIO_PREVIEW,
                 "Audio &Preview…\tCtrl+Shift+P",
@@ -283,44 +405,59 @@ class MainFrame(wx.Frame):
             "&AI Provider Settings…",
             "Configure AI providers for translation and summarization",
         )
-        if ff.is_enabled("plugins"):
+        if enabled("plugins"):
             tools_menu.Append(
                 ID_PLUGINS,
                 "P&lugins…",
                 "View and manage installed plugins",
             )
         tools_menu.AppendSeparator()
-        if ff.is_enabled("live_transcription"):
+        if enabled("watch_folder"):
+            self._watch_folder_item = tools_menu.AppendCheckItem(
+                ID_WATCH_FOLDER,
+                "&Watch Folder\tCtrl+W",
+                "Toggle watch folder monitoring for automatic transcription",
+            )
+            self._watch_folder_item.Check(self._watch_folder_service.is_running)
+            tools_menu.Append(
+                ID_WATCH_FOLDER_SETTINGS,
+                "Watch Folder S&ettings…",
+                "Configure the watch folder location and behaviour",
+            )
+            tools_menu.AppendSeparator()
+        else:
+            self._watch_folder_item = None
+        if enabled("live_transcription"):
             tools_menu.Append(
                 ID_LIVE_TRANSCRIPTION,
-                "&Live Transcription…\tCtrl+L",
+                "&Live Transcription…\tCtrl+Alt+L",
                 "Start real-time microphone transcription",
             )
 
         # -- AI --
         ai_menu = wx.Menu()
-        if ff.is_enabled("ai_translate"):
+        if enabled("ai_translate"):
             ai_menu.Append(
                 ID_TRANSLATE,
                 "&Translate Transcript…\tCtrl+T",
                 "Translate the current transcript using AI",
             )
-        if ff.is_enabled("multi_language_translate"):
+        if enabled("multi_language_translate"):
             ai_menu.Append(
                 ID_TRANSLATE_MULTI,
                 "Translate to &Multiple Languages…",
                 "Translate the transcript to all configured target languages",
             )
-        if ff.is_enabled("ai_translate") or ff.is_enabled("multi_language_translate"):
+        if enabled("ai_translate") or enabled("multi_language_translate"):
             ai_menu.AppendSeparator()
-        if ff.is_enabled("ai_summarize"):
+        if enabled("ai_summarize"):
             ai_menu.Append(
                 ID_SUMMARIZE,
                 "&Summarize Transcript…\tCtrl+Shift+S",
                 "Summarize the current transcript using AI",
             )
             ai_menu.AppendSeparator()
-        if ff.is_enabled("ai_chat"):
+        if enabled("ai_chat"):
             self._copilot_chat_item = ai_menu.AppendCheckItem(
                 ID_COPILOT_CHAT,
                 "&Chat with Transcript…\tCtrl+Shift+C",
@@ -328,13 +465,13 @@ class MainFrame(wx.Frame):
             )
         else:
             self._copilot_chat_item = None
-        if ff.is_enabled("copilot"):
+        if enabled("copilot"):
             ai_menu.Append(
                 ID_COPILOT_SETUP,
                 "Copilot &Setup…",
-                "Set up GitHub Copilot CLI and authentication",
+                "Sign in with GitHub and set up AI-powered transcript chat",
             )
-        if ff.is_enabled("agent_builder"):
+        if enabled("agent_builder"):
             ai_menu.Append(
                 ID_AGENT_BUILDER,
                 "&Agent Builder…",
@@ -362,6 +499,33 @@ class MainFrame(wx.Frame):
             "Automatically export each transcript when it finishes",
         )
         self._auto_export_item.Check(self._auto_export)
+        view_menu.AppendSeparator()
+
+        # Font size controls
+        view_menu.Append(
+            ID_FONT_INCREASE,
+            "Increase &Font Size\tCtrl++",
+            "Make transcript text larger",
+        )
+        view_menu.Append(
+            ID_FONT_DECREASE,
+            "&Decrease Font Size\tCtrl+-",
+            "Make transcript text smaller",
+        )
+        view_menu.Append(
+            ID_FONT_RESET,
+            "&Reset Font Size\tCtrl+0",
+            "Reset transcript text to default size",
+        )
+        view_menu.AppendSeparator()
+
+        # DND status
+        if enabled("dnd_monitor"):
+            self._dnd_status_item = view_menu.Append(
+                ID_DND_STATUS,
+                "Do Not Dis&turb Status…",
+                "View current Do Not Disturb / Focus Assist status",
+            )
 
         # -- Tools additions --
         tools_menu.AppendSeparator()
@@ -380,20 +544,42 @@ class MainFrame(wx.Frame):
             "Open the BITS website in your browser",
         )
         help_menu.AppendSeparator()
-        if ff.is_enabled("self_updater"):
+        if enabled("self_updater"):
             help_menu.Append(
                 ID_CHECK_UPDATES,
                 "Check for &Updates…",
                 "Check GitHub for a newer version",
             )
             help_menu.AppendSeparator()
+        help_menu.Append(
+            ID_WHATS_NEW,
+            "What's &New…",
+            "View recent feature changes and release notes",
+        )
+        help_menu.Append(
+            ID_BETA_SETTINGS,
+            "&Beta Programme…",
+            "Join or manage the beta testing programme",
+        )
+        help_menu.AppendSeparator()
+        help_menu.Append(
+            ID_LICENSE,
+            "&Licence…\tCtrl+Shift+L",
+            "View and manage your licence, register, purchase, or revoke",
+        )
+        help_menu.AppendSeparator()
+        help_menu.Append(
+            ID_KEYBOARD_SHORTCUTS,
+            "&Keyboard Shortcuts…\tCtrl+Shift+K",
+            "View a list of all keyboard shortcuts",
+        )
         help_menu.Append(ID_ABOUT, "&About…\tF1", f"About {APP_NAME}")
 
         menu_bar.Append(file_menu, "&File")
         menu_bar.Append(queue_menu, "&Queue")
         # Only show AI menu if at least one AI feature is enabled
         if any(
-            ff.is_enabled(f)
+            enabled(f)
             for f in (
                 "ai_translate",
                 "ai_summarize",
@@ -417,13 +603,13 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_start, id=ID_START)
         self.Bind(wx.EVT_MENU, self._on_pause, id=ID_PAUSE)
         self.Bind(wx.EVT_MENU, self._on_cancel, id=ID_CANCEL)
-        if ff.is_enabled("audio_preview"):
+        if enabled("audio_preview"):
             self.Bind(wx.EVT_MENU, self._on_audio_preview_selected, id=ID_AUDIO_PREVIEW_SELECTED)
         self.Bind(wx.EVT_MENU, self._on_clear_queue, id=ID_CLEAR_QUEUE)
         self.Bind(wx.EVT_MENU, self._on_settings, id=ID_SETTINGS)
         self.Bind(wx.EVT_MENU, self._on_models, id=ID_MODELS)
         self.Bind(wx.EVT_MENU, self._on_hardware_info, id=ID_HARDWARE)
-        if ff.is_enabled("self_updater"):
+        if enabled("self_updater"):
             self.Bind(wx.EVT_MENU, self._on_check_updates, id=ID_CHECK_UPDATES)
         self.Bind(wx.EVT_MENU, self._on_about, id=ID_ABOUT)
         self.Bind(wx.EVT_MENU, self._on_setup_wizard, id=ID_SETUP_WIZARD)
@@ -433,28 +619,41 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self._on_toggle_auto_export, id=ID_AUTO_EXPORT)
         self.Bind(wx.EVT_MENU, self._on_view_log, id=ID_VIEW_LOG)
         self.Bind(wx.EVT_MENU, self._on_add_provider, id=ID_ADD_PROVIDER)
-        if ff.is_enabled("live_transcription"):
+        if enabled("watch_folder"):
+            self.Bind(wx.EVT_MENU, self._on_toggle_watch_folder, id=ID_WATCH_FOLDER)
+            self.Bind(wx.EVT_MENU, self._on_watch_folder_settings, id=ID_WATCH_FOLDER_SETTINGS)
+        if enabled("live_transcription"):
             self.Bind(wx.EVT_MENU, self._on_live_transcription, id=ID_LIVE_TRANSCRIPTION)
         self.Bind(wx.EVT_MENU, self._on_ai_settings, id=ID_AI_SETTINGS)
-        if ff.is_enabled("ai_translate"):
+        if enabled("ai_translate"):
             self.Bind(wx.EVT_MENU, self._on_translate, id=ID_TRANSLATE)
-        if ff.is_enabled("ai_summarize"):
+        if enabled("ai_summarize"):
             self.Bind(wx.EVT_MENU, self._on_summarize, id=ID_SUMMARIZE)
-        if ff.is_enabled("plugins"):
+        if enabled("plugins"):
             self.Bind(wx.EVT_MENU, self._on_plugins, id=ID_PLUGINS)
-        if ff.is_enabled("audio_preview"):
+        if enabled("audio_preview"):
             self.Bind(wx.EVT_MENU, self._on_audio_preview, id=ID_AUDIO_PREVIEW)
-        if ff.is_enabled("copilot"):
+        if enabled("copilot"):
             self.Bind(wx.EVT_MENU, self._on_copilot_setup, id=ID_COPILOT_SETUP)
-        if ff.is_enabled("ai_chat"):
+        if enabled("ai_chat"):
             self.Bind(wx.EVT_MENU, self._on_copilot_chat, id=ID_COPILOT_CHAT)
-        if ff.is_enabled("agent_builder"):
+        if enabled("agent_builder"):
             self.Bind(wx.EVT_MENU, self._on_agent_builder, id=ID_AGENT_BUILDER)
-        if ff.is_enabled("multi_language_translate"):
+        if enabled("multi_language_translate"):
             self.Bind(wx.EVT_MENU, self._on_translate_multi, id=ID_TRANSLATE_MULTI)
         self.Bind(wx.EVT_MENU, self._on_clear_completed, id=ID_CLEAR_COMPLETED)
         self.Bind(wx.EVT_MENU, self._on_retry_failed, id=ID_RETRY_FAILED)
         self.Bind(wx.EVT_MENU, self._on_rename_selected, id=ID_RENAME)
+        self.Bind(wx.EVT_MENU, self._on_beta_settings, id=ID_BETA_SETTINGS)
+        self.Bind(wx.EVT_MENU, self._on_whats_new, id=ID_WHATS_NEW)
+        self.Bind(wx.EVT_MENU, self._on_keyboard_shortcuts, id=ID_KEYBOARD_SHORTCUTS)
+        self.Bind(wx.EVT_MENU, self._on_license, id=ID_LICENSE)
+        self.Bind(wx.EVT_MENU, self._on_find_transcript, id=ID_FIND_TRANSCRIPT)
+        if enabled("dnd_monitor"):
+            self.Bind(wx.EVT_MENU, self._on_dnd_status, id=ID_DND_STATUS)
+        self.Bind(wx.EVT_MENU, self._on_font_increase, id=ID_FONT_INCREASE)
+        self.Bind(wx.EVT_MENU, self._on_font_decrease, id=ID_FONT_DECREASE)
+        self.Bind(wx.EVT_MENU, self._on_font_reset, id=ID_FONT_RESET)
 
     def _build_accelerators(self) -> None:
         # Panel-navigation IDs (not in the menu bar)
@@ -475,7 +674,7 @@ class MainFrame(wx.Frame):
                 wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("M"), ID_MODELS),
                 wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_F1, ID_ABOUT),
                 wx.AcceleratorEntry(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("A"), ID_ADVANCED_MODE),
-                wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("L"), ID_LIVE_TRANSCRIPTION),
+                wx.AcceleratorEntry(wx.ACCEL_CTRL | wx.ACCEL_ALT, ord("L"), ID_LIVE_TRANSCRIPTION),
                 wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("T"), ID_TRANSLATE),
                 wx.AcceleratorEntry(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("S"), ID_SUMMARIZE),
                 wx.AcceleratorEntry(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("C"), ID_COPILOT_CHAT),
@@ -490,6 +689,16 @@ class MainFrame(wx.Frame):
                 wx.AcceleratorEntry(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, wx.WXK_TAB, self._id_prev_tab),
                 wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_F6, self._id_next_pane),
                 wx.AcceleratorEntry(wx.ACCEL_SHIFT, wx.WXK_F6, self._id_prev_pane),
+                # Find & shortcuts reference
+                wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("F"), ID_FIND_TRANSCRIPT),
+                wx.AcceleratorEntry(
+                    wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("K"), ID_KEYBOARD_SHORTCUTS
+                ),
+                wx.AcceleratorEntry(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("L"), ID_LICENSE),
+                # Font size
+                wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("="), ID_FONT_INCREASE),
+                wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("-"), ID_FONT_DECREASE),
+                wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("0"), ID_FONT_RESET),
             ]
         )
         self.SetAcceleratorTable(accel)
@@ -514,7 +723,26 @@ class MainFrame(wx.Frame):
         self._progress_gauge.SetValue(0)
         set_accessible_name(self._progress_gauge, "Overall progress")
 
+        # Licence status in the third field
+        self._update_licence_status_bar()
+
         self.Bind(wx.EVT_SIZE, self._on_resize_statusbar)
+
+    def _update_licence_status_bar(self) -> None:
+        """Refresh the licence summary text in the 3rd status-bar field."""
+        sb = self.GetStatusBar()
+        if not sb:
+            return
+        reg = self.registration_service
+        if reg.is_registered():
+            name = reg.get_registered_name()
+            text = f"Registered — {name}" if name else "Registered"
+        elif reg.is_trial_active():
+            days = reg.get_trial_days_remaining()
+            text = f"Trial — {days} day{'s' if days != 1 else ''} left"
+        else:
+            text = "Unregistered"
+        sb.SetStatusText(text, 2)
 
     def _on_resize_statusbar(self, event: wx.SizeEvent) -> None:
         event.Skip()
@@ -572,7 +800,7 @@ class MainFrame(wx.Frame):
 
         ai_service = AIService(self.key_store, self.app_settings.ai)
         has_provider = ai_service.is_configured()
-        chat_flag_enabled = self.feature_flags.is_enabled("ai_chat")
+        chat_flag_enabled = self._is_feature_enabled("ai_chat")
         should_show = has_provider and chat_flag_enabled
 
         if should_show and not self._chat_visible:
@@ -773,13 +1001,13 @@ class MainFrame(wx.Frame):
 
         # Export / AI items require a loaded transcript
         menu_bar.Enable(ID_EXPORT, has_transcript)
-        if self.feature_flags.is_enabled("ai_translate"):
+        if self._is_feature_enabled("ai_translate"):
             menu_bar.Enable(ID_TRANSLATE, has_transcript)
-        if self.feature_flags.is_enabled("multi_language_translate"):
+        if self._is_feature_enabled("multi_language_translate"):
             menu_bar.Enable(ID_TRANSLATE_MULTI, has_transcript)
-        if self.feature_flags.is_enabled("ai_summarize"):
+        if self._is_feature_enabled("ai_summarize"):
             menu_bar.Enable(ID_SUMMARIZE, has_transcript)
-        if self.feature_flags.is_enabled("ai_chat") and self._copilot_chat_item is not None:
+        if self._is_feature_enabled("ai_chat") and self._copilot_chat_item is not None:
             menu_bar.Enable(ID_COPILOT_CHAT, has_transcript)
         # AI Action Builder is always accessible — users create templates anytime
 
@@ -890,7 +1118,6 @@ class MainFrame(wx.Frame):
             announce_status(self, "Switch to the Queue tab to rename items")
 
     def _on_export(self, _event: wx.CommandEvent) -> None:
-
         self.transcript_panel.export_transcript()
 
     def _on_settings(self, _event: wx.CommandEvent) -> None:
@@ -1003,7 +1230,7 @@ class MainFrame(wx.Frame):
                 safe_call_after(self._update_window_title)
 
             # Only check for updates if feature flag is enabled
-            if not self.feature_flags.is_enabled("self_updater"):
+            if not self._is_feature_enabled("self_updater"):
                 return
 
             try:
@@ -1028,6 +1255,60 @@ class MainFrame(wx.Frame):
 
         threading.Thread(target=_check, daemon=True, name="startup-update").start()
 
+    # ------------------------------------------------------------------ #
+    # Periodic trial / licence status refresh                             #
+    # ------------------------------------------------------------------ #
+
+    def _on_trial_timer(self, _event: wx.TimerEvent) -> None:
+        """Hourly check — refresh title/status bar, re-verify, handle expiry.
+
+        1. Refresh window title and status bar licence text.
+        2. If the licence key needs periodic re-verification, trigger it.
+        3. Announce a warning if the trial is expiring soon.
+        4. If the trial has expired, show the welcome dialog.
+        """
+        self._update_window_title()
+        self._update_licence_status_bar()
+
+        reg = self.registration_service
+
+        # Background re-verification of licence key (24-hour interval)
+        if reg.is_registered() and reg.needs_reverification():
+            logger.info("Periodic re-verification of licence key")
+            reg.verify_key(force=True)
+            self._update_licence_status_bar()
+
+        # Trial expiry warning — gentle reminder to screen reader users
+        if reg.is_trial_expiring_soon():
+            days = reg.get_trial_days_remaining()
+            announce_status(
+                self,
+                f"Trial expires in {days} day{'s' if days != 1 else ''}."
+                " Register via Help, Licence.",
+            )
+
+        if reg.needs_activation():
+            self._trial_timer.Stop()
+            logger.info("Trial expired during session — showing welcome dialog")
+
+            from bits_whisperer.ui.welcome_dialog import (
+                WELCOME_EXIT,
+                WelcomeDialog,
+            )
+
+            dlg = WelcomeDialog(self, reg)
+            result = dlg.ShowModal()
+            dlg.Destroy()
+
+            if result == WELCOME_EXIT:
+                self.Close()
+                return
+
+            # User registered or started a new trial — refresh everything
+            self._update_window_title()
+            self._update_licence_status_bar()
+            self._trial_timer.Start(3_600_000)
+
     def _on_add_provider(self, _event: wx.CommandEvent) -> None:
         """Open the Add Provider dialog for cloud provider onboarding."""
         from bits_whisperer.ui.add_provider_dialog import AddProviderDialog
@@ -1042,6 +1323,333 @@ class MainFrame(wx.Frame):
                 "Provider activated — ready for transcription",
             )
         dlg.Destroy()
+
+    # =================================================================== #
+    # Watch folder handlers                                                 #
+    # =================================================================== #
+
+    def _on_toggle_watch_folder(self, _event: wx.CommandEvent) -> None:
+        """Toggle watch folder monitoring on/off."""
+        if self._watch_folder_service.is_running:
+            self._watch_folder_service.stop()
+            if self._watch_folder_item:
+                self._watch_folder_item.Check(False)
+            announce_status(self, "Watch folder monitoring stopped")
+        else:
+            wf = self.app_settings.watch_folder
+            if not wf.folder_path:
+                accessible_message_box(
+                    "No watch folder configured.\n\n"
+                    "Go to Tools > Watch Folder Settings to set a folder path.",
+                    "Watch Folder Not Configured",
+                    wx.OK | wx.ICON_INFORMATION,
+                    self,
+                )
+                if self._watch_folder_item:
+                    self._watch_folder_item.Check(False)
+                return
+
+            wf.enabled = True
+            self.app_settings.save()
+
+            if self._watch_folder_service.start():
+                if self._watch_folder_item:
+                    self._watch_folder_item.Check(True)
+                folder_name = Path(wf.folder_path).name
+                announce_status(
+                    self,
+                    f"Watch folder active: {folder_name}",
+                )
+            else:
+                if self._watch_folder_item:
+                    self._watch_folder_item.Check(False)
+                accessible_message_box(
+                    "Failed to start watch folder monitoring.\n\n"
+                    "Check that the folder exists and is accessible.",
+                    "Watch Folder Error",
+                    wx.OK | wx.ICON_ERROR,
+                    self,
+                )
+
+    def _on_watch_folder_settings(self, _event: wx.CommandEvent) -> None:
+        """Open the watch folder settings dialog."""
+        from bits_whisperer.ui.watch_folder_dialog import WatchFolderDialog
+
+        dlg = WatchFolderDialog(self, main_frame=self)
+        result = dlg.ShowModal()
+        if result == wx.ID_OK:
+            self.app_settings = AppSettings.load()
+            # Restart if running to pick up new settings
+            if self._watch_folder_service.is_running:
+                self._watch_folder_service._app_settings = self.app_settings
+                self._watch_folder_service.restart()
+                announce_status(self, "Watch folder settings updated and restarted")
+            else:
+                self._watch_folder_service._app_settings = self.app_settings
+                announce_status(self, "Watch folder settings saved")
+        dlg.Destroy()
+
+    def _on_watch_folder_job_queued(self, job: Job) -> None:
+        """Callback from watch folder service when a new job is queued."""
+
+        def _update_ui() -> None:
+            self.queue_panel.add_job(job)
+            announce_status(
+                self,
+                f"Watch folder: queued {job.display_name}",
+            )
+            # Tray notification when minimized
+            if not self.IsShown():
+                self._tray_icon.notify_job_complete(
+                    f"Watch folder: {job.display_name} queued",
+                )
+
+        safe_call_after(_update_ui)
+
+    def _on_watch_folder_status_change(self, running: bool) -> None:
+        """Callback when watch folder running state changes."""
+
+        def _update_ui() -> None:
+            if self._watch_folder_item:
+                self._watch_folder_item.Check(running)
+            status = "active" if running else "stopped"
+            folder = self._watch_folder_service.watch_path
+            if folder and running:
+                announce_status(
+                    self,
+                    f"Watch folder {status}: {folder.name}",
+                )
+            else:
+                announce_status(self, f"Watch folder {status}")
+
+        safe_call_after(_update_ui)
+
+    # =================================================================== #
+    # DND (Focus Assist) state change handler                               #
+    # =================================================================== #
+
+    def _on_dnd_state_change(self, event: object) -> None:
+        """Handle DND / Focus Assist state transitions.
+
+        Called from the DND monitor's background thread, so all UI
+        updates are dispatched via ``safe_call_after``.
+
+        Args:
+            event: A ``DNDEvent`` with ``current_active`` bool.
+        """
+        active: bool = getattr(event, "current_active", False)
+
+        def _update_ui() -> None:
+            dnd_cfg = self.app_settings.dnd
+            if active:
+                logger.info("DND active — pausing if configured")
+                announce_status(self, "Do Not Disturb active")
+                if hasattr(self, "_tray_icon"):
+                    self._tray_icon.set_dnd_active(True)
+                if dnd_cfg.pause_transcription:
+                    self.transcription_service.pause()
+                if dnd_cfg.show_alert_on_pause:
+                    announce_to_screen_reader("Do Not Disturb detected. Transcription paused.")
+            else:
+                logger.info("DND deactivated")
+                announce_status(self, "Do Not Disturb ended")
+                if hasattr(self, "_tray_icon"):
+                    self._tray_icon.set_dnd_active(False)
+                if dnd_cfg.auto_resume_on_dnd_off:
+                    self.transcription_service.resume()
+                    announce_to_screen_reader("Do Not Disturb ended. Transcription resumed.")
+
+        safe_call_after(_update_ui)
+
+    # =================================================================== #
+    # Scheduled maintenance tasks                                           #
+    # =================================================================== #
+
+    def _scheduled_ollama_health_check(self) -> None:
+        """Periodic Ollama daemon health check (runs on scheduler thread)."""
+        try:
+            from bits_whisperer.core.ollama_adapter import OllamaHTTPAdapter
+
+            adapter = OllamaHTTPAdapter(base_url=self.app_settings.ai.ollama_base_url)
+            status = adapter.health_check()
+            if not status.reachable:
+                logger.warning("Scheduled Ollama health check: daemon unreachable")
+        except Exception as exc:
+            logger.debug("Scheduled Ollama health check error: %s", exc)
+
+    def _scheduled_cache_prune(self) -> None:
+        """Enforce the Ollama model cache disk quota (runs on scheduler thread)."""
+        try:
+            from bits_whisperer.core.ollama_adapter import OllamaHTTPAdapter
+
+            quota_gib = self.app_settings.ai.ollama_cache_quota_gib
+            if quota_gib <= 0:
+                return
+
+            adapter = OllamaHTTPAdapter(base_url=self.app_settings.ai.ollama_base_url)
+            models = adapter.list_models()
+            if not models:
+                return
+
+            total_bytes = sum(getattr(m, "size_bytes", 0) for m in models)
+            quota_bytes = quota_gib * 1024 * 1024 * 1024
+
+            if total_bytes <= quota_bytes:
+                return
+
+            # Sort by last modified (oldest first) and prune until under quota
+            sorted_models = sorted(
+                models,
+                key=lambda m: getattr(m, "modified_at", "") or "",
+            )
+            for model in sorted_models:
+                if total_bytes <= quota_bytes:
+                    break
+                model_size = getattr(model, "size_bytes", 0)
+                model_name = getattr(model, "name", "unknown")
+                try:
+                    adapter.delete_model(model_name)
+                    total_bytes -= model_size
+                    logger.info(
+                        "Cache prune: removed '%s' (%.1f GB freed)",
+                        model_name,
+                        model_size / (1024**3),
+                    )
+                except Exception as exc:
+                    logger.warning("Cache prune: failed to remove '%s': %s", model_name, exc)
+        except Exception as exc:
+            logger.debug("Scheduled cache prune error: %s", exc)
+
+    def _scheduled_catalog_refresh(self) -> None:
+        """Refresh feature flags and model catalog (runs on scheduler thread)."""
+        try:
+            self.feature_flags.refresh()
+            logger.debug("Scheduled catalog/flag refresh complete")
+        except Exception as exc:
+            logger.debug("Scheduled catalog refresh error: %s", exc)
+
+    # =================================================================== #
+    # Beta programme & What's New handlers                                  #
+    # =================================================================== #
+
+    def _is_feature_enabled(self, feature_name: str) -> bool:
+        """Check if a feature is enabled, respecting beta mode.
+
+        Args:
+            feature_name: Feature identifier.
+
+        Returns:
+            ``True`` if enabled for the current user (general or beta).
+        """
+        if self._beta_service.is_beta_tester:
+            return self.feature_flags.is_enabled_for_beta(feature_name)
+        return self.feature_flags.is_enabled(feature_name)
+
+    def _on_beta_settings(self, _event: wx.CommandEvent) -> None:
+        """Open the Beta Programme settings dialog."""
+        from bits_whisperer.ui.beta_settings_dialog import BetaSettingsDialog
+
+        dlg = BetaSettingsDialog(self, self._beta_service, self.app_settings)
+        dlg.ShowModal()
+        dlg.Destroy()
+
+    def _on_whats_new(self, _event: wx.CommandEvent) -> None:
+        """Manually show the What's New dialog."""
+        self._show_whats_new_dialog(force=True)
+
+    def _on_whats_new_timer(self, _event: wx.TimerEvent) -> None:
+        """Deferred startup check for What's New changes."""
+        if not self.app_settings.beta.show_whats_new:
+            # User opted out — still snapshot state silently
+            self._snapshot_whats_new_state()
+            return
+        self._show_whats_new_dialog(force=False)
+
+    def _show_whats_new_dialog(self, *, force: bool) -> None:
+        """Detect feature changes and show the dialog if needed.
+
+        Args:
+            force: If ``True``, always show even if no changes.
+        """
+        is_beta = self._beta_service.is_beta_tester
+        current_flags = self.feature_flags.get_all_flags()
+        changes = self._beta_service.detect_changes(current_flags, is_beta)
+
+        if not changes and not force:
+            # Nothing new — snapshot and move on
+            self._snapshot_whats_new_state()
+            return
+
+        if not changes and force:
+            # Force-show with a "no changes" message
+            from bits_whisperer.utils.accessibility import accessible_message_box
+
+            accessible_message_box(
+                "There are no new feature changes to report.\n\nAll features are up to date.",
+                "What's New",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            return
+
+        # Fetch release notes in background then show dialog
+        import threading
+
+        def _fetch_and_show() -> None:
+            notes: dict[str, str] = {}
+            for change in changes:
+                if change.feature_name.startswith("__"):
+                    continue
+                flag = self.feature_flags.get_flag(change.feature_name)
+                url = ""
+                if flag:
+                    url = flag.release_notes_url
+                content = self._beta_service.fetch_release_notes(
+                    change.feature_name,
+                    url,
+                )
+                if content:
+                    notes[change.feature_name] = content
+
+            safe_call_after(self._display_whats_new, changes, is_beta, notes)
+
+        threading.Thread(
+            target=_fetch_and_show,
+            daemon=True,
+            name="whats-new-fetch",
+        ).start()
+
+    def _display_whats_new(
+        self,
+        changes: list,
+        is_beta: bool,
+        notes: dict[str, str],
+    ) -> None:
+        """Show the What's New dialog on the main thread."""
+        from bits_whisperer.ui.whats_new_dialog import WhatsNewDialog
+
+        dlg = WhatsNewDialog(
+            self,
+            changes,
+            is_beta=is_beta,
+            release_notes_by_feature=notes,
+        )
+        dlg.ShowModal()
+
+        if dlg.suppress_future:
+            self.app_settings.beta.show_whats_new = False
+            self.app_settings.save()
+
+        dlg.Destroy()
+
+        # Snapshot current state so we don't re-show
+        self._snapshot_whats_new_state()
+
+    def _snapshot_whats_new_state(self) -> None:
+        """Save the current feature flag state for future comparison."""
+        is_beta = self._beta_service.is_beta_tester
+        current_flags = self.feature_flags.get_all_flags()
+        self._beta_service.snapshot_current_state(current_flags, is_beta)
 
     def _on_live_transcription(self, _event: wx.CommandEvent) -> None:
         """Open the live transcription dialog."""
@@ -1175,7 +1783,7 @@ class MainFrame(wx.Frame):
                         self,
                         title="Multi-Language Translation",
                         size=(700, 500),
-                        style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+                        style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL,
                     )
                     dlg.SetMinSize((400, 300))
                     sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1304,7 +1912,7 @@ class MainFrame(wx.Frame):
                     self,
                     title=f"{action.title()} Result",
                     size=(700, 500),
-                    style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+                    style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL,
                 )
                 dlg.SetMinSize((400, 300))
                 sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1395,7 +2003,7 @@ class MainFrame(wx.Frame):
 
         dlg = wx.SingleChoiceDialog(
             self,
-            f"Found {len(plugins)} plugin(s).\n" "Select a plugin to toggle enabled/disabled:",
+            f"Found {len(plugins)} plugin(s).\nSelect a plugin to toggle enabled/disabled:",
             "Plugins",
             items,
         )
@@ -1583,7 +2191,30 @@ class MainFrame(wx.Frame):
 
         webbrowser.open("https://www.joinbits.org")
 
+    def _on_license(self, _event: wx.CommandEvent) -> None:
+        """Open the Licence management dialog."""
+        from bits_whisperer.ui.license_dialog import LicenseDialog
+
+        dlg = LicenseDialog(self, self.registration_service)
+        dlg.ShowModal()
+        dlg.Destroy()
+        # Refresh title in case status changed
+        self._update_window_title()
+
     def _on_about(self, _event: wx.CommandEvent) -> None:
+        # Build licence status summary for the About description
+        status_msg = self.registration_service.get_status_message()
+        name = self.registration_service.get_registered_name()
+        installs = self.registration_service.get_install_count()
+        licence_info = f"\n\nLicence: {status_msg}"
+        if name:
+            licence_info += f"\nRegistered to: {name}"
+        if installs:
+            licence_info += f"\nInstallations: {installs} of 3"
+        if self.registration_service.is_trial_active():
+            days = self.registration_service.get_trial_days_remaining()
+            licence_info += f"\nTrial: {days} day{'s' if days != 1 else ''} remaining"
+
         info = wx.adv.AboutDialogInfo()
         info.SetName(APP_NAME)
         info.SetVersion(APP_VERSION)
@@ -1591,10 +2222,10 @@ class MainFrame(wx.Frame):
             "A consumer-grade audio transcription application.\n\n"
             "Supports 17 cloud and on-device transcription providers, "
             "14 Whisper AI models, and 7 export formats.\n"
-            "Accessible, privacy-first, and easy to use."
+            "Accessible, privacy-first, and easy to use." + licence_info
         )
         info.SetCopyright(
-            "(C) 2025 Blind Information Technology Solutions (BITS)\n" "All rights reserved."
+            "(C) 2025 Blind Information Technology Solutions (BITS)\nAll rights reserved."
         )
         info.AddDeveloper("Blind Information Technology Solutions (BITS)")
         info.SetWebSite("https://github.com/BITSWhisperer/bits-whisperer")
@@ -1633,6 +2264,48 @@ class MainFrame(wx.Frame):
             "whose work makes this application possible."
         )
         wx.adv.AboutBox(info, self)
+
+    def _on_keyboard_shortcuts(self, _event: wx.CommandEvent) -> None:
+        """Open the Keyboard Shortcuts reference dialog."""
+        from bits_whisperer.ui.keyboard_shortcuts_dialog import KeyboardShortcutsDialog
+
+        dlg = KeyboardShortcutsDialog(self)
+        dlg.ShowModal()
+        dlg.Destroy()
+
+    def _on_find_transcript(self, _event: wx.CommandEvent) -> None:
+        """Focus the transcript search bar (Ctrl+F)."""
+        # Switch to transcript tab if not already active
+        if self._notebook.GetSelection() != self._TAB_TRANSCRIPT:
+            self._notebook.SetSelection(self._TAB_TRANSCRIPT)
+        self.transcript_panel.focus_search()
+
+    def _on_dnd_status(self, _event: wx.CommandEvent) -> None:
+        """Show a brief dialog with current DND / Focus Assist status."""
+        if self._dnd_monitor:
+            active = self._dnd_monitor.is_active
+            status = "Active (Do Not Disturb is ON)" if active else "Inactive (Normal mode)"
+            pausing = self.app_settings.dnd.pause_transcription
+            pause_text = "Transcription pauses when DND is active." if pausing else ""
+        else:
+            status = "DND monitor is not running"
+            pause_text = ""
+        msg = f"Do Not Disturb Status: {status}"
+        if pause_text:
+            msg += f"\n\n{pause_text}"
+        accessible_message_box(msg, "DND Status", wx.OK | wx.ICON_INFORMATION, self)
+
+    def _on_font_increase(self, _event: wx.CommandEvent) -> None:
+        """Increase transcript font size."""
+        self.transcript_panel.adjust_font_size(2)
+
+    def _on_font_decrease(self, _event: wx.CommandEvent) -> None:
+        """Decrease transcript font size."""
+        self.transcript_panel.adjust_font_size(-2)
+
+    def _on_font_reset(self, _event: wx.CommandEvent) -> None:
+        """Reset transcript font size to default."""
+        self.transcript_panel.reset_font_size()
 
     def _on_exit(self, _event: wx.CommandEvent) -> None:
         """Handle explicit exit (File > Exit or Alt+F4) — always truly quit."""
@@ -1736,8 +2409,7 @@ class MainFrame(wx.Frame):
                 announce_to_screen_reader(f"Error: {first_err}")
             elif failed > 0:
                 msg = (
-                    f"Batch finished: {completed} completed, "
-                    f"{failed} failed, {cancelled} cancelled"
+                    f"Batch finished: {completed} completed, {failed} failed, {cancelled} cancelled"
                 )
                 announce_status(self, msg)
                 announce_to_screen_reader(msg)
@@ -1772,7 +2444,11 @@ class MainFrame(wx.Frame):
             self._tray_icon.show_main_window()
 
     def _auto_export_transcript(self, job) -> None:
-        """Auto-export completed transcript to default format alongside audio file.
+        """Auto-export completed transcript using the configured format and location.
+
+        Respects ``OutputSettings.auto_export_format`` and
+        ``OutputSettings.auto_export_location`` instead of hard-coding
+        plain text.
 
         Args:
             job: Completed job with result.
@@ -1780,22 +2456,70 @@ class MainFrame(wx.Frame):
         if not job.result:
             return
         try:
-            from bits_whisperer.export.plain_text import PlainTextFormatter
+            fmt = self.app_settings.output.auto_export_format or "txt"
+            formatter = self._get_formatter(fmt)
 
-            audio_dir = Path(job.file_path).parent
+            location = self.app_settings.output.auto_export_location
+            if location == "output_dir":
+                base_dir = Path(self.app_settings.output.output_directory)
+            elif location == "custom" and self.app_settings.output.custom_export_dir:
+                base_dir = Path(self.app_settings.output.custom_export_dir)
+            else:
+                base_dir = Path(job.file_path).parent
+
             stem = Path(job.file_path).stem
-            out_path = audio_dir / f"{stem}.txt"
+            ext = fmt if fmt != "docx" else "docx"
+            out_path = base_dir / f"{stem}.{ext}"
 
             # Avoid overwriting — append number
             counter = 1
             while out_path.exists():
-                out_path = audio_dir / f"{stem}_{counter}.txt"
+                out_path = base_dir / f"{stem}_{counter}.{ext}"
                 counter += 1
 
-            PlainTextFormatter().export(job.result, out_path)
-            logger.info("Auto-exported: %s", out_path)
+            formatter.export(job.result, out_path)
+            logger.info("Auto-exported (%s): %s", fmt, out_path)
         except Exception as exc:
             logger.warning("Auto-export failed for %s: %s", job.display_name, exc)
+
+    @staticmethod
+    def _get_formatter(fmt: str):
+        """Return the export formatter for the given format key.
+
+        Args:
+            fmt: Format identifier (txt, md, html, docx, srt, vtt, json).
+
+        Returns:
+            An exporter instance with an ``export()`` method.
+        """
+        if fmt == "md":
+            from bits_whisperer.export.markdown import MarkdownFormatter
+
+            return MarkdownFormatter()
+        if fmt == "html":
+            from bits_whisperer.export.html_export import HtmlFormatter
+
+            return HtmlFormatter()
+        if fmt == "docx":
+            from bits_whisperer.export.word_export import WordFormatter
+
+            return WordFormatter()
+        if fmt == "srt":
+            from bits_whisperer.export.srt import SrtFormatter
+
+            return SrtFormatter()
+        if fmt == "vtt":
+            from bits_whisperer.export.vtt import VttFormatter
+
+            return VttFormatter()
+        if fmt == "json":
+            from bits_whisperer.export.json_export import JsonFormatter
+
+            return JsonFormatter()
+        # Default: plain text
+        from bits_whisperer.export.plain_text import PlainTextFormatter
+
+        return PlainTextFormatter()
 
     # =================================================================== #
     # Window close                                                          #
@@ -1867,14 +2591,34 @@ class MainFrame(wx.Frame):
         except Exception as exc:
             logger.debug("Error stopping transcription service: %s", exc)
 
-        # 2. Stop Copilot SDK (session + event loop + thread join)
+        # 2. Stop watch folder service
+        try:
+            self._watch_folder_service.stop()
+        except Exception as exc:
+            logger.debug("Error stopping watch folder service: %s", exc)
+
+        # 3. Stop Copilot SDK (session + event loop + thread join)
         if self._copilot_service:
             try:
                 self._copilot_service.stop()
             except Exception as exc:
                 logger.debug("Error stopping Copilot service: %s", exc)
 
-        # 3. Save settings to persist any unsaved changes
+        # 4. Stop DND monitor
+        if self._dnd_monitor:
+            try:
+                self._dnd_monitor.stop()
+            except Exception as exc:
+                logger.debug("Error stopping DND monitor: %s", exc)
+
+        # 5. Stop scheduler service
+        if self._scheduler_service:
+            try:
+                self._scheduler_service.stop()
+            except Exception as exc:
+                logger.debug("Error stopping scheduler service: %s", exc)
+
+        # 6. Save settings to persist any unsaved changes
         try:
             # Persist feature flag overrides back to settings
             self.app_settings.feature_flags.local_overrides = self.feature_flags.get_overrides()
@@ -1882,14 +2626,14 @@ class MainFrame(wx.Frame):
         except Exception as exc:
             logger.debug("Error saving settings on exit: %s", exc)
 
-        # 4. Remove tray icon
+        # 7. Remove tray icon
         if hasattr(self, "_tray_icon"):
             try:
                 self._tray_icon.cleanup()
             except Exception as exc:
                 logger.debug("Error cleaning up tray icon: %s", exc)
 
-        # 5. Clean up stale temp files from prior runs
+        # 8. Clean up stale temp files from prior runs
         self._cleanup_stale_temp_files()
 
         logger.info("Shutdown cleanup complete")

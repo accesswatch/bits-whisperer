@@ -1,78 +1,371 @@
 {
-  "version": 1,
-  "description": "Remote feature flags for BITS Whisperer staged rollout. Edit this file to enable/disable features across all deployed instances.",
+  "version": 2,
+  "description": "Remote feature flags for BITS Whisperer staged rollout. Edit this file to enable/disable features across all deployed instances. Schema v2 adds beta channel, release notes, and per-feature versioning.",
+  "beta": {
+    "invitations_url": "https://raw.githubusercontent.com/accesswatch/bits-whisperer/main/beta_invitations.json",
+    "welcome_message": "Welcome to the BITS Whisperer beta programme! You will receive early access to new features before they are released publicly. Your feedback helps us improve the application for everyone."
+  },
+  "licensing": {
+    "trial_days": 7,
+    "offline_grace_days": 30,
+    "reverify_hours": 24,
+    "trial_warning_days": 2,
+    "max_devices": 3,
+    "admin_message": "",
+    "purchase_url": "",
+    "trial_extension_days": 0,
+    "grace_mode_enabled": false,
+    "grace_mode_days": 7,
+    "activation_mode": "beta",
+    "tier_names": {
+      "L": "Lifetime Member",
+      "A": "Active Membership",
+      "C": "Paying Contributor",
+      "T": "Alpha Tester"
+    }
+  },
   "features": {
     "live_transcription": {
       "enabled": true,
+      "beta_enabled": true,
       "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
       "label": "Live Transcription",
-      "description": "Real-time microphone transcription using faster-whisper"
+      "description": "Real-time microphone transcription using faster-whisper",
+      "release_notes_url": "bitswhisperer://release-notes/live_transcription"
     },
     "ai_translate": {
       "enabled": true,
+      "beta_enabled": true,
       "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
       "label": "AI Translation",
-      "description": "Translate transcripts using cloud AI providers"
+      "description": "Translate transcripts using cloud AI providers",
+      "release_notes_url": "bitswhisperer://release-notes/ai_translate"
     },
     "ai_summarize": {
       "enabled": true,
+      "beta_enabled": true,
       "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
       "label": "AI Summarization",
-      "description": "Summarize transcripts using cloud AI providers"
+      "description": "Summarize transcripts using cloud AI providers",
+      "release_notes_url": "bitswhisperer://release-notes/ai_summarize"
     },
     "ai_chat": {
       "enabled": true,
+      "beta_enabled": true,
       "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
       "label": "AI Chat",
-      "description": "Interactive AI chat panel for transcript Q&A"
+      "description": "Interactive AI chat panel for transcript Q&A",
+      "release_notes_url": "bitswhisperer://release-notes/ai_chat"
     },
     "agent_builder": {
       "enabled": true,
+      "beta_enabled": true,
       "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
       "label": "Agent Builder",
-      "description": "Custom AI agent configuration builder"
+      "description": "Custom AI agent configuration builder",
+      "release_notes_url": "bitswhisperer://release-notes/agent_builder"
     },
     "audio_preview": {
       "enabled": true,
+      "beta_enabled": true,
       "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
       "label": "Audio Preview",
-      "description": "Pitch-preserving audio playback with clip-range selection"
+      "description": "Pitch-preserving audio playback with clip-range selection",
+      "release_notes_url": "bitswhisperer://release-notes/audio_preview"
     },
     "diarization": {
       "enabled": true,
+      "beta_enabled": true,
       "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
       "label": "Speaker Diarization",
-      "description": "Speaker identification and labelling in transcripts"
+      "description": "Speaker identification and labelling in transcripts",
+      "release_notes_url": "bitswhisperer://release-notes/diarization"
     },
     "plugins": {
       "enabled": true,
+      "beta_enabled": true,
       "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
       "label": "Plugin System",
-      "description": "Extensible plugin architecture for custom providers"
+      "description": "Extensible plugin architecture for custom providers",
+      "release_notes_url": "bitswhisperer://release-notes/plugins"
     },
     "copilot": {
       "enabled": true,
+      "beta_enabled": true,
       "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
       "label": "GitHub Copilot",
-      "description": "GitHub Copilot SDK integration for AI chat"
+      "description": "GitHub Copilot SDK integration for AI chat",
+      "release_notes_url": "bitswhisperer://release-notes/copilot"
     },
     "self_updater": {
       "enabled": true,
+      "beta_enabled": true,
       "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
       "label": "Self-Updater",
-      "description": "Check for and apply application updates from GitHub"
+      "description": "Check for and apply application updates from GitHub",
+      "release_notes_url": "bitswhisperer://release-notes/self_updater"
     },
     "budget_tracking": {
       "enabled": true,
+      "beta_enabled": true,
       "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
       "label": "Budget Tracking",
-      "description": "Per-provider spending limits and cost confirmation"
+      "description": "Per-provider spending limits and cost confirmation",
+      "release_notes_url": "bitswhisperer://release-notes/budget_tracking"
     },
     "multi_language_translate": {
       "enabled": true,
+      "beta_enabled": true,
       "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
       "label": "Multi-Language Translation",
-      "description": "Translate transcripts to multiple languages at once"
+      "description": "Translate transcripts to multiple languages at once",
+      "release_notes_url": "bitswhisperer://release-notes/multi_language_translate"
+    },
+    "watch_folder": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Watch Folder",
+      "description": "Automatically transcribe audio files placed in a monitored folder",
+      "release_notes_url": "bitswhisperer://release-notes/watch_folder"
+    },
+    "alpha_testing": {
+      "enabled": false,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Alpha Testing Mode",
+      "description": "Internal alpha testing mode that bypasses registration and enables all features",
+      "release_notes_url": "bitswhisperer://release-notes/alpha_testing"
+    },
+    "provider_local_whisper": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Local Whisper",
+      "description": "On-device transcription using faster-whisper (free, private)",
+      "release_notes_url": ""
+    },
+    "provider_openai_whisper": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "OpenAI Whisper API",
+      "description": "Cloud transcription via OpenAI Whisper API",
+      "release_notes_url": ""
+    },
+    "provider_google_speech": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Google Cloud Speech",
+      "description": "Cloud transcription via Google Cloud Speech-to-Text",
+      "release_notes_url": ""
+    },
+    "provider_azure_speech": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Azure Speech Services",
+      "description": "Cloud transcription via Microsoft Azure Speech Services",
+      "release_notes_url": ""
+    },
+    "provider_azure_embedded": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Azure Embedded Speech",
+      "description": "On-device transcription via Azure Embedded Speech SDK",
+      "release_notes_url": ""
+    },
+    "provider_deepgram": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Deepgram",
+      "description": "Cloud transcription via Deepgram Nova API",
+      "release_notes_url": ""
+    },
+    "provider_assemblyai": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "AssemblyAI",
+      "description": "Cloud transcription via AssemblyAI Universal model",
+      "release_notes_url": ""
+    },
+    "provider_aws_transcribe": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "AWS Transcribe",
+      "description": "Cloud transcription via Amazon Transcribe",
+      "release_notes_url": ""
+    },
+    "provider_gemini": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Google Gemini",
+      "description": "Cloud transcription via Google Gemini multimodal API",
+      "release_notes_url": ""
+    },
+    "provider_groq_whisper": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Groq Whisper",
+      "description": "Ultra-fast cloud transcription via Groq LPU inference",
+      "release_notes_url": ""
+    },
+    "provider_rev_ai": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Rev AI",
+      "description": "Cloud transcription via Rev AI speech recognition",
+      "release_notes_url": ""
+    },
+    "provider_speechmatics": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Speechmatics",
+      "description": "Cloud transcription via Speechmatics Ursa engine",
+      "release_notes_url": ""
+    },
+    "provider_elevenlabs": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "ElevenLabs",
+      "description": "Cloud transcription via ElevenLabs speech-to-text",
+      "release_notes_url": ""
+    },
+    "provider_auphonic": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Auphonic",
+      "description": "Cloud transcription via Auphonic audio processing",
+      "release_notes_url": ""
+    },
+    "provider_vosk": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Vosk",
+      "description": "Lightweight on-device transcription using Vosk/Kaldi models",
+      "release_notes_url": ""
+    },
+    "provider_parakeet": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "NVIDIA Parakeet",
+      "description": "High-accuracy on-device transcription using NVIDIA NeMo Parakeet",
+      "release_notes_url": ""
+    },
+    "provider_windows_speech": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Windows Speech Recognition",
+      "description": "Built-in Windows speech recognition (Windows only)",
+      "release_notes_url": ""
+    },
+    "provider_mai_transcribe": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "MAI-Transcribe-1",
+      "description": "Cloud transcription via Microsoft MAI-Transcribe-1 (best-in-class accuracy, 25 languages)",
+      "release_notes_url": ""
+    },
+    "ollama_native": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Ollama Native HTTP",
+      "description": "Native HTTP adapter for Ollama REST API with httpx, replacing the OpenAI-compat layer",
+      "release_notes_url": "bitswhisperer://release-notes/ollama_native"
+    },
+    "ollama_cli_fallback": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Ollama CLI Fallback",
+      "description": "Fall back to the ollama CLI when the HTTP daemon is unreachable",
+      "release_notes_url": ""
+    },
+    "ollama_model_catalog": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Ollama Model Catalog",
+      "description": "Browse and pull Ollama models from the library catalog",
+      "release_notes_url": ""
+    },
+    "model_manager_treeview": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Model Manager Tree View",
+      "description": "Multi-provider tree view in the Model Manager dialog (Whisper + Ollama)",
+      "release_notes_url": "bitswhisperer://release-notes/model_manager_treeview"
+    },
+    "dnd_monitor": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Do Not Disturb Monitor",
+      "description": "Detect system DND/Focus Assist and pause transcription automatically",
+      "release_notes_url": "bitswhisperer://release-notes/dnd_monitor"
+    },
+    "scheduler": {
+      "enabled": true,
+      "beta_enabled": true,
+      "min_version": "1.0.0",
+      "added_in_version": "1.0.0",
+      "label": "Background Scheduler",
+      "description": "Recurring background tasks for model cache pruning, health checks, and catalog refresh",
+      "release_notes_url": ""
     }
   }
 }

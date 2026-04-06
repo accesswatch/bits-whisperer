@@ -31,7 +31,7 @@ from bits_whisperer.utils.accessibility import (
     set_accessible_help,
     set_accessible_name,
 )
-from bits_whisperer.utils.constants import DATA_DIR
+from bits_whisperer.utils.constants import ALL_AI_MODELS, DATA_DIR
 
 if TYPE_CHECKING:
     from bits_whisperer.ui.main_frame import MainFrame
@@ -159,7 +159,7 @@ class AgentBuilderDialog(wx.Dialog):
             parent,
             title="AI Action Builder — Create Post-Transcription Templates",
             size=(650, 620),
-            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL,
         )
         set_accessible_name(self, "AI Action Builder")
         self.SetMinSize((540, 480))
@@ -171,6 +171,7 @@ class AgentBuilderDialog(wx.Dialog):
 
         self._build_ui()
         self._load_values()
+        wx.CallAfter(self._name_input.SetFocus)
 
     # ------------------------------------------------------------------ #
     # UI                                                                   #
@@ -309,13 +310,13 @@ class AgentBuilderDialog(wx.Dialog):
 
         model_row = wx.BoxSizer(wx.HORIZONTAL)
         model_lbl = wx.StaticText(parent, label="&Model:")
-        models = [
-            "gpt-4o",
-            "gpt-4o-mini",
-            "gpt-4-turbo",
-            "claude-sonnet-4-20250514",
-            "claude-haiku-4-20250414",
-        ]
+        # Build model list from the central registry (unique IDs)
+        seen: set[str] = set()
+        models: list[str] = []
+        for m in ALL_AI_MODELS:
+            if m.id not in seen:
+                seen.add(m.id)
+                models.append(m.id)
         self._model_choice = wx.Choice(parent, choices=models)
         set_accessible_name(self._model_choice, "Select AI model")
         label_control(model_lbl, self._model_choice)
@@ -475,6 +476,8 @@ class AgentBuilderDialog(wx.Dialog):
         remove_btn.Bind(wx.EVT_BUTTON, self._on_attach_remove)
         btn_sizer.Add(remove_btn, 0)
 
+        self._attach_list.Bind(wx.EVT_CONTEXT_MENU, self._on_attach_context_menu)
+
         sizer.Add(btn_sizer, 0, wx.LEFT | wx.BOTTOM, 8)
 
         # Tips
@@ -627,6 +630,37 @@ class AgentBuilderDialog(wx.Dialog):
     # Attachment event handlers                                            #
     # ------------------------------------------------------------------ #
 
+    def _on_attach_context_menu(self, _event: wx.ContextMenuEvent) -> None:
+        """Right-click context menu for the attachments list."""
+        menu = wx.Menu()
+        has_selection = self._attach_list.GetFirstSelected() != -1
+        has_items = self._attach_list.GetItemCount() > 0
+
+        edit_item = menu.Append(wx.ID_ANY, "&Edit Instructions…")
+        self.Bind(wx.EVT_MENU, self._on_attach_edit, edit_item)
+        edit_item.Enable(has_selection)
+
+        remove_item = menu.Append(wx.ID_ANY, "&Remove")
+        self.Bind(wx.EVT_MENU, self._on_attach_remove, remove_item)
+        remove_item.Enable(has_selection)
+
+        menu.AppendSeparator()
+
+        add_item = menu.Append(wx.ID_ANY, "&Add File…")
+        self.Bind(wx.EVT_MENU, self._on_attach_add, add_item)
+
+        remove_all = menu.Append(wx.ID_ANY, "Remove A&ll")
+        self.Bind(wx.EVT_MENU, lambda e: self._remove_all_attachments(), remove_all)
+        remove_all.Enable(has_items)
+
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def _remove_all_attachments(self) -> None:
+        """Remove all attachments from the list."""
+        self._attach_list.DeleteAllItems()
+        self._attachments_data.clear()
+
     def _on_attach_add(self, _event: wx.CommandEvent) -> None:
         """Browse for a file and add it as an attachment."""
         dlg = wx.FileDialog(
@@ -700,7 +734,7 @@ class AgentBuilderDialog(wx.Dialog):
         att = attachments[sel]
         dlg = wx.TextEntryDialog(
             self,
-            f"Instructions for '{att.name}':\n\n" f"Tell the AI how to use this document.",
+            f"Instructions for '{att.name}':\n\nTell the AI how to use this document.",
             "Edit Attachment Instructions",
             value=att.instructions,
         )

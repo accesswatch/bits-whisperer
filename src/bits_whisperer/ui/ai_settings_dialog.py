@@ -19,6 +19,7 @@ from bits_whisperer.utils.accessibility import (
     accessible_message_box,
     announce_status,
     announce_to_screen_reader,
+    label_control,
     make_panel_accessible,
     safe_call_after,
     set_accessible_help,
@@ -77,15 +78,15 @@ _AI_PROVIDERS = [
         "id": "azure_openai",
         "name": "Azure OpenAI (Copilot)",
         "description": (
-            "Microsoft Azure OpenAI Service. Use your Azure OpenAI deployment "
-            "for enterprise-grade AI features. Compatible with Copilot infrastructure."
+            "Use your Azure OpenAI service for organization-managed AI features. "
+            "Enter your service web address and deployment name below."
         ),
         "key_id": "azure_openai",
         "fields": [
             {"id": "api_key", "label": "API Key", "key_name": "azure_openai", "password": True},
             {
                 "id": "endpoint",
-                "label": "Endpoint URL",
+                "label": "Service URL",
                 "key_name": "azure_openai_endpoint",
                 "password": False,
             },
@@ -117,14 +118,14 @@ _AI_PROVIDERS = [
         "id": "copilot",
         "name": "GitHub Copilot",
         "description": (
-            "GitHub Copilot-powered AI via the Copilot CLI. Requires a GitHub "
-            "account with Copilot access. Use AI > Copilot Setup for installation."
+            "GitHub Copilot-powered AI for chat, summaries, and transcript questions. "
+            "Use AI > Copilot Setup to sign in with GitHub in your browser and finish setup."
         ),
         "key_id": "copilot",
         "fields": [
             {
                 "id": "api_key",
-                "label": "GitHub Token (PAT)",
+                "label": "GitHub Access Token",
                 "key_name": "copilot_github_token",
                 "password": True,
             },
@@ -144,14 +145,14 @@ _AI_PROVIDERS = [
         "fields": [
             {
                 "id": "endpoint",
-                "label": "Ollama Endpoint",
+                "label": "Ollama Address",
                 "key_name": "",
                 "password": False,
                 "default": "http://localhost:11434",
             },
             {
                 "id": "custom_model",
-                "label": "Custom Model (HuggingFace or Ollama)",
+                "label": "Model To Download",
                 "key_name": "",
                 "password": False,
                 "placeholder": "e.g. hf.co/user/model or custom-model:tag",
@@ -204,7 +205,7 @@ class AISettingsDialog(wx.Dialog):
             parent,
             title="AI Provider Settings",
             size=(650, 600),
-            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL,
         )
         set_accessible_name(self, "AI Provider Settings")
         self.SetMinSize((520, 460))
@@ -301,6 +302,7 @@ class AISettingsDialog(wx.Dialog):
         provider_names = [p["name"] for p in _AI_PROVIDERS]
         self._provider_choice = wx.Choice(parent, choices=provider_names)
         set_accessible_name(self._provider_choice, "Select default AI provider")
+        label_control(provider_label, self._provider_choice)
         provider_row.Add(self._provider_choice, 1, wx.ALIGN_CENTER_VERTICAL)
         sizer.Add(provider_row, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 10)
 
@@ -328,6 +330,13 @@ class AISettingsDialog(wx.Dialog):
                 txt = wx.TextCtrl(parent, style=style, size=(250, -1))
                 field_id = f"{provider['id']}_{field_def['id']}"
                 set_accessible_name(txt, f"{field_def['label']} for {provider['name']}")
+                label_control(lbl, txt)
+                if field_def.get("password"):
+                    set_accessible_help(
+                        txt,
+                        "Enter your API key for this provider. "
+                        "Keys are stored securely in your system keychain.",
+                    )
                 grid.Add(txt, 1, wx.EXPAND)
                 self._fields[field_id] = txt
 
@@ -358,6 +367,7 @@ class AISettingsDialog(wx.Dialog):
                 model_choice = wx.Choice(parent, choices=provider["models"])
                 model_field_id = f"{provider['id']}_model"
                 set_accessible_name(model_choice, f"Select {provider['name']} model")
+                label_control(model_lbl, model_choice)
                 model_row.Add(model_choice, 1, wx.ALIGN_CENTER_VERTICAL)
                 self._fields[model_field_id] = model_choice  # type: ignore[assignment]
                 box_sizer.Add(model_row, 0, wx.ALL | wx.EXPAND, 5)
@@ -387,6 +397,7 @@ class AISettingsDialog(wx.Dialog):
                         self._copilot_tier_choice,
                         "Select your Copilot subscription tier",
                     )
+                    label_control(tier_lbl, self._copilot_tier_choice)
                     set_accessible_help(
                         self._copilot_tier_choice,
                         "Choose your GitHub Copilot plan to see available models",
@@ -403,6 +414,86 @@ class AISettingsDialog(wx.Dialog):
 
                 # Ollama-specific controls
                 if provider["id"] == "ollama":
+                    # Connection mode selector
+                    mode_row = wx.BoxSizer(wx.HORIZONTAL)
+                    mode_lbl = wx.StaticText(parent, label="Connection &Mode:")
+                    set_accessible_name(mode_lbl, "Ollama connection mode")
+                    mode_row.Add(mode_lbl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+
+                    mode_choices = [
+                        "Automatic (recommended)",
+                        "Command line mode",
+                        "Custom address",
+                    ]
+                    self._ollama_mode_choice = wx.Choice(parent, choices=mode_choices)
+                    set_accessible_name(
+                        self._ollama_mode_choice,
+                        "Select Ollama connection mode",
+                    )
+                    label_control(mode_lbl, self._ollama_mode_choice)
+                    set_accessible_help(
+                        self._ollama_mode_choice,
+                        "Automatic uses the standard Ollama connection. "
+                        "Command line mode uses the installed Ollama app. "
+                        "Custom address lets you enter a different Ollama web address.",
+                    )
+                    mode_row.Add(self._ollama_mode_choice, 1, wx.ALIGN_CENTER_VERTICAL)
+                    box_sizer.Add(mode_row, 0, wx.ALL | wx.EXPAND, 5)
+
+                    # Optional app path override
+                    cli_row = wx.BoxSizer(wx.HORIZONTAL)
+                    cli_lbl = wx.StaticText(parent, label="App &Path:")
+                    set_accessible_name(cli_lbl, "Ollama app path")
+                    cli_row.Add(cli_lbl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+
+                    self._ollama_cli_path = wx.TextCtrl(parent, size=(200, -1))
+                    set_accessible_name(
+                        self._ollama_cli_path,
+                        "Ollama application path",
+                    )
+                    label_control(cli_lbl, self._ollama_cli_path)
+                    set_accessible_help(
+                        self._ollama_cli_path,
+                        "Optional path to the Ollama application. Leave blank to use "
+                        "the default installed location.",
+                    )
+                    cli_row.Add(self._ollama_cli_path, 1, wx.ALIGN_CENTER_VERTICAL)
+
+                    cli_browse = wx.Button(parent, label="&Browse\u2026")
+                    set_accessible_name(cli_browse, "Browse for the Ollama application")
+                    cli_browse.Bind(wx.EVT_BUTTON, self._on_browse_cli)
+                    cli_row.Add(cli_browse, 0, wx.LEFT, 4)
+                    box_sizer.Add(cli_row, 0, wx.ALL | wx.EXPAND, 5)
+
+                    # Default chat model (combo box: pick from downloaded or type custom)
+                    chat_row = wx.BoxSizer(wx.HORIZONTAL)
+                    chat_lbl = wx.StaticText(parent, label="Default Chat &Model:")
+                    set_accessible_name(chat_lbl, "Default chat model")
+                    chat_row.Add(chat_lbl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+
+                    self._default_chat_model = wx.ComboBox(
+                        parent,
+                        size=(200, -1),
+                        style=wx.CB_DROPDOWN,
+                    )
+                    set_accessible_name(
+                        self._default_chat_model,
+                        "Default Ollama model for chat",
+                    )
+                    label_control(chat_lbl, self._default_chat_model)
+                    set_accessible_help(
+                        self._default_chat_model,
+                        "Select a downloaded model or type a custom name. "
+                        "Leave blank to use the model selected above. "
+                        "Click Refresh Models to update the list.",
+                    )
+                    chat_row.Add(
+                        self._default_chat_model,
+                        1,
+                        wx.ALIGN_CENTER_VERTICAL,
+                    )
+                    box_sizer.Add(chat_row, 0, wx.ALL | wx.EXPAND, 5)
+
                     ollama_btn_row = wx.BoxSizer(wx.HORIZONTAL)
 
                     test_btn = wx.Button(parent, label="Test Connection")
@@ -428,7 +519,17 @@ class AISettingsDialog(wx.Dialog):
                         "e.g. hf.co/user/model for Hugging Face GGUF models.",
                     )
                     pull_btn.Bind(wx.EVT_BUTTON, self._on_ollama_pull)
-                    ollama_btn_row.Add(pull_btn, 0)
+                    ollama_btn_row.Add(pull_btn, 0, wx.RIGHT, 8)
+
+                    mm_btn = wx.Button(parent, label="&Manage Models\u2026")
+                    set_accessible_name(mm_btn, "Manage AI and transcription models")
+                    set_accessible_help(
+                        mm_btn,
+                        "Open Manage Models to browse, download, "
+                        "and manage all AI and transcription models",
+                    )
+                    mm_btn.Bind(wx.EVT_BUTTON, self._on_open_model_manager)
+                    ollama_btn_row.Add(mm_btn, 0)
 
                     box_sizer.Add(ollama_btn_row, 0, wx.ALL, 5)
 
@@ -461,6 +562,7 @@ class AISettingsDialog(wx.Dialog):
 
         self._lang_choice = wx.Choice(parent, choices=_LANGUAGES)
         set_accessible_name(self._lang_choice, "Select translation target language")
+        label_control(lang_label, self._lang_choice)
         set_accessible_help(
             self._lang_choice,
             "The language to translate transcripts into",
@@ -480,6 +582,7 @@ class AISettingsDialog(wx.Dialog):
         self._trans_tpl_ids = [t.id for t in trans_templates]
         self._trans_tpl_choice = wx.Choice(parent, choices=self._trans_tpl_names)
         set_accessible_name(self._trans_tpl_choice, "Select translation template")
+        label_control(tpl_label, self._trans_tpl_choice)
         self._trans_tpl_choice.SetSelection(0)
         tpl_row.Add(self._trans_tpl_choice, 1, wx.ALIGN_CENTER_VERTICAL)
         trans_sizer.Add(tpl_row, 0, wx.ALL | wx.EXPAND, 8)
@@ -499,6 +602,7 @@ class AISettingsDialog(wx.Dialog):
         styles = ["Concise (3-5 sentences)", "Detailed", "Bullet Points", "Meeting Minutes"]
         self._style_choice = wx.Choice(parent, choices=styles)
         set_accessible_name(self._style_choice, "Select summarization style")
+        label_control(style_label, self._style_choice)
         self._style_choice.SetSelection(0)
         style_row.Add(self._style_choice, 1, wx.ALIGN_CENTER_VERTICAL)
         summ_sizer.Add(style_row, 0, wx.ALL | wx.EXPAND, 8)
@@ -517,9 +621,10 @@ class AISettingsDialog(wx.Dialog):
 
         self._temp_spin = wx.SpinCtrlDouble(parent, min=0.0, max=2.0, inc=0.1, initial=0.3)
         set_accessible_name(self._temp_spin, "AI temperature value")
+        label_control(temp_label, self._temp_spin)
         set_accessible_help(
             self._temp_spin,
-            "Lower values produce more predictable output, higher values more creative",
+            "Controls randomness of AI responses. Lower values are more deterministic.",
         )
         temp_row.Add(self._temp_spin, 0, wx.ALIGN_CENTER_VERTICAL)
         adv_sizer.Add(temp_row, 0, wx.ALL | wx.EXPAND, 8)
@@ -531,10 +636,52 @@ class AISettingsDialog(wx.Dialog):
 
         self._tokens_spin = wx.SpinCtrl(parent, min=256, max=16384, initial=4096)
         set_accessible_name(self._tokens_spin, "Maximum response tokens")
+        label_control(tokens_label, self._tokens_spin)
+        set_accessible_help(
+            self._tokens_spin,
+            "Maximum number of tokens in the AI response",
+        )
         tokens_row.Add(self._tokens_spin, 0, wx.ALIGN_CENTER_VERTICAL)
         adv_sizer.Add(tokens_row, 0, wx.ALL | wx.EXPAND, 8)
 
         sizer.Add(adv_sizer, 0, wx.ALL | wx.EXPAND, 10)
+
+        # Do Not Disturb settings
+        dnd_box = wx.StaticBox(parent, label="Do Not Disturb")
+        set_accessible_name(dnd_box, "Do Not Disturb settings")
+        dnd_sizer = wx.StaticBoxSizer(dnd_box, wx.VERTICAL)
+
+        self._dnd_enabled = wx.CheckBox(parent, label="&Enable DND detection")
+        set_accessible_name(self._dnd_enabled, "Enable Do Not Disturb detection")
+        set_accessible_help(
+            self._dnd_enabled,
+            "When enabled, the app detects system-wide Do Not Disturb "
+            "or Focus Assist and can pause transcription automatically.",
+        )
+        dnd_sizer.Add(self._dnd_enabled, 0, wx.ALL, 8)
+
+        self._dnd_pause_transcription = wx.CheckBox(parent, label="&Pause transcription during DND")
+        set_accessible_name(
+            self._dnd_pause_transcription,
+            "Pause transcription during Do Not Disturb",
+        )
+        dnd_sizer.Add(self._dnd_pause_transcription, 0, wx.LEFT | wx.BOTTOM, 8)
+
+        self._dnd_pause_live = wx.CheckBox(parent, label="Pause &live transcription during DND")
+        set_accessible_name(
+            self._dnd_pause_live,
+            "Pause live transcription during Do Not Disturb",
+        )
+        dnd_sizer.Add(self._dnd_pause_live, 0, wx.LEFT | wx.BOTTOM, 8)
+
+        self._dnd_auto_resume = wx.CheckBox(parent, label="Auto-&resume when DND turns off")
+        set_accessible_name(
+            self._dnd_auto_resume,
+            "Auto-resume transcription when DND turns off",
+        )
+        dnd_sizer.Add(self._dnd_auto_resume, 0, wx.LEFT | wx.BOTTOM, 8)
+
+        sizer.Add(dnd_sizer, 0, wx.ALL | wx.EXPAND, 10)
 
         parent.SetSizer(sizer)
 
@@ -753,7 +900,7 @@ class AISettingsDialog(wx.Dialog):
                 if model_info.is_premium:
                     tier_note += " (Premium)"
             pricing_label.SetLabel(
-                f"Input: {in_price}  |  Output: {out_price}  |  " f"Context: {ctx}{tier_note}"
+                f"Input: {in_price}  |  Output: {out_price}  |  Context: {ctx}{tier_note}"
             )
         else:
             pricing_label.SetLabel("")
@@ -897,6 +1044,22 @@ class AISettingsDialog(wx.Dialog):
         if custom_model_field and isinstance(custom_model_field, wx.TextCtrl):
             custom_model_field.SetValue(ai.ollama_custom_model or "")
 
+        # Ollama mode, CLI path, default chat model
+        mode_map = {"http": 0, "cli": 1, "manual": 2}
+        self._ollama_mode_choice.SetSelection(mode_map.get(ai.ollama_mode, 0))
+        self._ollama_cli_path.SetValue(ai.ollama_cli_path or "")
+        self._default_chat_model.SetValue(ai.default_chat_model or "")
+
+        # Populate default chat model combo with downloaded Ollama models
+        self._refresh_chat_model_combo()
+
+        # DND settings
+        dnd = self._settings.dnd
+        self._dnd_enabled.SetValue(dnd.enabled)
+        self._dnd_pause_transcription.SetValue(dnd.pause_transcription)
+        self._dnd_pause_live.SetValue(dnd.pause_live_transcription)
+        self._dnd_auto_resume.SetValue(dnd.auto_resume_on_dnd_off)
+
     def _on_ok(self, _event: wx.CommandEvent) -> None:
         """Save settings and close."""
         ai = self._settings.ai
@@ -995,6 +1158,20 @@ class AISettingsDialog(wx.Dialog):
         if custom_model_field and isinstance(custom_model_field, wx.TextCtrl):
             ai.ollama_custom_model = custom_model_field.GetValue().strip()
 
+        # Ollama mode, CLI path, default chat model
+        mode_idx = self._ollama_mode_choice.GetSelection()
+        mode_map = {0: "http", 1: "cli", 2: "manual"}
+        ai.ollama_mode = mode_map.get(mode_idx, "http")
+        ai.ollama_cli_path = self._ollama_cli_path.GetValue().strip()
+        ai.default_chat_model = self._default_chat_model.GetValue().strip()
+
+        # DND settings
+        dnd = self._settings.dnd
+        dnd.enabled = self._dnd_enabled.GetValue()
+        dnd.pause_transcription = self._dnd_pause_transcription.GetValue()
+        dnd.pause_live_transcription = self._dnd_pause_live.GetValue()
+        dnd.auto_resume_on_dnd_off = self._dnd_auto_resume.GetValue()
+
         # Persist
         self._settings.save()
         announce_status(self._main_frame, "AI settings saved")
@@ -1084,6 +1261,26 @@ class AISettingsDialog(wx.Dialog):
         threading.Thread(target=_validate, daemon=True).start()
 
     # ------------------------------------------------------------------ #
+    # File browser handler                                                 #
+    # ------------------------------------------------------------------ #
+
+    def _on_browse_cli(self, _event: wx.CommandEvent) -> None:
+        """Browse for the Ollama CLI executable."""
+        wildcard = (
+            "Executable files (*.exe)|*.exe|All files (*.*)|*.*"
+            if wx.Platform == "__WXMSW__"
+            else "All files (*)|*"
+        )
+        with wx.FileDialog(
+            self,
+            "Select Ollama CLI Executable",
+            wildcard=wildcard,
+            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+        ) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                self._ollama_cli_path.SetValue(dlg.GetPath())
+
+    # ------------------------------------------------------------------ #
     # Ollama-specific handlers                                             #
     # ------------------------------------------------------------------ #
 
@@ -1156,7 +1353,7 @@ class AISettingsDialog(wx.Dialog):
                 if not models:
                     self._ollama_status.SetLabel("No models found — pull a model first")
                     announce_to_screen_reader(
-                        "No models found on Ollama server. " "Use Pull Model to download one."
+                        "No models found on Ollama server. Use Pull Model to download one."
                     )
                     return
 
@@ -1179,6 +1376,9 @@ class AISettingsDialog(wx.Dialog):
                     self._main_frame,
                     f"Found {count} Ollama model{'s' if count != 1 else ''}",
                 )
+
+                # Also refresh the chat model combo box
+                self._refresh_chat_model_combo()
 
             safe_call_after(_update)
 
@@ -1244,3 +1444,38 @@ class AISettingsDialog(wx.Dialog):
             safe_call_after(_show)
 
         threading.Thread(target=_pull, daemon=True).start()
+
+    def _on_open_model_manager(self, _event: wx.CommandEvent) -> None:
+        """Open the Manage Models dialog from AI settings."""
+        try:
+            self._main_frame._on_model_manager(None)
+        except Exception:
+            logger.exception("Failed to open Manage Models")
+            announce_to_screen_reader("Could not open Manage Models")
+
+    def _refresh_chat_model_combo(self) -> None:
+        """Populate the Default Chat Model combo box with downloaded Ollama models."""
+        endpoint = self._get_ollama_endpoint()
+        saved_val = self._default_chat_model.GetValue()
+
+        def _fetch() -> list[str]:
+            try:
+                from bits_whisperer.core.ai_service import OllamaAIProvider
+
+                provider = OllamaAIProvider(endpoint=endpoint)
+                return provider.list_models()
+            except Exception:
+                return []
+
+        def _update(models: list[str]) -> None:
+            self._default_chat_model.Clear()
+            for m in models:
+                self._default_chat_model.Append(m)
+            # Restore the saved value (may be typed or selected)
+            self._default_chat_model.SetValue(saved_val)
+
+        def _bg() -> None:
+            models = _fetch()
+            safe_call_after(_update, models)
+
+        threading.Thread(target=_bg, daemon=True, name="chat-model-combo").start()

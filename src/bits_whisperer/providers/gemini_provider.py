@@ -46,7 +46,7 @@ class GeminiProvider(TranscriptionProvider):
             supported_languages=["auto"],
             rate_per_minute_usd=self.RATE_PER_MINUTE,
             free_tier_description=(
-                "Generous free tier via Google AI Studio. " "Pay-as-you-go via Vertex AI."
+                "Generous free tier via Google AI Studio. Pay-as-you-go via Vertex AI."
             ),
         )
 
@@ -83,7 +83,7 @@ class GeminiProvider(TranscriptionProvider):
             import google.generativeai as genai
         except ImportError:
             raise RuntimeError(
-                "google-generativeai package not installed. " "pip install google-generativeai"
+                "google-generativeai package not installed. pip install google-generativeai"
             ) from None
 
         if not api_key:

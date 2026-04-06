@@ -1,18 +1,24 @@
-"""Model Manager dialog — download, delete, and inspect Whisper models."""
+"""Model Manager dialog — download, delete, and inspect models.
+
+Multi-provider treeview supporting Whisper (faster-whisper) and
+Ollama (local LLM) model management from a single unified dialog.
+"""
 
 from __future__ import annotations
 
 import logging
 import threading
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import wx
 
 from bits_whisperer.core.device_probe import DeviceProfile
-from bits_whisperer.core.model_manager import ModelManager
+from bits_whisperer.core.model_manager import ModelManager, UnifiedModelInfo
 from bits_whisperer.core.sdk_installer import ensure_sdk
 from bits_whisperer.utils.accessibility import (
     accessible_message_box,
+    announce_to_screen_reader,
     safe_call_after,
     set_accessible_help,
     set_accessible_name,
@@ -20,18 +26,18 @@ from bits_whisperer.utils.accessibility import (
 from bits_whisperer.utils.constants import WHISPER_MODELS, WhisperModelInfo
 from bits_whisperer.utils.platform_utils import get_free_disk_space_mb, has_sufficient_disk_space
 
+if TYPE_CHECKING:
+    from bits_whisperer.core.ollama_adapter import CancelToken
+
 logger = logging.getLogger(__name__)
 
 
 class ModelManagerDialog(wx.Dialog):
-    """Dialog for managing local Whisper models.
+    """Dialog for managing local models across all providers.
 
-    Shows all available Whisper models with:
-    - Name and plain-English description
-    - Disk size, VRAM/RAM requirements
-    - Speed/accuracy star ratings
-    - Download status and actions
-    - Hardware eligibility indicator
+    Uses a ``wx.TreeCtrl`` with provider root nodes (Whisper, Ollama)
+    and model child nodes showing status, size, and hardware eligibility.
+    Supports downloading/pulling and deleting models for each provider.
     """
 
     def __init__(
@@ -42,22 +48,28 @@ class ModelManagerDialog(wx.Dialog):
     ) -> None:
         super().__init__(
             parent,
-            title="Manage Whisper Models",
-            size=(750, 560),
-            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+            title="Manage Models",
+            size=(800, 600),
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.TAB_TRAVERSAL,
         )
         set_accessible_name(self, "Model manager dialog")
         self._mm = model_manager
         self._dp = device_profile
         self._downloading = False
         self._download_model_id: str | None = None
+        self._download_provider: str = ""
         self._expected_bytes = 0
         self._download_dir: Path | None = None
         self._progress_timer: wx.Timer | None = None
+        self._cancel_token: CancelToken | None = None
+
+        # Map tree item IDs → UnifiedModelInfo
+        self._item_map: dict[int, UnifiedModelInfo] = {}
 
         self._build_ui()
         self._populate()
         self.CentreOnParent()
+        wx.CallAfter(self._tree.SetFocus)
 
     # ------------------------------------------------------------------ #
     # Build                                                                #
@@ -70,46 +82,40 @@ class ModelManagerDialog(wx.Dialog):
         intro = wx.StaticText(
             self,
             label=(
-                "Download Whisper models for on-device transcription. "
-                "Larger models are more accurate but need more memory and disk space. "
-                "Models marked as Slow may run slowly on your hardware."
+                "Manage transcription and AI chat models. "
+                "Whisper models run on-device for transcription. "
+                "Ollama models run locally for AI chat. "
+                "Larger models need more memory and disk space."
             ),
         )
-        intro.Wrap(700)
+        intro.Wrap(760)
         set_accessible_name(intro, "Model manager instructions")
         sizer.Add(intro, 0, wx.ALL, 8)
 
         # Disk usage
         total = self._mm.get_total_disk_usage_mb()
-        self._disk_label = wx.StaticText(self, label=f"Disk usage: {total:.0f} MB")
+        self._disk_label = wx.StaticText(self, label=f"Whisper disk usage: {total:.0f} MB")
         set_accessible_name(self._disk_label, "Total disk usage")
         sizer.Add(self._disk_label, 0, wx.LEFT | wx.RIGHT, 8)
 
-        # Model list
-        self._list = wx.ListCtrl(
+        # Model tree
+        self._tree = wx.TreeCtrl(
             self,
-            style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_HRULES,
+            style=(wx.TR_DEFAULT_STYLE | wx.TR_SINGLE | wx.TR_HAS_BUTTONS | wx.TR_LINES_AT_ROOT),
         )
-        set_accessible_name(self._list, "Available Whisper models")
+        set_accessible_name(self._tree, "Available models")
         set_accessible_help(
-            self._list,
-            "List of all Whisper models. Select a model and press Download or Delete.",
+            self._tree,
+            "Tree of model providers and their models. "
+            "Select a model and press Download or Delete.",
         )
-
-        self._list.InsertColumn(0, "Model", width=170)
-        self._list.InsertColumn(1, "Status", width=90)
-        self._list.InsertColumn(2, "Size", width=75)
-        self._list.InsertColumn(3, "Speed", width=65)
-        self._list.InsertColumn(4, "Accuracy", width=75)
-        self._list.InsertColumn(5, "Hardware", width=80)
-
-        sizer.Add(self._list, 1, wx.ALL | wx.EXPAND, 8)
+        sizer.Add(self._tree, 1, wx.ALL | wx.EXPAND, 8)
 
         # Description area
         self._desc_text = wx.TextCtrl(
             self,
             style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_WORDWRAP,
-            size=(-1, 60),
+            size=(-1, 70),
         )
         set_accessible_name(self._desc_text, "Model description")
         sizer.Add(self._desc_text, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 8)
@@ -130,13 +136,28 @@ class ModelManagerDialog(wx.Dialog):
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self._dl_btn = wx.Button(self, label="&Download")
         self._del_btn = wx.Button(self, label="D&elete")
+        self._pull_btn = wx.Button(self, label="&Pull Ollama Model\u2026")
         self._close_btn = wx.Button(self, wx.ID_CLOSE, "&Close")
 
         set_accessible_name(self._dl_btn, "Download selected model")
+        set_accessible_help(
+            self._dl_btn,
+            "Download or pull the selected model for offline use",
+        )
         set_accessible_name(self._del_btn, "Delete selected model")
+        set_accessible_help(
+            self._del_btn,
+            "Remove the selected model from disk to free space",
+        )
+        set_accessible_name(self._pull_btn, "Pull an Ollama model by name")
+        set_accessible_help(
+            self._pull_btn,
+            "Enter a model name to pull from the Ollama library or Hugging Face",
+        )
 
         btn_sizer.Add(self._dl_btn, 0, wx.RIGHT, 4)
         btn_sizer.Add(self._del_btn, 0, wx.RIGHT, 4)
+        btn_sizer.Add(self._pull_btn, 0, wx.RIGHT, 4)
         btn_sizer.AddStretchSpacer()
         btn_sizer.Add(self._close_btn, 0)
 
@@ -150,9 +171,10 @@ class ModelManagerDialog(wx.Dialog):
         # Events
         self._dl_btn.Bind(wx.EVT_BUTTON, self._on_download)
         self._del_btn.Bind(wx.EVT_BUTTON, self._on_delete)
+        self._pull_btn.Bind(wx.EVT_BUTTON, self._on_pull_ollama)
         self._close_btn.Bind(wx.EVT_BUTTON, self._on_close)
-        self._list.Bind(wx.EVT_LIST_ITEM_SELECTED, self._on_select)
-        self._list.Bind(wx.EVT_LIST_ITEM_DESELECTED, self._on_deselect)
+        self._tree.Bind(wx.EVT_TREE_SEL_CHANGED, self._on_select)
+        self._tree.Bind(wx.EVT_CONTEXT_MENU, self._on_tree_context_menu)
         self.Bind(wx.EVT_CLOSE, self._on_close_event)
 
     # ------------------------------------------------------------------ #
@@ -160,97 +182,357 @@ class ModelManagerDialog(wx.Dialog):
     # ------------------------------------------------------------------ #
 
     def _populate(self, select_model_id: str | None = None) -> None:
-        """Populate the model list, optionally selecting a specific model.
+        """Populate the tree with provider roots and model children.
 
         Args:
             select_model_id: If provided, select and focus this model after populating.
         """
-        self._list.DeleteAllItems()
-        select_idx = -1
-        for i, mi in enumerate(WHISPER_MODELS):
-            idx = self._list.InsertItem(self._list.GetItemCount(), mi.name)
-            downloaded = self._mm.is_downloaded(mi.id)
-            self._list.SetItem(idx, 1, "Downloaded" if downloaded else "\u2014")
-            self._list.SetItem(idx, 2, f"{mi.disk_size_mb} MB")
-            self._list.SetItem(idx, 3, f"{mi.speed_stars} of 5")
-            self._list.SetItem(idx, 4, f"{mi.accuracy_stars} of 5")
+        self._tree.DeleteAllItems()
+        self._item_map.clear()
 
-            if mi.id in self._dp.eligible_models:
-                hw_status = "Ready"
-            elif mi.id in self._dp.warned_models:
-                hw_status = "Slow"
-            else:
-                hw_status = "Too big"
-            self._list.SetItem(idx, 5, hw_status)
+        root = self._tree.AddRoot("Models")
+        summaries = self._mm.get_provider_summaries()
+        unified = self._mm.get_unified_models()
 
-            if select_model_id and mi.id == select_model_id:
-                select_idx = i
+        select_item: wx.TreeItemId | None = None
+
+        for summary in summaries:
+            label = f"{summary.name}  ({summary.downloaded_count}/{summary.available_count})"
+            provider_item = self._tree.AppendItem(root, label)
+
+            # Add child nodes for this provider, sorted by rank descending
+            provider_models = sorted(
+                [m for m in unified if m.provider == summary.provider_id],
+                key=lambda m: m.rank_score,
+                reverse=True,
+            )
+            for model in provider_models:
+                child_label = self._format_model_label(model)
+                child = self._tree.AppendItem(provider_item, child_label)
+                self._item_map[child.GetID()] = model
+                if select_model_id and model.model_id == select_model_id:
+                    select_item = child
+
+            self._tree.Expand(provider_item)
 
         self._update_disk_label()
 
-        # Restore selection and focus
-        if select_idx >= 0:
-            self._list.Select(select_idx)
-            self._list.Focus(select_idx)
-            self._list.EnsureVisible(select_idx)
-            mi = WHISPER_MODELS[select_idx]
-            self._show_model_description(mi)
-            self._update_button_states()
+        if select_item is not None:
+            self._tree.SelectItem(select_item)
+            self._tree.EnsureVisible(select_item)
+        elif self._tree.GetChildrenCount(root) > 0:
+            # Select first provider node
+            first_child, _cookie = self._tree.GetFirstChild(root)
+            if first_child.IsOk():
+                self._tree.Expand(first_child)
+
+    def _format_model_label(self, model: UnifiedModelInfo) -> str:
+        """Create a tree item label for a model.
+
+        Args:
+            model: Unified model info.
+
+        Returns:
+            Formatted label string.
+        """
+        status = model.status.title()
+        size_str = (
+            f"{model.size_gb:.1f} GB" if model.size_gb >= 1.0 else f"{int(model.size_gb * 1024)} MB"
+        )
+
+        if model.provider == "whisper":
+            hw_label = self._whisper_hw_label(model.model_id)
+            speed = model.extra.get("speed_stars", "")
+            acc = model.extra.get("accuracy_stars", "")
+            extras = f" | Speed {speed}/5 | Accuracy {acc}/5" if speed else ""
+            return f"{model.name} — {status} — {size_str} — {hw_label}{extras}"
+
+        # Ollama and other providers
+        param = f" ({model.parameter_size})" if model.parameter_size else ""
+        return f"{model.name}{param} — {status} — {size_str}"
+
+    def _whisper_hw_label(self, model_id: str) -> str:
+        """Return a hardware eligibility label for a Whisper model.
+
+        Args:
+            model_id: Whisper model identifier.
+
+        Returns:
+            'Ready', 'Slow', or 'Too big'.
+        """
+        if model_id in self._dp.eligible_models:
+            return "Ready"
+        if model_id in self._dp.warned_models:
+            return "Slow"
+        return "Too big"
 
     def _update_disk_label(self) -> None:
         total = self._mm.get_total_disk_usage_mb()
         free = get_free_disk_space_mb(self._mm.models_dir)
-        self._disk_label.SetLabel(f"Disk usage: {total:.0f} MB  |  Free: {free:.0f} MB")
+        self._disk_label.SetLabel(f"Whisper disk usage: {total:.0f} MB  |  Free: {free:.0f} MB")
 
-    def _show_model_description(self, mi: WhisperModelInfo) -> None:
-        """Update the description area with model info."""
-        self._desc_text.SetValue(
-            f"{mi.name}\n{mi.description}\n\n"
-            f"Parameters: {mi.parameters_m}M  |  "
-            f"Min RAM: {mi.min_ram_gb} GB  |  "
-            f"Min VRAM: {mi.min_vram_gb} GB  |  "
-            f"Languages: {mi.languages}"
-        )
+    def _show_model_description(self, model: UnifiedModelInfo) -> None:
+        """Update the description area with model info.
+
+        Args:
+            model: The selected model's unified info.
+        """
+        if model.provider == "whisper":
+            mi = self._get_whisper_info(model.model_id)
+            if mi:
+                self._desc_text.SetValue(
+                    f"{mi.name}\n{mi.description}\n\n"
+                    f"Parameters: {mi.parameters_m}M  |  "
+                    f"Min RAM: {mi.min_ram_gb} GB  |  "
+                    f"Min VRAM: {mi.min_vram_gb} GB  |  "
+                    f"Languages: {mi.languages}"
+                )
+                return
+
+        # Ollama or generic
+        lines = [model.name]
+        if model.description:
+            lines.append(model.description)
+        details = []
+        if model.parameter_size:
+            details.append(f"Parameters: {model.parameter_size}")
+        if model.size_gb:
+            details.append(f"Size: {model.size_gb:.1f} GB")
+        if model.context_window:
+            details.append(f"Context: {model.context_window:,} tokens")
+        quant = model.extra.get("quantization", "")
+        if quant:
+            details.append(f"Quantization: {quant}")
+        if model.version:
+            details.append(f"Version: {model.version}")
+        if model.rank_score:
+            details.append(f"Rank: {model.rank_score:.1f}")
+        rec = model.extra.get("recommended_devices", "")
+        if rec:
+            details.append(f"Devices: {rec}")
+        if model.last_updated:
+            details.append(f"Updated: {model.last_updated}")
+        if model.disk_path:
+            details.append(f"Path: {model.disk_path}")
+        if details:
+            lines.append("\n" + "  |  ".join(details))
+        self._desc_text.SetValue("\n".join(lines))
 
     # ------------------------------------------------------------------ #
     # Events                                                               #
     # ------------------------------------------------------------------ #
 
+    def _get_selected_model(self) -> UnifiedModelInfo | None:
+        """Return the ``UnifiedModelInfo`` for the selected tree item."""
+        sel = self._tree.GetSelection()
+        if not sel.IsOk():
+            return None
+        return self._item_map.get(sel.GetID())
+
+    def _get_whisper_info(self, model_id: str) -> WhisperModelInfo | None:
+        """Look up a Whisper model by ID.
+
+        Args:
+            model_id: Whisper model identifier.
+
+        Returns:
+            WhisperModelInfo or None if not found.
+        """
+        for m in WHISPER_MODELS:
+            if m.id == model_id:
+                return m
+        return None
+
     def _update_button_states(self) -> None:
-        """Enable/disable Download and Delete buttons based on selection and model state."""
+        """Enable/disable buttons based on selection and model state."""
         if self._downloading:
             self._dl_btn.Disable()
             self._del_btn.Disable()
             return
-        idx = self._list.GetFirstSelected()
-        if idx == -1 or idx >= len(WHISPER_MODELS):
+
+        model = self._get_selected_model()
+        if not model:
             self._dl_btn.Disable()
             self._del_btn.Disable()
             return
-        mi = WHISPER_MODELS[idx]
-        downloaded = self._mm.is_downloaded(mi.id)
-        self._dl_btn.Enable(not downloaded)
-        self._del_btn.Enable(downloaded)
 
-    def _on_deselect(self, _event: wx.ListEvent) -> None:
-        """Disable action buttons when no model is selected."""
-        if not self._downloading:
+        if model.provider == "whisper":
+            downloaded = self._mm.is_downloaded(model.model_id)
+            self._dl_btn.SetLabel("&Download")
+            self._dl_btn.Enable(not downloaded)
+            self._del_btn.Enable(downloaded)
+        elif model.provider == "ollama":
+            # Ollama models listed are always downloaded
+            self._dl_btn.SetLabel("&Download")
+            self._dl_btn.Disable()
+            self._del_btn.Enable(True)
+        else:
             self._dl_btn.Disable()
             self._del_btn.Disable()
 
-    def _on_select(self, event: wx.ListEvent) -> None:
-        idx = event.GetIndex()
-        if 0 <= idx < len(WHISPER_MODELS):
-            mi = WHISPER_MODELS[idx]
-            self._show_model_description(mi)
+    def _on_tree_context_menu(self, _event: wx.ContextMenuEvent) -> None:
+        """Right-click context menu for the model tree."""
+        model = self._get_selected_model()
+        menu = wx.Menu()
+
+        if model and model.provider == "whisper":
+            downloaded = self._mm.is_downloaded(model.model_id)
+            dl_item = menu.Append(wx.ID_ANY, "&Download")
+            self.Bind(wx.EVT_MENU, self._on_download, dl_item)
+            dl_item.Enable(not downloaded and not self._downloading)
+
+            del_item = menu.Append(wx.ID_ANY, "D&elete")
+            self.Bind(wx.EVT_MENU, self._on_delete, del_item)
+            del_item.Enable(downloaded and not self._downloading)
+
+        elif model and model.provider == "ollama":
+            del_item = menu.Append(wx.ID_ANY, "D&elete from Ollama")
+            self.Bind(wx.EVT_MENU, self._on_delete, del_item)
+            del_item.Enable(not self._downloading)
+
+        menu.AppendSeparator()
+
+        pull_item = menu.Append(wx.ID_ANY, "&Pull Ollama Model\u2026")
+        self.Bind(wx.EVT_MENU, self._on_pull_ollama, pull_item)
+
+        if model:
+            menu.AppendSeparator()
+
+            details_item = menu.Append(wx.ID_ANY, "&View Details")
+            self.Bind(
+                wx.EVT_MENU,
+                lambda e, m=model: self._show_model_details(m),
+                details_item,
+            )
+
+            folder_item = menu.Append(wx.ID_ANY, "Open &Folder")
+            self.Bind(
+                wx.EVT_MENU,
+                lambda e, m=model: self._open_model_folder(m),
+                folder_item,
+            )
+            # Enable Open Folder only when a disk path is available
+            folder_item.Enable(bool(model.disk_path) or model.provider == "whisper")
+
+            copy_item = menu.Append(wx.ID_ANY, "&Copy Model ID")
+            self.Bind(
+                wx.EVT_MENU,
+                lambda e, m=model: self._copy_model_id(m),
+                copy_item,
+            )
+
+        self.PopupMenu(menu)
+        menu.Destroy()
+
+    def _copy_model_id(self, model: UnifiedModelInfo) -> None:
+        """Copy the model ID to the clipboard.
+
+        Args:
+            model: The model whose ID to copy.
+        """
+        if wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(wx.TextDataObject(model.model_id))
+            wx.TheClipboard.Close()
+            announce_to_screen_reader(f"Copied {model.model_id}")
+
+    def _show_model_details(self, model: UnifiedModelInfo) -> None:
+        """Show a dialog with full model details.
+
+        Args:
+            model: The model to inspect.
+        """
+        lines = [
+            f"Model ID: {model.model_id}",
+            f"Name: {model.name}",
+            f"Provider: {model.provider}",
+            f"Status: {model.status.title()}",
+        ]
+        if model.description:
+            lines.append(f"Description: {model.description}")
+        if model.size_gb:
+            lines.append(f"Size: {model.size_gb:.2f} GB")
+        if model.parameter_size:
+            lines.append(f"Parameters: {model.parameter_size}")
+        if model.context_window:
+            lines.append(f"Context Window: {model.context_window:,} tokens")
+        if model.version:
+            lines.append(f"Version: {model.version}")
+        if model.rank_score:
+            lines.append(f"Rank Score: {model.rank_score:.1f}")
+        rec = model.extra.get("recommended_devices", "")
+        if rec:
+            lines.append(f"Recommended Devices: {rec}")
+        if model.last_updated:
+            lines.append(f"Last Updated: {model.last_updated}")
+        if model.disk_path:
+            lines.append(f"Disk Path: {model.disk_path}")
+        quant = model.extra.get("quantization", "")
+        if quant:
+            lines.append(f"Quantization: {quant}")
+        family = model.extra.get("family", "")
+        if family:
+            lines.append(f"Family: {family}")
+        # Whisper-specific extras
+        for key, label in [
+            ("speed_stars", "Speed"),
+            ("accuracy_stars", "Accuracy"),
+            ("min_ram_gb", "Min RAM (GB)"),
+            ("min_vram_gb", "Min VRAM (GB)"),
+            ("repo_id", "HuggingFace Repo"),
+        ]:
+            val = model.extra.get(key, "")
+            if val:
+                lines.append(f"{label}: {val}")
+
+        accessible_message_box(
+            "\n".join(lines),
+            f"Model Details — {model.name}",
+            wx.OK | wx.ICON_INFORMATION,
+            self,
+        )
+
+    def _open_model_folder(self, model: UnifiedModelInfo) -> None:
+        """Open the model's disk location in the system file explorer.
+
+        Args:
+            model: The model whose folder to open.
+        """
+        import os
+        import subprocess
+
+        folder: Path | None = None
+        if model.disk_path:
+            folder = Path(model.disk_path)
+        elif model.provider == "whisper":
+            folder = self._mm.get_download_dir(model.model_id)
+
+        if folder and folder.exists():
+            if wx.Platform == "__WXMSW__":
+                os.startfile(str(folder))
+            elif wx.Platform == "__WXMAC__":
+                subprocess.Popen(["open", str(folder)], check=False)
+            else:
+                subprocess.Popen(["xdg-open", str(folder)], check=False)
+        else:
+            accessible_message_box(
+                "Could not locate the model folder on disk.",
+                "Folder Not Found",
+                wx.OK | wx.ICON_WARNING,
+                self,
+            )
+
+    def _on_select(self, _event: wx.TreeEvent) -> None:
+        """Handle tree selection change."""
+        model = self._get_selected_model()
+        if model:
+            self._show_model_description(model)
         self._update_button_states()
 
     def _on_close(self, _event: wx.CommandEvent) -> None:
         """Handle Close button press."""
         if self._downloading:
             accessible_message_box(
-                "A model download is in progress.\n\n"
-                "Please wait for it to finish before closing.",
+                "A model download is in progress.\n\nPlease wait for it to finish before closing.",
                 "Download In Progress",
                 wx.OK | wx.ICON_INFORMATION,
                 self,
@@ -262,8 +544,7 @@ class ModelManagerDialog(wx.Dialog):
         """Handle window close (X button, Alt+F4)."""
         if self._downloading and event.CanVeto():
             accessible_message_box(
-                "A model download is in progress.\n\n"
-                "Please wait for it to finish before closing.",
+                "A model download is in progress.\n\nPlease wait for it to finish before closing.",
                 "Download In Progress",
                 wx.OK | wx.ICON_INFORMATION,
                 self,
@@ -273,10 +554,71 @@ class ModelManagerDialog(wx.Dialog):
         event.Skip()
 
     def _on_download(self, _event: wx.CommandEvent) -> None:
-        idx = self._list.GetFirstSelected()
-        if idx == -1 or self._downloading:
+        """Download/pull the selected model."""
+        model = self._get_selected_model()
+        if not model or self._downloading:
             return
-        mi = WHISPER_MODELS[idx]
+
+        if model.provider == "whisper":
+            self._download_whisper(model)
+        elif model.provider == "ollama":
+            self._pull_ollama_model(model.model_id)
+
+    def _on_delete(self, _event: wx.CommandEvent) -> None:
+        """Delete the selected model."""
+        model = self._get_selected_model()
+        if not model:
+            return
+
+        if model.provider == "whisper":
+            self._delete_whisper(model)
+        elif model.provider == "ollama":
+            self._delete_ollama(model)
+
+    def _on_pull_ollama(self, _event: wx.CommandEvent) -> None:
+        """Prompt the user for an Ollama model name and pull it."""
+        if self._downloading:
+            accessible_message_box(
+                "A download is already in progress.",
+                "Download In Progress",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            return
+
+        dlg = wx.TextEntryDialog(
+            self,
+            "Enter a model name to pull from the Ollama library "
+            "or Hugging Face.\n\n"
+            "Examples:\n"
+            "  llama3.2\n"
+            "  mistral:7b-instruct\n"
+            "  hf.co/bartowski/Llama-3.2-3B-Instruct-GGUF",
+            "Pull Ollama Model",
+        )
+        set_accessible_name(dlg, "Pull Ollama model name entry")
+        if dlg.ShowModal() == wx.ID_OK:
+            name = dlg.GetValue().strip()
+            dlg.Destroy()
+            if name:
+                self._pull_ollama_model(name)
+        else:
+            dlg.Destroy()
+
+    # ------------------------------------------------------------------ #
+    # Whisper download / delete                                            #
+    # ------------------------------------------------------------------ #
+
+    def _download_whisper(self, model: UnifiedModelInfo) -> None:
+        """Download a Whisper model.
+
+        Args:
+            model: The unified model info for a Whisper model.
+        """
+        mi = self._get_whisper_info(model.model_id)
+        if not mi:
+            return
+
         if self._mm.is_downloaded(mi.id):
             accessible_message_box(
                 f"{mi.name} is already downloaded.",
@@ -286,7 +628,7 @@ class ModelManagerDialog(wx.Dialog):
             )
             return
 
-        # Ensure faster-whisper SDK is installed before downloading a model
+        # Ensure faster-whisper SDK is installed before downloading
         if not ensure_sdk("local_whisper", parent_window=self):
             return
 
@@ -305,42 +647,175 @@ class ModelManagerDialog(wx.Dialog):
             )
             return
 
-        # Enter downloading state
+        self._enter_download_state(mi.id, "whisper", mi.name)
+        self._expected_bytes = mi.disk_size_mb * 1024 * 1024
+        self._download_dir = self._mm.get_download_dir(mi.id)
+        self._start_progress_timer()
+
+        def _do_download() -> None:
+            try:
+                self._mm.download_model(mi.id)
+                safe_call_after(self._download_complete, mi.id, mi.name, True, "")
+            except Exception as exc:
+                safe_call_after(self._download_complete, mi.id, mi.name, False, str(exc))
+
+        threading.Thread(target=_do_download, daemon=True).start()
+
+    def _delete_whisper(self, model: UnifiedModelInfo) -> None:
+        """Delete a Whisper model.
+
+        Args:
+            model: The unified model info for a Whisper model.
+        """
+        mi = self._get_whisper_info(model.model_id)
+        if not mi or not self._mm.is_downloaded(mi.id):
+            return
+
+        if (
+            accessible_message_box(
+                f"Delete {mi.name} ({mi.disk_size_mb} MB)?\n\nYou can re-download it later.",
+                "Confirm Delete",
+                wx.YES_NO | wx.ICON_QUESTION,
+                self,
+            )
+            == wx.YES
+        ):
+            self._mm.delete_model(mi.id)
+            self._populate(select_model_id=mi.id)
+
+    # ------------------------------------------------------------------ #
+    # Ollama pull / delete                                                 #
+    # ------------------------------------------------------------------ #
+
+    def _pull_ollama_model(self, model_name: str) -> None:
+        """Pull an Ollama model in a background thread.
+
+        Args:
+            model_name: Model identifier to pull.
+        """
+        if not self._mm._ollama:
+            accessible_message_box(
+                "Ollama is not configured.\n\n"
+                "Set Ollama mode to 'HTTP' in AI Provider Settings "
+                "and make sure Ollama is running.",
+                "Ollama Not Available",
+                wx.OK | wx.ICON_WARNING,
+                self,
+            )
+            return
+
+        from bits_whisperer.core.ollama_adapter import CancelToken
+
+        self._cancel_token = CancelToken()
+        self._enter_download_state(model_name, "ollama", model_name)
+
+        def _do_pull() -> None:
+            try:
+
+                def _progress(pct: int) -> None:
+                    safe_call_after(self._update_pull_progress, model_name, pct)
+
+                success = self._mm.pull_ollama_model(
+                    model_name,
+                    progress_callback=lambda mid, pct: _progress(int(pct)),
+                    cancel_token=self._cancel_token,
+                )
+                safe_call_after(
+                    self._download_complete,
+                    model_name,
+                    model_name,
+                    success,
+                    "" if success else "Pull failed or was cancelled",
+                )
+            except Exception as exc:
+                safe_call_after(self._download_complete, model_name, model_name, False, str(exc))
+
+        threading.Thread(target=_do_pull, daemon=True).start()
+
+    def _update_pull_progress(self, model_name: str, pct: int) -> None:
+        """Update the progress UI during an Ollama pull.
+
+        Args:
+            model_name: Name of the model being pulled.
+            pct: Progress percentage (0-100).
+        """
+        if not self._downloading:
+            return
+        clamped = min(pct, 99)
+        self._progress.SetValue(clamped)
+        self._progress_label.SetLabel(f"Pulling {model_name}\u2026 {clamped}%")
+
+    def _delete_ollama(self, model: UnifiedModelInfo) -> None:
+        """Delete an Ollama model.
+
+        Args:
+            model: The unified model info for an Ollama model.
+        """
+        size_str = (
+            f"{model.size_gb:.1f} GB" if model.size_gb >= 1.0 else f"{int(model.size_gb * 1024)} MB"
+        )
+        if (
+            accessible_message_box(
+                f"Delete Ollama model '{model.name}' ({size_str})?\n\n"
+                "You can re-pull it later from ollama.com.",
+                "Confirm Delete",
+                wx.YES_NO | wx.ICON_QUESTION,
+                self,
+            )
+            == wx.YES
+        ):
+            success = self._mm.delete_ollama_model(model.model_id)
+            if success:
+                announce_to_screen_reader(f"Deleted {model.name}")
+            else:
+                accessible_message_box(
+                    f"Failed to delete '{model.name}'.",
+                    "Delete Failed",
+                    wx.OK | wx.ICON_ERROR,
+                    self,
+                )
+            self._populate()
+
+    # ------------------------------------------------------------------ #
+    # Download state helpers                                               #
+    # ------------------------------------------------------------------ #
+
+    def _enter_download_state(
+        self,
+        model_id: str,
+        provider: str,
+        display_name: str,
+    ) -> None:
+        """Switch the dialog into downloading mode.
+
+        Args:
+            model_id: Identifier of the model being downloaded.
+            provider: Provider identifier (``'whisper'`` or ``'ollama'``).
+            display_name: Human-readable model name.
+        """
         self._downloading = True
-        self._download_model_id = mi.id
+        self._download_model_id = model_id
+        self._download_provider = provider
         self._dl_btn.Disable()
         self._del_btn.Disable()
         self._close_btn.Disable()
+        self._pull_btn.Disable()
 
-        # Show progress UI with determinate progress
         self._progress.SetValue(0)
         self._progress.Show()
-        self._progress_label.SetLabel(f"Downloading {mi.name}\u2026 0%")
+        verb = "Pulling" if provider == "ollama" else "Downloading"
+        self._progress_label.SetLabel(f"{verb} {display_name}\u2026 0%")
         self._progress_label.Show()
         self._desc_text.SetValue(
-            f"Downloading {mi.name}\u2026\n" "This may take a few minutes for larger models."
+            f"{verb} {display_name}\u2026\nThis may take a few minutes for larger models."
         )
         self.Layout()
 
-        # Update the list status column to show downloading
-        self._list.SetItem(idx, 1, "Downloading")
-
-        # Start progress monitoring timer (poll download dir size)
-        self._expected_bytes = mi.disk_size_mb * 1024 * 1024
-        self._download_dir = self._mm.get_download_dir(mi.id)
+    def _start_progress_timer(self) -> None:
+        """Start the timer that polls Whisper download directory size."""
         self._progress_timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self._on_progress_tick, self._progress_timer)
         self._progress_timer.Start(500)
-
-        def _do_download():
-            try:
-                self._mm.download_model(mi.id)
-                safe_call_after(self._download_complete, mi, True, "")
-            except Exception as exc:
-                safe_call_after(self._download_complete, mi, False, str(exc))
-
-        t = threading.Thread(target=_do_download, daemon=True)
-        t.start()
 
     def _on_progress_tick(self, _event: wx.TimerEvent) -> None:
         """Poll download directory size and update progress UI."""
@@ -360,74 +835,52 @@ class ModelManagerDialog(wx.Dialog):
                 pct = 0
 
             self._progress.SetValue(pct)
-            mi_name = ""
-            if self._download_model_id:
-                for m in WHISPER_MODELS:
-                    if m.id == self._download_model_id:
-                        mi_name = m.name
-                        break
-            self._progress_label.SetLabel(f"Downloading {mi_name}\u2026 {pct}%")
+            name = self._download_model_id or ""
+            self._progress_label.SetLabel(f"Downloading {name}\u2026 {pct}%")
         except Exception:
-            # Directory might be in flux during download; ignore transient errors
             pass
 
-    def _download_complete(self, mi: WhisperModelInfo, success: bool, error: str) -> None:
-        """Handle download completion on the UI thread."""
+    def _download_complete(
+        self,
+        model_id: str,
+        display_name: str,
+        success: bool,
+        error: str,
+    ) -> None:
+        """Handle download/pull completion on the UI thread.
+
+        Args:
+            model_id: Model identifier.
+            display_name: Human-readable model name.
+            success: Whether the operation succeeded.
+            error: Error message (empty on success).
+        """
         # Stop progress timer
         if self._progress_timer:
             self._progress_timer.Stop()
             self._progress_timer = None
 
-        # Exit downloading state
         self._downloading = False
         self._download_model_id = None
+        self._download_provider = ""
+        self._cancel_token = None
 
-        # Hide progress UI
         self._progress.SetValue(100 if success else 0)
         self._progress.Hide()
         self._progress_label.Hide()
-
-        # Re-enable close button
         self._close_btn.Enable()
+        self._pull_btn.Enable()
 
-        # Refresh list and restore selection to this model
-        self._populate(select_model_id=mi.id)
+        self._populate(select_model_id=model_id)
 
         if success:
-            # Inline success feedback — no dialog interruption
-            self._desc_text.SetValue(
-                f"\u2713 {mi.name} downloaded successfully!\n\n"
-                f"{mi.description}\n\n"
-                f"Parameters: {mi.parameters_m}M  |  "
-                f"Min RAM: {mi.min_ram_gb} GB  |  "
-                f"Min VRAM: {mi.min_vram_gb} GB  |  "
-                f"Languages: {mi.languages}"
-            )
-            logger.info("Model '%s' downloaded successfully.", mi.id)
+            self._desc_text.SetValue(f"\u2713 {display_name} downloaded successfully!")
+            logger.info("Model '%s' downloaded successfully.", model_id)
+            announce_to_screen_reader(f"{display_name} downloaded successfully")
         else:
             accessible_message_box(
-                f"Failed to download {mi.name}:\n{error}",
+                f"Failed to download {display_name}:\n{error}",
                 "Download Failed",
                 wx.OK | wx.ICON_ERROR,
                 self,
             )
-
-    def _on_delete(self, _event: wx.CommandEvent) -> None:
-        idx = self._list.GetFirstSelected()
-        if idx == -1:
-            return
-        mi = WHISPER_MODELS[idx]
-        if not self._mm.is_downloaded(mi.id):
-            return
-
-        if (
-            accessible_message_box(
-                f"Delete {mi.name} ({mi.disk_size_mb} MB)?\n\n" "You can re-download it later.",
-                "Confirm Delete",
-                wx.YES_NO | wx.ICON_QUESTION,
-                self,
-            )
-            == wx.YES
-        ):
-            self._mm.delete_model(mi.id)
-            self._populate(select_model_id=mi.id)

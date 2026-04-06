@@ -104,8 +104,7 @@ class ParakeetProvider(TranscriptionProvider):
                     "'Install SDK' to download it automatically."
                 ) from None
             raise RuntimeError(
-                "nemo_toolkit[asr] is not installed. "
-                "Install it with: pip install nemo_toolkit[asr]"
+                "nemo_toolkit[asr] is not installed. Install it with: pip install nemo_toolkit[asr]"
             ) from None
 
         # Resolve model info
@@ -168,7 +167,7 @@ class ParakeetProvider(TranscriptionProvider):
                 )
         except Exception as exc:
             raise RuntimeError(
-                f"Parakeet transcription failed for '{Path(audio_path).name}'.\n\n" f"Error: {exc}"
+                f"Parakeet transcription failed for '{Path(audio_path).name}'.\n\nError: {exc}"
             ) from exc
 
         if progress_callback:

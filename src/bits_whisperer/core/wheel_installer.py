@@ -443,14 +443,14 @@ class WheelInstaller:
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             if status == 404:
-                raise RuntimeError(f"Package '{package_name}' " "not found on PyPI.") from exc
+                raise RuntimeError(f"Package '{package_name}' not found on PyPI.") from exc
             raise RuntimeError(f"PyPI request failed for '{package_name}': HTTP {status}") from exc
         except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
             raise RuntimeError(
                 "Cannot reach PyPI (pypi.org). Check your internet connection."
             ) from exc
         except Exception as exc:
-            raise RuntimeError(f"Failed to query PyPI for " f"'{package_name}': {exc}") from exc
+            raise RuntimeError(f"Failed to query PyPI for '{package_name}': {exc}") from exc
 
     def _pick_wheel(
         self,
@@ -573,11 +573,11 @@ class WheelInstaller:
                         f.write(chunk)
         except Exception as exc:
             dest.unlink(missing_ok=True)
-            raise RuntimeError(f"Download failed: {filename}: " f"{exc}") from exc
+            raise RuntimeError(f"Download failed: {filename}: {exc}") from exc
 
         if not zipfile.is_zipfile(dest):
             dest.unlink(missing_ok=True)
-            raise RuntimeError(f"Downloaded file is not a valid " f"wheel: {filename}")
+            raise RuntimeError(f"Downloaded file is not a valid wheel: {filename}")
 
         return dest
 

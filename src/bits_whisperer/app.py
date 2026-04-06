@@ -52,6 +52,16 @@ class BitsWhispererApp(wx.App):
 
         self.SetAppName(APP_NAME)
 
+        # Single-instance check — prevent duplicate processes
+        self._instance_checker = wx.SingleInstanceChecker(f"{APP_NAME}-{wx.GetUserId()}")
+        if self._instance_checker.IsAnotherRunning():
+            wx.MessageBox(
+                f"{APP_NAME} is already running.\n\nOnly one instance can run at a time.",
+                APP_NAME,
+                wx.OK | wx.ICON_INFORMATION,
+            )
+            return False
+
         # First-run setup wizard
         from bits_whisperer.ui.setup_wizard import SetupWizard, needs_wizard
 
@@ -68,6 +78,41 @@ class BitsWhispererApp(wx.App):
         for dep, ok in dep_status.items():
             if not ok:
                 logger.warning("Dependency '%s' is not available", dep)
+
+        # ---- Licence / trial activation gate ----
+        from bits_whisperer.core.feature_flags import FeatureFlagService
+        from bits_whisperer.core.registration_service import BITS_RegistrationService
+        from bits_whisperer.storage.key_store import KeyStore
+
+        key_store = KeyStore()
+        feature_flags = FeatureFlagService()
+        feature_flags.refresh()
+        reg_service = BITS_RegistrationService(key_store, feature_flag_service=feature_flags)
+
+        if reg_service.needs_activation():
+            from bits_whisperer.core.beta_service import BetaService
+            from bits_whisperer.core.member_verification import MemberVerificationService
+            from bits_whisperer.ui.welcome_dialog import (
+                WELCOME_EXIT,
+                WelcomeDialog,
+            )
+
+            beta_service = BetaService(key_store=key_store)
+            member_service = MemberVerificationService(key_store=key_store)
+            logger.info("No active licence or trial — showing welcome dialog")
+            dlg = WelcomeDialog(
+                None,
+                reg_service,
+                beta_service=beta_service,
+                member_service=member_service,
+                activation_mode=reg_service.activation_mode,
+            )
+            result = dlg.ShowModal()
+            dlg.Destroy()
+
+            if result == WELCOME_EXIT:
+                logger.info("User chose to exit from welcome dialog")
+                return False
 
         # Import here to avoid circular imports with wx startup
         from bits_whisperer.ui.main_frame import MainFrame

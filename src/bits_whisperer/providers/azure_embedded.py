@@ -189,7 +189,7 @@ class AzureEmbeddedSpeechProvider(TranscriptionProvider):
             if evt.result.reason == speechsdk.ResultReason.Canceled:
                 cancellation = speechsdk.CancellationDetails(evt.result)
                 if cancellation.reason == speechsdk.CancellationReason.Error:
-                    cancel_error = f"Embedded recognition error: " f"{cancellation.error_details}"
+                    cancel_error = f"Embedded recognition error: {cancellation.error_details}"
                     logger.error(cancel_error)
                 else:
                     logger.warning(

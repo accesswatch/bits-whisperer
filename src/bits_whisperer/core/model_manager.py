@@ -1,38 +1,220 @@
-"""Model manager — download, cache, and manage Whisper models locally."""
+"""Model manager — download, cache, and manage Whisper + Ollama models locally.
+
+Supports multiple model providers:
+- **Whisper**: faster-whisper models from HuggingFace Hub.
+- **Ollama**: local LLM models pulled via Ollama daemon/CLI.
+- **Vosk**: Kaldi-based offline speech models.
+- **Parakeet**: NVIDIA NeMo ASR models.
+
+The manager provides a unified interface for listing, downloading,
+deleting, and querying models across all providers, plus hardware-
+aware ranking via :class:`DeviceProbe`.
+"""
 
 from __future__ import annotations
 
 import logging
 import shutil
 from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from bits_whisperer.utils.constants import MODELS_DIR, WHISPER_MODELS, WhisperModelInfo
 from bits_whisperer.utils.platform_utils import get_free_disk_space_mb, has_sufficient_disk_space
+
+if TYPE_CHECKING:
+    from bits_whisperer.core.ollama_adapter import (
+        CancelToken,
+        OllamaHTTPAdapter,
+        OllamaModelMetadata,
+    )
 
 logger = logging.getLogger(__name__)
 
 DownloadCallback = Callable[[str, float], None]  # (model_id, progress 0–100)
 
 
-class ModelManager:
-    """Manage local Whisper model downloads and cache.
+# ---------------------------------------------------------------------------
+# Unified model info wrapper
+# ---------------------------------------------------------------------------
 
-    Models are stored in the app data directory under ``models/``.
-    Each model gets its own subdirectory matching its repo_id basename.
+
+@dataclass
+class UnifiedModelInfo:
+    """Provider-agnostic model information for the Model Manager UI."""
+
+    provider: str  # "whisper", "ollama", "vosk", "parakeet"
+    model_id: str
+    name: str
+    description: str = ""
+    status: str = "available"  # "available", "downloaded", "downloading", "error"
+    size_gb: float = 0.0
+    context_window: int = 0
+    parameter_size: str = ""
+    rank_score: float = 0.0
+    disk_path: str = ""
+    version: str = ""
+    last_updated: str = ""
+    extra: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ProviderSummary:
+    """Summary of a model provider for the treeview root nodes."""
+
+    provider_id: str
+    name: str
+    description: str = ""
+    downloaded_count: int = 0
+    available_count: int = 0
+
+
+class ModelManager:
+    """Manage local model downloads and cache across all providers.
+
+    Supports Whisper models (downloaded via faster-whisper from
+    HuggingFace Hub) and Ollama models (pulled via the native HTTP
+    adapter or CLI).  Provides a unified interface for listing,
+    downloading/pulling, deleting, and querying models.
+
+    Models are stored in the app data directory under ``models/``
+    (Whisper) or managed by the Ollama daemon (Ollama).
     """
 
-    def __init__(self, models_dir: Path = MODELS_DIR) -> None:
+    def __init__(
+        self,
+        models_dir: Path = MODELS_DIR,
+        ollama_adapter: OllamaHTTPAdapter | None = None,
+    ) -> None:
         self._models_dir = models_dir
         self._models_dir.mkdir(parents=True, exist_ok=True)
+        self._ollama: OllamaHTTPAdapter | None = ollama_adapter
 
     @property
     def models_dir(self) -> Path:
         """Return the directory where models are stored."""
         return self._models_dir
 
+    def set_ollama_adapter(self, adapter: OllamaHTTPAdapter | None) -> None:
+        """Attach or replace the Ollama adapter at runtime.
+
+        Args:
+            adapter: An ``OllamaHTTPAdapter`` instance, or ``None`` to detach.
+        """
+        self._ollama = adapter
+
     # ------------------------------------------------------------------
-    # Queries
+    # Provider summaries (for treeview root nodes)
+    # ------------------------------------------------------------------
+
+    def get_provider_summaries(self) -> list[ProviderSummary]:
+        """Return a summary for each model provider.
+
+        Returns:
+            List of ProviderSummary objects in display order.
+        """
+        summaries: list[ProviderSummary] = []
+
+        # Whisper
+        whisper_dl = sum(1 for m in WHISPER_MODELS if self.is_downloaded(m.id))
+        summaries.append(
+            ProviderSummary(
+                provider_id="whisper",
+                name="Whisper (faster-whisper)",
+                description="On-device transcription models from HuggingFace",
+                downloaded_count=whisper_dl,
+                available_count=len(WHISPER_MODELS),
+            )
+        )
+
+        # Ollama
+        try:
+            ollama_models = self.list_ollama_models()
+            summaries.append(
+                ProviderSummary(
+                    provider_id="ollama",
+                    name="Ollama (Local LLM)",
+                    description="AI chat models running locally via Ollama",
+                    downloaded_count=len(ollama_models),
+                    available_count=len(ollama_models),
+                )
+            )
+        except Exception:
+            summaries.append(
+                ProviderSummary(
+                    provider_id="ollama",
+                    name="Ollama (Local LLM)",
+                    description="Ollama daemon not reachable",
+                    downloaded_count=0,
+                    available_count=0,
+                )
+            )
+
+        return summaries
+
+    # ------------------------------------------------------------------
+    # Unified model listing
+    # ------------------------------------------------------------------
+
+    def get_unified_models(self, provider: str = "") -> list[UnifiedModelInfo]:
+        """Return models as ``UnifiedModelInfo`` for the treeview.
+
+        Args:
+            provider: Filter by provider ID (empty = all providers).
+
+        Returns:
+            List of UnifiedModelInfo objects.
+        """
+        result: list[UnifiedModelInfo] = []
+
+        if not provider or provider == "whisper":
+            for m in WHISPER_MODELS:
+                downloaded = self.is_downloaded(m.id)
+                result.append(
+                    UnifiedModelInfo(
+                        provider="whisper",
+                        model_id=m.id,
+                        name=m.name,
+                        description=m.description,
+                        status="downloaded" if downloaded else "available",
+                        size_gb=round(m.disk_size_mb / 1024, 2),
+                        parameter_size=f"{m.parameters_m}M",
+                        extra={
+                            "speed_stars": str(m.speed_stars),
+                            "accuracy_stars": str(m.accuracy_stars),
+                            "min_ram_gb": str(m.min_ram_gb),
+                            "min_vram_gb": str(m.min_vram_gb),
+                            "repo_id": m.repo_id,
+                        },
+                    )
+                )
+
+        if not provider or provider == "ollama":
+            for m in self.list_ollama_models():
+                result.append(
+                    UnifiedModelInfo(
+                        provider="ollama",
+                        model_id=m.model_id,
+                        name=m.name,
+                        description=f"{m.family} {m.parameter_size}".strip(),
+                        status="downloaded",
+                        size_gb=m.size_gb,
+                        parameter_size=m.parameter_size,
+                        context_window=m.context_window,
+                        version=m.digest[:12] if m.digest else "",
+                        last_updated=m.modified_at,
+                        extra={
+                            "quantization": m.quantization,
+                            "family": m.family,
+                        },
+                    )
+                )
+
+        return result
+
+    # ------------------------------------------------------------------
+    # Whisper queries
     # ------------------------------------------------------------------
 
     def list_available_models(self) -> list[WhisperModelInfo]:
@@ -52,7 +234,7 @@ class ModelManager:
         return downloaded
 
     def is_downloaded(self, model_id: str) -> bool:
-        """Check whether a model is cached locally.
+        """Check whether a Whisper model is cached locally.
 
         Args:
             model_id: Whisper model identifier (e.g. 'small', 'large-v3').
@@ -71,7 +253,7 @@ class ModelManager:
         return any(model_dir.glob("*.bin")) or any(model_dir.glob("config.json"))
 
     def get_model_path(self, model_id: str) -> Path | None:
-        """Return the local path for a downloaded model.
+        """Return the local path for a downloaded Whisper model.
 
         Args:
             model_id: Whisper model identifier.
@@ -86,7 +268,7 @@ class ModelManager:
         return snapshot if snapshot else model_dir
 
     def get_disk_usage(self) -> dict[str, int]:
-        """Return disk usage per downloaded model in bytes.
+        """Return disk usage per downloaded Whisper model in bytes.
 
         Returns:
             Dict mapping model_id to size in bytes.
@@ -100,12 +282,12 @@ class ModelManager:
         return usage
 
     def get_total_disk_usage_mb(self) -> float:
-        """Return total disk space used by all models in megabytes."""
+        """Return total disk space used by all Whisper models in megabytes."""
         total = sum(self.get_disk_usage().values())
         return round(total / (1024 * 1024), 1)
 
     def get_download_dir(self, model_id: str) -> Path:
-        """Return the expected download directory for a model.
+        """Return the expected download directory for a Whisper model.
 
         This is useful for monitoring download progress by observing
         directory size growth.
@@ -119,7 +301,47 @@ class ModelManager:
         return self._model_dir(model_id)
 
     # ------------------------------------------------------------------
-    # Download / Delete
+    # Ollama queries
+    # ------------------------------------------------------------------
+
+    def list_ollama_models(self) -> list[OllamaModelMetadata]:
+        """List models available in the local Ollama instance.
+
+        Returns:
+            List of ``OllamaModelMetadata`` (empty if adapter is not set
+            or Ollama is unreachable).
+        """
+        if not self._ollama:
+            return []
+        try:
+            return self._ollama.list_models()
+        except Exception:
+            logger.debug("Failed to list Ollama models", exc_info=True)
+            return []
+
+    def is_ollama_model_downloaded(self, model_id: str) -> bool:
+        """Check whether an Ollama model is pulled locally.
+
+        Args:
+            model_id: Model identifier (e.g. ``llama3.2``).
+
+        Returns:
+            True if the model is listed by the Ollama daemon.
+        """
+        return any(m.model_id == model_id for m in self.list_ollama_models())
+
+    def get_ollama_model_names(self) -> list[str]:
+        """Return just the model name strings for Ollama.
+
+        Convenient for populating dropdown choices.
+
+        Returns:
+            List of model ID strings.
+        """
+        return [m.model_id for m in self.list_ollama_models()]
+
+    # ------------------------------------------------------------------
+    # Whisper download / delete
     # ------------------------------------------------------------------
 
     def download_model(
@@ -191,13 +413,13 @@ class ModelManager:
                     "'Install SDK' to download it automatically."
                 ) from None
             raise RuntimeError(
-                "faster-whisper is not installed. " "Install it with: pip install faster-whisper"
+                "faster-whisper is not installed. Install it with: pip install faster-whisper"
             ) from None
         except Exception as exc:
             raise RuntimeError(f"Failed to download model '{model_id}': {exc}") from exc
 
     def delete_model(self, model_id: str) -> bool:
-        """Delete a downloaded model from disk.
+        """Delete a downloaded Whisper model from disk.
 
         Args:
             model_id: Whisper model identifier.
@@ -213,11 +435,56 @@ class ModelManager:
         return False
 
     # ------------------------------------------------------------------
-    # Internal
+    # Ollama pull / delete
     # ------------------------------------------------------------------
 
+    def pull_ollama_model(
+        self,
+        model_id: str,
+        progress_callback: DownloadCallback | None = None,
+        cancel_token: CancelToken | None = None,
+    ) -> bool:
+        """Pull (download) an Ollama model.
+
+        Args:
+            model_id: Model identifier (e.g. ``llama3.2``).
+            progress_callback: Optional ``(model_id, progress %)`` callback.
+            cancel_token: Optional cancellation token.
+
+        Returns:
+            True if the pull completed successfully.
+
+        Raises:
+            RuntimeError: If the Ollama adapter is not configured.
+        """
+        if not self._ollama:
+            raise RuntimeError(
+                "Ollama adapter not configured. Enable Ollama in AI Provider Settings."
+            )
+
+        def _pct_cb(pct: int) -> None:
+            if progress_callback:
+                progress_callback(model_id, float(pct))
+
+        return self._ollama.pull_model(model_id, progress_cb=_pct_cb, cancel_token=cancel_token)
+
+    def delete_ollama_model(self, model_id: str) -> bool:
+        """Delete an Ollama model from the local daemon.
+
+        Args:
+            model_id: Model identifier to delete.
+
+        Returns:
+            True if deletion succeeded, False otherwise.
+        """
+        if not self._ollama:
+            return False
+        return self._ollama.delete_model(model_id)
+
+    # ── Internal (Whisper) ──────────────────────────────────────────
+
     def _model_dir(self, model_id: str) -> Path:
-        """Compute the local directory for a model.
+        """Compute the local directory for a Whisper model.
 
         Uses HuggingFace Hub cache naming convention (``models--org--repo``).
 
@@ -250,7 +517,7 @@ class ModelManager:
         return None
 
     def _get_model_info(self, model_id: str) -> WhisperModelInfo:
-        """Look up model metadata.
+        """Look up Whisper model metadata.
 
         Args:
             model_id: Whisper model identifier.

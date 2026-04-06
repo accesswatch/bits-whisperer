@@ -25,16 +25,31 @@ _KEY_NAMES: dict[str, str] = {
     "speechmatics": "Speechmatics API Key",
     "elevenlabs": "ElevenLabs API Key",
     "auphonic": "Auphonic API Token",
+    # MAI-Transcribe-1 (reuses Azure Speech key + region)
+    "mai_transcribe_region": "MAI-Transcribe-1 Region",
     # AI service providers (translation / summarization)
     "anthropic": "Anthropic (Claude) API Key",
     "azure_openai": "Azure OpenAI API Key",
     "azure_openai_endpoint": "Azure OpenAI Endpoint URL",
     "azure_openai_deployment": "Azure OpenAI Deployment Name",
     # GitHub Copilot
-    "copilot_github_token": "GitHub Copilot Token (PAT)",
+    "copilot_github_token": "GitHub Copilot Access Token",
     # BITS Whisperer Registration
     "registration_key": "BITS Whisperer Registration Key",
     "registration_status": "Membership Status (Verified Code)",
+    "registration_name": "Registered User Name",
+    "registration_email": "Registered User Email",
+    "registration_install_count": "Installation Count (cached)",
+    "registration_verified_at": "Last Verification Timestamp",
+    # Trial
+    "trial_start_date": "Trial Start Date (ISO 8601)",
+    "trial_hmac": "Trial Date Integrity (HMAC-SHA256)",
+    "trial_name": "Trial User Name",
+    "trial_email": "Trial User Email",
+    # Beta programme
+    "beta_invitation_hash": "Beta Programme Invitation (hashed)",
+    # BITS member verification
+    "member_email_hash": "BITS Member Email Verification (hashed)",
 }
 
 

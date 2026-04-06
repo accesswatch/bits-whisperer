@@ -128,7 +128,7 @@ class ElevenLabsProvider(TranscriptionProvider):
         try:
             import httpx
         except ImportError:
-            raise RuntimeError("httpx package not installed. " "pip install httpx") from None
+            raise RuntimeError("httpx package not installed. pip install httpx") from None
 
         if not api_key:
             raise RuntimeError("ElevenLabs API key is required.")
@@ -174,7 +174,7 @@ class ElevenLabsProvider(TranscriptionProvider):
 
         if response.status_code != 200:
             raise RuntimeError(
-                f"ElevenLabs API error ({response.status_code}): " f"{response.text[:500]}"
+                f"ElevenLabs API error ({response.status_code}): {response.text[:500]}"
             )
 
         result_data = response.json()

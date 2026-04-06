@@ -8,14 +8,138 @@ and this project adheres to
 
 ______________________________________________________________________
 
-## [1.0.0] — 2026-02-08
+## [Unreleased]
+
+______________________________________________________________________
+
+## [1.0.0] — 2026-04-05
 
 ### Added
 
-- **17 transcription providers** — Local Whisper, Windows Speech (SAPI5), Azure
+- **Watch folder** — Automatic directory monitoring for unattended
+  transcription (`core/watch_folder.py`, `ui/watch_folder_dialog.py`).
+  Configurable provider/model/language overrides, subfolder scanning,
+  existing-file processing, and 3-second age guard. Feature-flagged via
+  `watch_folder`.
+- **Beta programme** — Invitation-based beta testing with SHA-256 hashed codes,
+  signed manifests, feature flag gating (`beta_enabled`), and What’s New release
+  notes dialog (`core/beta_service.py`, `ui/whats_new_dialog.py`,
+  `ui/beta_settings_dialog.py`).
+- **Product registration** — Ed25519-signed registration keys with hardware
+  fingerprinting and encrypted local cache (`core/registration_service.py`).
+- **GitHub OAuth** — RFC 8628 device flow for GitHub authentication
+  (`core/github_oauth.py`).
+- **Admin CLI tool** — `tools/bits_admin/` registration automation utility with
+  17 subcommands for key generation, user management, beta invitations, CSV
+  import/export, and manifest signing.
+- **Watch folder tests** — 33 tests covering service lifecycle, file detection,
+  subfolder scanning, pre-scan, job creation, callbacks, utilities, and settings
+  round-trip (`tests/test_watch_folder.py`).
+- **Ollama native HTTP adapter** — Direct REST API integration for Ollama
+  (`core/ollama_adapter.py`). Streaming chat completion, model pull/delete,
+  health monitoring, connection modes (HTTP/CLI/Manual), and automatic fallback.
+  No OpenAI-compatible shim required.
+- **Ollama as 6th AI provider** — `OllamaAIProvider` and
+  `OllamaNativeAIProvider` in `core/ai_service.py`. Local, free, private AI
+  translation, summarization, and chat using any Ollama model. AI Provider
+  Settings updated to 6 providers.
+- **Do Not Disturb detection** — Windows Focus Assist / macOS DND awareness
+  (`core/dnd_monitor.py`). Configurable pause/resume for transcription and live
+  microphone capture during focus sessions.
+- **Scheduled transcription** — Timed and recurring transcription jobs with
+  DND-aware rules (`core/scheduler_service.py`).
+- **Model Manager TreeCtrl** — Multi-provider model tree view with rank score
+  sorting, metadata display, and context menu (View Details, Open Folder, Copy
+  Model ID).
+- **Chat panel dynamic models** — Ollama model list dynamically queried from
+  downloaded models. Per-session model selection (not persisted). Manage Models
+  button opens Model Manager.
+- **AI Settings enhancements** — Default chat model ComboBox populated from
+  downloaded Ollama models, Ollama connection mode selector (HTTP/CLI/Manual),
+  and Model Manager button.
+- **Ollama/DND/Scheduler tests** — 50 tests covering adapter, DND monitor,
+  scheduler, and settings (`tests/test_ollama_dnd_scheduler.py`).
+- **Keyboard shortcuts reference dialog** — Searchable dialog listing all 35+
+  shortcuts across 7 categories (File, Queue, Transcript, AI, Tools, Navigation,
+  Help) with real-time filtering (`ui/keyboard_shortcuts_dialog.py`). Accessible
+  from Help menu (Ctrl+Shift+K).
+- **Ctrl+F find in transcript** — Frame-level accelerator that switches to the
+  transcript tab and focuses the search bar.
+- **Font size adjustment** — Increase (Ctrl+=), decrease (Ctrl+-), and reset
+  (Ctrl+0) transcript font size. Range 6–36pt with screen reader announcements.
+- **Transcript statistics** — Word count, character count, and segment count
+  displayed below transcript metadata.
+- **DND status in View menu** — Shows current Do Not Disturb / Focus Assist
+  status in an accessible message box.
+- **Progress dialog ETA & speed** — Elapsed time, estimated remaining time, and
+  per-file processing speed in the batch progress dialog.
+- **Settings Reset to Defaults** — One-click reset with confirmation dialog in
+  the Settings dialog.
+- **Settings Import/Export** — Export all settings to JSON and import from a
+  previously exported file for backup and migration.
+- **What's New changelog link** — HyperlinkCtrl linking to the full changelog on
+  GitHub in the What's New dialog.
+- **Scheduler maintenance jobs** — 3 recurring maintenance jobs registered at
+  startup: Ollama health check, model cache pruning, and catalog refresh.
+- **Cache pruning enforcement** — Scheduled task enforces the
+  `ollama_cache_quota_gib` setting by deleting oldest models when disk usage
+  exceeds the configured quota.
+
+### Changed
+
+- **Watch folder: watchdog backend** — Replaced 5-second polling loop with
+  event-driven filesystem monitoring via `watchdog` library
+  (ReadDirectoryChangesW on Windows, FSEvents on macOS). Polling retained as
+  automatic fallback when `watchdog` is not installed.
+- **Live transcription: Silero VAD** — Replaced RMS energy thresholding
+  (energy > 0.01) with neural network-based voice activity detection via
+  `silero-vad`. Provides approximately 95% accuracy vs approximately 70% with
+  energy-based detection. Falls back to energy detection when `silero-vad` is
+  not installed.
+- **AI service: tenacity retries** — Added automatic retry with exponential
+  backoff (3 attempts, 1 to 15 second delays) for transient API errors in
+  OpenAI, Anthropic, Azure OpenAI, and Gemini providers. Handles rate limits,
+  timeouts, connection failures, and server errors.
+- **HTML export: stdlib escaping** — Replaced custom `_esc()` function with
+  `html.escape()` from the standard library for more robust XSS prevention.
+- **ffmpeg lookup: deduplicated** — Centralised `find_ffmpeg()` in
+  `utils/platform_utils.py`. Removed duplicate implementations from
+  `audio_preprocessor.py` and `transcoder.py`.
+- **Deepgram default model** — Updated from Nova-2 to Nova-3. Nova-3 is
+  Deepgram's current flagship model with improved accuracy and language support.
+- **Deepgram model selector** — Added Nova-3 as top option in the model
+  registry; Nova-2 remains available.
+- **AssemblyAI speech_model forwarding** — The `speech_model` parameter is now
+  correctly forwarded to the AssemblyAI SDK `TranscriptionConfig`. Previously
+  the selected model was stored in metadata but not sent to the API.
+- **AssemblyAI model selector** — Added Conformer-2 and Slam-1 model options
+  alongside Best and Nano.
+- **Google Speech model forwarding** — The `model` parameter is now forwarded
+  to `RecognitionConfig`. Previously the model selection was ignored by the API
+  call.
+- **Google Speech model selector** — Added 5 model options: Latest Long
+  (recommended), Latest Short, Chirp 2, Chirp, and Default.
+- **Black → Ruff formatter** — Replaced Black with Ruff as the sole code
+  formatter across all configuration (`.pre-commit-config.yaml`,
+  `.github/workflows/ci.yml`, `.vscode/settings.json`,
+  `.vscode/extensions.json`, `pyproject.toml`).
+- **KeyStore entries** — Updated from 22 to 33 entries (registration, trial,
+  beta, member verification, and Copilot keys added).
+- **StrEnum migration** — `tools/bits_admin/config.py` enum classes migrated
+  from `(str, Enum)` to `StrEnum` (Python 3.11+).
+
+### Fixed
+
+- **Admin tool `reset_devices`** — Now returns −1 for user-not-found (was 0,
+  making the CLI branch unreachable).
+- **Auto-export format** — Now uses the user's configured export format and
+  location (`OutputSettings.auto_export_format`) instead of hard-coded plain
+  text / `.txt`.
+- **18 transcription providers** — Local Whisper, Windows Speech (SAPI5), Azure
   Embedded Speech, OpenAI Whisper, ElevenLabs Scribe, Groq Whisper, AssemblyAI,
   Deepgram Nova-2, Azure Speech Services, Google Speech-to-Text, Google Gemini,
-  Amazon Transcribe, Rev.ai, Speechmatics, Auphonic, Vosk, NVIDIA Parakeet
+  Amazon Transcribe, Rev.ai, Speechmatics, Auphonic, Vosk, NVIDIA Parakeet,
+  MAI-Transcribe-1
 - **14 Whisper model variants** — Tiny through Large v3, plus Turbo and Distil
   variants, with plain-English descriptions and hardware eligibility checks
 - **7 export formats** — Plain Text, Markdown, HTML, Word (.docx), SRT, VTT,
@@ -48,14 +172,14 @@ ______________________________________________________________________
   settings before transcription. Implemented on: Auphonic, Deepgram, AssemblyAI,
   Google Speech, Azure, Groq, OpenAI, ElevenLabs.
 - **Cloud provider onboarding** — "Add Provider" wizard (Tools, then Add
-  Provider) guides users step-by-step through configuring any of the 12 cloud
+  Provider) guides users step-by-step through configuring any of the 13 cloud
   transcription providers. Includes live API key validation with real API calls
   before saving.
 - **Basic & Advanced modes** — Experience mode system with Basic (streamlined, 3
   tabs, activated providers only) and Advanced (all 7 tabs, full control).
   Toggled via Ctrl+Shift+A or View menu. Persisted as `experience_mode` in
   settings.
-- **First-run setup wizard** — Guided 8-page wizard: experience mode selection,
+- **First-run setup wizard** — Guided 9-page wizard: experience mode selection,
   hardware scan, model recommendations, model downloads, cloud provider setup,
   AI & Copilot setup, preferences, and summary.
 - **NVIDIA Parakeet provider** — On-device English ASR using NVIDIA NeMo.
@@ -148,12 +272,13 @@ ______________________________________________________________________
   providers via `.py` plugins with `register(manager)` entry point
 - **Installer Copilot option** — Optional Copilot CLI installation via WinGet
   during Windows setup
-- **CopilotSettings** — Settings dataclass with 11 configurable fields (enabled,
-  CLI path, model, streaming, system message, agent config, transcript tools)
+- **CopilotSettings** — Settings dataclass with 14 configurable fields (enabled,
+  CLI path, model, streaming, system message, agent config, transcript tools,
+  reasoning effort, infinite sessions, user input requests)
 
 ### Provider Robustness
 
-- All 17 providers audited for thread safety, file handle leaks, API key
+- All 18 providers audited for thread safety, file handle leaks, API key
   validation, timeout handling, error propagation, and confidence normalization
 - Azure Speech: ConversationTranscriber for proper diarization, real WAV-based
   API key validation, 30-min polling timeout

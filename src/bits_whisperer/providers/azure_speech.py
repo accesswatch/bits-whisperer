@@ -214,7 +214,7 @@ class AzureSpeechProvider(TranscriptionProvider):
                 cancellation = speechsdk.CancellationDetails(evt.result)
                 if cancellation.reason == speechsdk.CancellationReason.Error:
                     cancel_error = (
-                        f"Azure Speech cancelled with error: " f"{cancellation.error_details}"
+                        f"Azure Speech cancelled with error: {cancellation.error_details}"
                     )
                     logger.error(cancel_error)
                 done = True
@@ -253,7 +253,7 @@ class AzureSpeechProvider(TranscriptionProvider):
                 cancellation = speechsdk.CancellationDetails(evt.result)
                 if cancellation.reason == speechsdk.CancellationReason.Error:
                     cancel_error = (
-                        f"Azure Speech cancelled with error: " f"{cancellation.error_details}"
+                        f"Azure Speech cancelled with error: {cancellation.error_details}"
                     )
                     logger.error(cancel_error)
                 else:

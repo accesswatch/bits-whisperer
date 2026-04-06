@@ -960,7 +960,7 @@ def _poll_until_done(
             raise RuntimeError(f"Auphonic production failed: {error_msg}")
 
     raise RuntimeError(
-        "Auphonic production timed out after " f"{_MAX_POLLS * _POLL_INTERVAL} seconds."
+        f"Auphonic production timed out after {_MAX_POLLS * _POLL_INTERVAL} seconds."
     )
 
 

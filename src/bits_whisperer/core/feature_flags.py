@@ -75,16 +75,92 @@ class FeatureFlag:
     Attributes:
         name: Internal identifier (e.g. ``"live_transcription"``).
         enabled: Whether the feature is enabled in the remote config.
+        beta_enabled: Whether the feature is enabled for beta testers.
+            When ``None``, inherits from ``enabled``.
         min_version: Minimum app version required (semver string).
+        added_in_version: The version in which this feature was introduced.
         label: Human-readable feature name for UI display.
         description: Brief explanation shown in settings or logs.
+        release_notes_url: URL or ``bitswhisperer://`` URI pointing
+            to Markdown release notes for this feature.
     """
 
     name: str
     enabled: bool = True
+    beta_enabled: bool | None = None
     min_version: str = "0.0.0"
+    added_in_version: str = ""
     label: str = ""
     description: str = ""
+    release_notes_url: str = ""
+
+
+@dataclass(frozen=True)
+class LicensingConfig:
+    """Remotely adjustable licensing parameters.
+
+    These values are served from ``feature_flags.json`` so admins can
+    extend or shorten grace periods, trial durations, and verification
+    intervals without pushing a code change or requiring user action.
+
+    Attributes:
+        trial_days: Length of the free trial in days.
+        offline_grace_days: How many days a cached verification
+            remains trusted when the device is offline.
+        reverify_hours: How often (in hours) the licence key is
+            re-checked against the backend.
+        trial_warning_days: When the trial has this many days or
+            fewer remaining, show a gentle reminder.
+        max_devices: Maximum number of devices a single licence
+            key can be activated on simultaneously.
+        admin_message: System-wide broadcast message shown as a
+            banner in the licence dialog.  Empty string means
+            no message.
+        purchase_url: Remotely updatable URL for the purchase /
+            renewal page.  Falls back to a compiled default when
+            empty.
+        trial_extension_days: Global bonus days added to every
+            active trial.  Admins can bump this to grant extra
+            time without per-user changes.
+        grace_mode_enabled: When ``True``, expired trials and
+            lapsed licences enter a read-only grace mode instead
+            of a hard lockout.
+        grace_mode_days: How many days the read-only grace mode
+            lasts after the trial or licence expires.
+        activation_mode: Controls which activation paths are
+            available.  ``"beta"`` restricts to beta testers
+            and registered keys only.  ``"live"`` opens all
+            paths (trial, register, BITS member, beta).
+            ``"closed"`` blocks all new activations.
+        tier_names: Human-readable display names keyed by status
+            code (``L``, ``A``, ``C``, ``T``).  Admins can
+            rename tiers (e.g. for rebranding) without a code
+            change.
+    """
+
+    activation_mode: str = "beta"
+    trial_days: int = 7
+    offline_grace_days: int = 30
+    reverify_hours: int = 24
+    trial_warning_days: int = 2
+    max_devices: int = 3
+    admin_message: str = ""
+    purchase_url: str = ""
+    trial_extension_days: int = 0
+    grace_mode_enabled: bool = False
+    grace_mode_days: int = 7
+    tier_names: dict[str, str] = field(
+        default_factory=lambda: {
+            "L": "Lifetime Member",
+            "A": "Active Membership",
+            "C": "Paying Contributor",
+            "T": "Alpha Tester",
+        }
+    )
+
+
+# Default instance when no remote config is available
+_DEFAULT_LICENSING_CONFIG = LicensingConfig()
 
 
 @dataclass
@@ -96,12 +172,16 @@ class FeatureFlagConfig:
         description: Human-readable description of the config.
         features: Mapping of feature name → :class:`FeatureFlag`.
         fetched_at: Unix timestamp of the last successful remote fetch.
+        licensing: Remotely adjustable licensing parameters.
     """
 
     version: int = 1
     description: str = ""
     features: dict[str, FeatureFlag] = field(default_factory=dict)
     fetched_at: float = 0.0
+    beta_invitations_url: str = ""
+    beta_welcome_message: str = ""
+    licensing: LicensingConfig = field(default_factory=LicensingConfig)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialise to a JSON-compatible dict for caching."""
@@ -110,6 +190,11 @@ class FeatureFlagConfig:
             "description": self.description,
             "features": {name: asdict(flag) for name, flag in self.features.items()},
             "fetched_at": self.fetched_at,
+            "beta": {
+                "invitations_url": self.beta_invitations_url,
+                "welcome_message": self.beta_welcome_message,
+            },
+            "licensing": asdict(self.licensing),
         }
 
     @classmethod
@@ -123,18 +208,55 @@ class FeatureFlagConfig:
         raw_features = data.get("features", {})
         for name, entry in raw_features.items():
             if isinstance(entry, dict):
+                beta_val = entry.get("beta_enabled")
                 features[name] = FeatureFlag(
                     name=name,
                     enabled=entry.get("enabled", True),
+                    beta_enabled=beta_val if beta_val is not None else None,
                     min_version=entry.get("min_version", "0.0.0"),
+                    added_in_version=entry.get("added_in_version", ""),
                     label=entry.get("label", name),
                     description=entry.get("description", ""),
+                    release_notes_url=entry.get("release_notes_url", ""),
                 )
+        beta_section = data.get("beta", {})
+        lic_section = data.get("licensing", {})
+        default_tier_names = {
+            "L": "Lifetime Member",
+            "A": "Active Membership",
+            "C": "Paying Contributor",
+            "T": "Alpha Tester",
+        }
+        raw_tiers = lic_section.get("tier_names", default_tier_names)
+        # Ensure tier_names is a dict[str, str] even if remote JSON
+        # has unexpected types.
+        tier_names = {
+            str(k): str(v)
+            for k, v in raw_tiers.items()
+            if isinstance(k, str) and isinstance(v, str)
+        } or default_tier_names
+        licensing = LicensingConfig(
+            activation_mode=lic_section.get("activation_mode", "beta"),
+            trial_days=lic_section.get("trial_days", 7),
+            offline_grace_days=lic_section.get("offline_grace_days", 30),
+            reverify_hours=lic_section.get("reverify_hours", 24),
+            trial_warning_days=lic_section.get("trial_warning_days", 2),
+            max_devices=lic_section.get("max_devices", 3),
+            admin_message=lic_section.get("admin_message", ""),
+            purchase_url=lic_section.get("purchase_url", ""),
+            trial_extension_days=lic_section.get("trial_extension_days", 0),
+            grace_mode_enabled=lic_section.get("grace_mode_enabled", False),
+            grace_mode_days=lic_section.get("grace_mode_days", 7),
+            tier_names=tier_names,
+        )
         return cls(
             version=data.get("version", 1),
             description=data.get("description", ""),
             features=features,
             fetched_at=data.get("fetched_at", 0.0),
+            beta_invitations_url=beta_section.get("invitations_url", ""),
+            beta_welcome_message=beta_section.get("welcome_message", ""),
+            licensing=licensing,
         )
 
 
@@ -254,6 +376,34 @@ class FeatureFlagService:
         """
         return dict(self._config.features)
 
+    def is_enabled_for_beta(self, feature_name: str) -> bool:
+        """Check whether a feature is enabled for beta testers.
+
+        Same evaluation as :meth:`is_enabled`, but uses the
+        ``beta_enabled`` value instead of ``enabled``.  Falls back
+        to ``enabled`` when ``beta_enabled`` is ``None``.
+
+        Args:
+            feature_name: Feature identifier.
+
+        Returns:
+            ``True`` if the feature should be shown to beta users.
+        """
+        # 1. Local override always wins
+        if feature_name in self._local_overrides:
+            return self._local_overrides[feature_name]
+
+        # 2. Remote config — prefer beta_enabled, fall back to enabled
+        flag = self._config.features.get(feature_name)
+        if flag is None:
+            return True
+
+        effective = flag.beta_enabled if flag.beta_enabled is not None else flag.enabled
+        if not effective:
+            return False
+
+        return self._version_satisfies(flag.min_version)
+
     def set_override(self, feature_name: str, enabled: bool) -> None:
         """Set a local override for a feature flag.
 
@@ -290,6 +440,13 @@ class FeatureFlagService:
     def config(self) -> FeatureFlagConfig:
         """The current feature flag config (read-only)."""
         return self._config
+
+    def get_licensing_config(self) -> LicensingConfig:
+        """Return the current remotely configurable licensing parameters.
+
+        Falls back to defaults when no remote config has been fetched.
+        """
+        return self._config.licensing
 
     @property
     def remote_url(self) -> str:

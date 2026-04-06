@@ -1,7 +1,6 @@
 # BITS Whisperer — Product Requirements Document
 
-> **Version:** 1.0.0 - **Updated:** 2026-02-08 - **Status:** Implementation
-> Complete
+> **Version:** 1.0.0 - **Updated:** 2026-04-05 - **Status:** Released
 >
 > Developed by **Blind Information Technology Solutions (BITS)**
 
@@ -20,7 +19,7 @@ accessibility advocates, and content creators.
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Accessible**       | WCAG 2.1/2.2 adapted for desktop; menu bar primary interface; full keyboard + screen reader support                                                                      |
 | **Private**          | Local transcript storage by default; API keys in OS credential store; offline-capable providers                                                                          |
-| **Versatile**        | 17 transcription providers (cloud + local); 14 Whisper models; 7 export formats; Auphonic audio post-production                                                          |
+| **Versatile**        | 18 transcription providers (cloud + local); 14 Whisper models; 7 export formats; Auphonic audio post-production                                                          |
 | **Simple**           | Consumer-friendly defaults; Basic mode hides advanced controls and unactivated providers; first-run setup wizard with experience mode selection; one-click transcription |
 | **Background-aware** | System tray integration; balloon notifications; minimize-to-tray for long batches                                                                                        |
 | **Cross-platform**   | Windows 10+ and macOS 12+; CUDA and Apple Silicon Metal GPU detection                                                                                                    |
@@ -67,7 +66,7 @@ ______________________________________________________________________
 
 ## 4. Transcription Providers
 
-17 adapters implementing `TranscriptionProvider` ABC:
+18 adapters implementing `TranscriptionProvider` ABC:
 
 | #   | Provider              | Module                     | Type  | Rate/min | Key Required | Highlights                                                                                       |
 | --- | --------------------- | -------------------------- | ----- | -------- | ------------ | ------------------------------------------------------------------------------------------------ |
@@ -78,7 +77,7 @@ ______________________________________________________________________
 | 5   | ElevenLabs Scribe     | `elevenlabs_provider.py`   | Cloud | $0.005   | Yes          | 99+ languages, best-in-class accuracy                                                            |
 | 6   | Groq Whisper          | `groq_whisper.py`          | Cloud | $0.003   | Yes          | 188x real-time on LPU hardware                                                                   |
 | 7   | AssemblyAI            | `assemblyai_provider.py`   | Cloud | $0.011   | Yes          | Speaker labels, auto-chapters                                                                    |
-| 8   | Deepgram Nova-2       | `deepgram_provider.py`     | Cloud | $0.013   | Yes          | Smart formatting, fast streaming                                                                 |
+| 8   | Deepgram Nova-3       | `deepgram_provider.py`     | Cloud | $0.013   | Yes          | Smart formatting, fast streaming                                                                 |
 | 9   | Azure Speech Services | `azure_speech.py`          | Cloud | $0.017   | Yes          | 100+ languages, continuous recognition                                                           |
 | 10  | Google Speech-to-Text | `google_speech.py`         | Cloud | $0.024   | Yes          | Diarization, enhanced models                                                                     |
 | 11  | Google Gemini         | `gemini_provider.py`       | Cloud | $0.0002  | Yes          | Cheapest cloud, multimodal AI                                                                    |
@@ -88,6 +87,7 @@ ______________________________________________________________________
 | 15  | Vosk                  | `vosk_provider.py`         | Local | Free     | No           | Lightweight offline ASR (Kaldi). 20+ languages, 40-50 MB models. Works on very low-end hardware. |
 | 16  | Parakeet              | `parakeet_provider.py`     | Local | Free     | No           | NVIDIA NeMo high-accuracy English ASR. 600M–1.1B param models.                                   |
 | 17  | Auphonic              | `auphonic_provider.py`     | Cloud | ~$0.01   | Yes          | Audio post-production + Whisper transcription                                                    |
+| 18  | MAI-Transcribe-1      | `mai_transcribe_provider.py` | Cloud | $0.006   | Yes          | Microsoft AI LLM Speech, 25 languages                                                           |
 
 ### Provider Selection
 
@@ -103,7 +103,7 @@ Cloud providers must be **activated** before they appear in Basic mode. The
 `AddProviderDialog` (Tools, then Add Provider) guides the user through a
 three-step workflow:
 
-1. **Select** a cloud provider from the 12 available options
+1. **Select** a cloud provider from the 13 available options
 1. **Enter** the required API key (and any auxiliary credentials like AWS
    region)
 1. **Validate** the key with a live test API call
@@ -218,9 +218,9 @@ transcription.
 | Provider      | Configurable Settings                                                                                                |
 | ------------- | -------------------------------------------------------------------------------------------------------------------- |
 | Auphonic      | Leveler, loudness target, noise/hum reduction, silence/filler/cough cutting, speech engine, output format, crosstalk |
-| Deepgram      | Model (nova-2/nova/enhanced/base), smart format, punctuation, paragraphs, utterances                                 |
-| AssemblyAI    | Punctuation, formatting, auto chapters, content safety, sentiment analysis, entity detection                         |
-| Google Speech | Recognition model, max speaker count                                                                                 |
+| Deepgram      | Model (nova-3/nova-2/nova/enhanced/base), smart format, punctuation, paragraphs, utterances                          |
+| AssemblyAI    | Model (best/nano/conformer-2/slam-1), punctuation, formatting, auto chapters, content safety, sentiment, entity det. |
+| Google Speech | Model (latest_long/latest_short/chirp_2/chirp/default), max speaker count                                            |
 | Azure         | Custom endpoint ID                                                                                                   |
 | AWS           | Max speaker labels                                                                                                   |
 | Speechmatics  | Operating point (enhanced/standard)                                                                                  |
@@ -262,6 +262,7 @@ AI provider settings (`AISettings` dataclass) include:
 - `openai_model`, `anthropic_model`, `gemini_model`, `copilot_model`,
   `ollama_model`
 - `ollama_endpoint`, `ollama_custom_model`
+- `ollama_mode` (http/cli/manual), `ollama_cli_path`, `default_chat_model`
 - `temperature`, `max_tokens`
 - `translation_language`, `summarization_style`
 - `multi_target_languages` — list of languages for simultaneous translation
@@ -373,24 +374,32 @@ transcription provider supports real-time streaming:
 
 | Provider   | Streaming |
 | ---------- | :-------: |
-| Deepgram   |    Yes    |
-| AssemblyAI |    Yes    |
-| All others |    No     |
+| Deepgram   | Yes       |
+| AssemblyAI | Yes       |
+| All others | No        |
 
 ### GitHub Copilot SDK Integration
 
 The `CopilotService` class (in `core/copilot_service.py`) integrates the GitHub
-Copilot SDK for interactive AI-powered transcript analysis:
+Copilot SDK for interactive AI-powered transcript analysis. Context7 Copilot
+SDK documentation confirms that the SDK manages a Copilot runtime over
+JSON-RPC, supports token-based or logged-in-user authentication, and exposes
+streaming session events and resumable session patterns. BITS Whisperer uses
+the SDK's local managed-runtime pattern by default and can optionally point to
+a custom runtime path.
 
 #### CopilotService
 
 - **Async SDK client** with process management for the Copilot CLI
+- **JSON-RPC transport** between the app and the Copilot runtime
 - **Session management** — conversation history maintained per session
 - **Streaming responses** — real-time token-by-token response delivery
 - **Custom tools** — transcript-aware tools that let the agent access and
   analyze the current transcript
 - **Agent configuration** — name, instructions, persona, and welcome message
-- **CLI detection** — auto-detects `github-copilot-cli` on PATH or manual path
+- **Authentication options** — stored GitHub token or logged-in user
+- **Managed runtime** — SDK auto-starts the bundled Copilot runtime unless the
+  user chooses a custom runtime path
 
 #### Interactive AI Chat Panel (`ui/copilot_chat_panel.py`)
 
@@ -423,21 +432,27 @@ Extensible registry of chat commands with:
 
 #### Copilot Setup Wizard (`ui/copilot_setup_dialog.py`)
 
-Four-step guided setup dialog:
+Guided setup dialog centered on sign-in rather than manual runtime management:
 
-1. **CLI Install** — Checks for GitHub Copilot CLI; offers WinGet install on
-   Windows
-1. **SDK Install** — Installs the Copilot SDK Python package
-1. **Authentication** — Authenticates with GitHub via CLI device flow
-1. **Test** — Runs a connection test to verify everything works
+1. **Prepare Copilot** — Detects the SDK and installs required Copilot
+  components automatically when needed
+1. **Authentication** — Signs in with GitHub using browser device flow or a
+  stored GitHub access token
+1. **Plan & Model** — Stores the user's Copilot tier and default model
+1. **Test** — Runs a live connection test to verify everything works
+
+The dialog deliberately hides most SDK and CLI terminology so non-technical
+users can complete setup without understanding the Copilot runtime model.
 
 #### Document Reader (`core/document_reader.py`)
 
 Utility module that extracts plain text from multiple file formats for use as AI
-context. Supports plain text (.txt, .md, .csv, .log, .json, .xml, .yaml), Word
-documents (.docx via python-docx), spreadsheets (.xlsx/.xls via openpyxl), PDF
-(.pdf via pypdf), and RTF (.rtf via striprtf). Enforces a 10 MB file size limit
-and provides graceful fallbacks when optional libraries are not installed.
+context. Supports plain text (.txt, .md, .csv, .log, .json, .xml, .yaml, .rst,
+.tsv, .html), Word documents (.docx via python-docx), spreadsheets
+(.xlsx/.xls via openpyxl), PDF (.pdf via pypdf), RTF (.rtf via striprtf), and
+MarkItDown-backed formats including PowerPoint (.pptx), EPUB (.epub), Outlook
+messages (.msg), and ZIP archives (.zip). Enforces a 10 MB file size limit and
+provides graceful fallbacks when optional libraries are not installed.
 
 #### AI Action Builder (`ui/agent_builder_dialog.py`)
 
@@ -619,6 +634,72 @@ budget before fitting the transcript.
 | `allow_transcript_tools` | bool | True                        |
 | `chat_panel_visible`     | bool | False                       |
 
+### Ollama Native HTTP Adapter (`core/ollama_adapter.py`)
+
+Direct REST API integration for Ollama, replacing the OpenAI-compatible shim.
+Uses `httpx` for persistent HTTP connections with configurable timeouts and
+retries (exponential backoff via `tenacity`).
+
+#### API Surface
+
+| Method           | Description                                                   |
+| ---------------- | ------------------------------------------------------------- |
+| `list_models()`  | Returns `list[ModelMetadata]` from `GET /api/tags`            |
+| `pull_model()`   | Streams model download via `POST /api/pull` with progress cb  |
+| `delete_model()` | Removes a model via `DELETE /api/delete`                      |
+| `chat_stream()`  | Streams chat via `POST /api/chat` with token-by-token cb      |
+| `health_check()` | Probes `GET /` to verify daemon availability                  |
+
+#### Connection Modes
+
+| Mode       | Behaviour                                                         |
+| ---------- | ----------------------------------------------------------------- |
+| **HTTP**   | Direct REST calls to `http://127.0.0.1:11434` (recommended)       |
+| **CLI**    | Falls back to `ollama` CLI subcommands when daemon is unreachable |
+| **Manual** | User manages Ollama externally; app connects to configured URL    |
+
+The adapter restricts CLI invocations to sanctioned `ollama` subcommands and
+defaults to localhost-only endpoints. Remote endpoints require explicit opt-in.
+
+#### `OllamaAIProvider` vs `OllamaNativeAIProvider`
+
+`OllamaAIProvider` wraps the OpenAI-compatible API (`/v1/chat/completions`).
+`OllamaNativeAIProvider` uses the native adapter for direct REST access with
+streaming, model management, and health monitoring. The native provider is
+preferred when the `ollama_native` feature flag is enabled.
+
+#### Model Manager Integration
+
+The Model Manager dialog (`ui/model_manager_dialog.py`) uses a `wx.TreeCtrl`
+with provider → model hierarchy:
+
+- **Provider nodes** — collapsible (e.g., Whisper, Ollama)
+- **Model nodes** — name, status, size, rank score, context window
+- Models sorted by `rank_score` descending (computed from `DeviceProbe`)
+- Context menu: **Download**, **Delete**, **View Details**, **Open Folder**,
+  **Copy Model ID**
+- Downloads run in background with `wx.Gauge` progress and accessible status
+
+The chat panel (`ui/copilot_chat_panel.py`) queries only downloaded models via
+`AIService.list_ollama_models()` in a background thread. The provider selector
+shows only providers with at least one downloaded model. If none exist, an empty
+state directs the user to open Model Manager. Per-session model selection is
+stored in `_session_model` (not persisted to settings).
+
+#### Ollama Feature Flags
+
+| Flag                       | Default | Description                                                    |
+| -------------------------- | ------- | -------------------------------------------------------------- |
+| `ollama_native`            | true    | Native HTTP adapter for Ollama REST API                        |
+| `ollama_cli_fallback`      | true    | Fall back to `ollama` CLI when daemon is unreachable           |
+| `ollama_model_catalog`     | true    | Browse and pull models from the Ollama library catalog         |
+| `model_manager_treeview`   | true    | Multi-provider tree view in the Model Manager dialog           |
+| `dnd_monitor`              | true    | Detect system DND/Focus Assist and pause transcription         |
+| `scheduler`                | true    | Timed and recurring transcription jobs with DND-aware rules    |
+
+All flags are defined in `feature_flags.json` and gated via
+`FeatureFlagService.is_enabled()` in UI and service code.
+
 ### Speaker Diarization
 
 Speaker diarization (identifying who spoke when) is supported through two
@@ -633,7 +714,7 @@ enabled:
 | ----------------- | ------------ | ------------------------------------------------------ |
 | Azure Speech      | Configurable | `ConversationTranscriber` with `speaker_id` extraction |
 | Google Speech     | Configurable | `diarization_config` on recognition request            |
-| Deepgram          | Auto         | Nova-2 `diarize=true` parameter                        |
+| Deepgram          | Auto         | Nova-3 `diarize=true` parameter                        |
 | AssemblyAI        | Auto         | `speaker_labels=True` feature                          |
 | Amazon Transcribe | Configurable | `ShowSpeakerLabels` in settings                        |
 | ElevenLabs        | Auto         | Built-in `diarize` parameter                           |
@@ -862,7 +943,7 @@ ______________________________________________________________________
 
 ```text
 Layout:
-  Top:      Menu Bar (File, Queue, View, Tools, Help)
+  Top:      Menu Bar (File, Queue, AI, View, Tools, Help)
   Left:     Queue Panel (file list)
   Right:    Transcript Panel (viewer / editor)
   Bottom:   Status Bar [status] [progress gauge] [hw]
@@ -881,64 +962,81 @@ Layout:
 #### Queue
 
 - Start Transcription (F5)
-- Pause (F6)
+- Pause (Ctrl+P)
 - Cancel Selected (Delete)
+- Audio Preview Selected (Ctrl+Alt+P) *(feature flag: audio_preview)*
+- Rename Selected (F2)
+- Clear Completed
+- Retry All Failed (Ctrl+Shift+R)
 - Clear Queue (Ctrl+Shift+Del)
+
+#### AI *(shown only when any AI feature flag is enabled)*
+
+- Translate (Ctrl+T) *(feature flag: ai_translate)*
+- Translate to Multiple Languages *(feature flag: multi_language_translate)*
+- Summarize (Ctrl+Shift+S) *(feature flag: ai_summarize)*
+- Chat with Transcript (Ctrl+Shift+C) *(feature flag: ai_chat)*
+- Copilot Setup… *(feature flag: copilot)*
+- Agent Builder… *(feature flag: agent_builder)*
 
 #### View
 
 - Advanced Mode (Ctrl+Shift+A) — toggle check item
 - Minimize to System Tray — toggle check item (default: on)
 - Auto-Export on Completion — toggle check item (default: off)
+- Increase Font Size (Ctrl++)
+- Decrease Font Size (Ctrl+-)
+- Reset Font Size (Ctrl+0)
+- DND Status *(feature flag: dnd_monitor)*
 
 #### Tools
 
 - Settings… (Ctrl+,)
 - Manage Models… (Ctrl+M)
-- Audio Preview… (Ctrl+Shift+P)
-- Add Provider…
-- Copilot Setup…
 - Hardware Info…
-- View Log…
-
-#### AI
-
-- Translate (Ctrl+T)
-- Summarize (Ctrl+Shift+S)
-- Copilot Chat (Ctrl+Shift+C)
-- AI Action Builder…
+- Audio Preview… (Ctrl+Shift+P) *(feature flag: audio_preview)*
+- Add Provider…
 - AI Provider Settings…
+- Plugins… *(feature flag: plugins)*
+- Watch Folder (Ctrl+W) *(feature flag: watch_folder)* — toggle
+- Watch Folder Settings… *(feature flag: watch_folder)*
+- Live Transcription (Ctrl+L) *(feature flag: live_transcription)*
+- View Log…
 
 #### Help
 
 - Setup Wizard…
-- Check for Updates…
 - Learn more about BITS
+- Check for Updates… *(feature flag: self_updater)*
+- What's New…
+- Beta Programme…
+- Keyboard Shortcuts (Ctrl+Shift+K)
 - About… (F1)
 
 ### Settings Dialog (9 tabs)
 
-| Tab                  | Visibility    | Contents                                                                                                                       |
-| -------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **General**          | Always        | Provider selection, language, timestamps, diarization, Behaviour section (minimize-to-tray, auto-export, notifications, sound) |
-| **Transcription**    | Always        | Timestamps, speakers, confidence, word-level, segmentation, VAD, temperature, beam size, compute type                          |
-| **Output**           | Always        | Default export format, output directory, filename template, encoding                                                           |
-| **Playback**         | Always        | Audio preview speed range, step size, and jump timing                                                                          |
-| **Providers & Keys** | Always        | API key entry per provider with Test button validation                                                                         |
-| **Paths & Storage**  | Always        | Output dir, models dir, temp dir, log file                                                                                     |
-| **AI Providers**     | Always        | AI provider selection (5 providers), model selection, temperature, max tokens, translation language, summarization style       |
-| **Audio Processing** | Advanced Mode | All 7 preprocessing filter toggles & parameters                                                                                |
-| **Advanced**         | Advanced Mode | Max file size, duration, batch limits, concurrency, chunking, GPU, log level                                                   |
+| Tab                  | Visibility    | Contents                                                                                                                                                                                            |
+| -------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **General**          | Always        | Provider selection, language, timestamps, diarization, Behaviour section (minimize-to-tray, auto-export, notifications, sound), BITS Registration                                                   |
+| **Transcription**    | Always        | Timestamps, speakers, confidence, word-level, segmentation, VAD, temperature, beam size, compute type                                                                                               |
+| **Output**           | Always        | Default export format, output directory, filename template, encoding, line ending, overwrite, header, metadata                                                                                      |
+| **Playback**         | Always        | Audio preview speed range, step size, and jump timing                                                                                                                                               |
+| **Budget**           | Always        | Enable spending limits, always confirm paid, default limit USD, per-provider limits for 13 cloud providers                                                                                          |
+| **Providers & Keys** | Always        | API key entry per provider with Test button validation, status labels                                                                                                                               |
+| **Paths & Storage**  | Always        | Output dir, models dir, temp dir, log file, Open Data/Models buttons                                                                                                                                |
+| **AI Providers**     | Always        | AI provider selection (6 providers), model selection, temperature, max tokens, translation language, summarization style, Ollama connection mode, default chat model ComboBox, Model Manager button |
+| **Audio Processing** | Advanced Mode | All 7 preprocessing filter toggles & parameters                                                                                                                                                     |
+| **Advanced**         | Advanced Mode | Max file size, duration, batch limits, concurrency, chunking, GPU device index, CPU threads, log level                                                                                              |
 
 ### Simple vs Advanced Mode
 
-- **Basic Mode** (default): Shows General, Transcription, Output, Providers &
-  Keys, Paths & Storage, and AI Providers tabs. Audio Processing and Advanced
-  tabs are hidden. Only local providers and **activated** cloud providers appear
+- **Basic Mode** (default): Shows General, Transcription, Output, Playback,
+  Budget, Providers & Keys, Paths & Storage, and AI Providers tabs. Audio
+  Processing and Advanced tabs are hidden. Only local providers and **activated** cloud providers appear
   in the provider dropdown. Cloud providers must be activated via the Add
   Provider wizard before they become available. Sensible defaults are applied
   automatically.
-- **Advanced Mode** (Ctrl+Shift+A): Reveals all 8 settings tabs. All cloud
+- **Advanced Mode** (Ctrl+Shift+A): Reveals all 9 settings tabs. All cloud
   providers appear in the provider dropdown regardless of activation status.
   Full control over audio preprocessing, GPU settings, concurrency, and chunking
   parameters.
@@ -968,6 +1066,123 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
+## 11.5. Watch Folder
+
+`core/watch_folder.py` implements automatic directory monitoring for
+unattended transcription:
+
+1. **Polling-based monitoring**: A daemon thread polls the configured
+   directory at a configurable interval (default 10 seconds).
+1. **File detection**: Recognises audio files by extension (`.wav`, `.mp3`,
+   `.flac`, `.ogg`, `.m4a`, `.aac`, `.wma`, `.opus`, `.webm`, `.mp4`,
+   `.avi`, `.mkv`, `.mov`). Empty files and files younger than 3 seconds
+   are skipped.
+1. **Duplicate prevention**: A seen-files set ensures each file is queued
+   only once per session.
+1. **Subfolder scanning**: Optionally recurse into subdirectories.
+1. **Pre-scan**: Optionally process files already present when monitoring
+   starts.
+1. **Override settings**: Provider, model, and language can be overridden
+   per watch folder or default to the app's transcription settings.
+1. **Callbacks**: `on_job_queued` and `on_status_change` hooks for UI
+   integration.
+1. **Feature-flagged**: Gated by the `watch_folder` feature flag.
+
+Settings: `WatchFolderSettings` dataclass in `core/settings.py`.
+Dialog: `ui/watch_folder_dialog.py`.
+
+______________________________________________________________________
+
+## 11.6. Beta Programme
+
+`core/beta_service.py` implements an invitation-based beta testing system:
+
+1. **Invitation codes**: SHA-256 hashed codes verified against a
+   signed manifest.
+1. **Feature gating**: Beta-only features gated via `beta_enabled`
+   in `feature_flags.json`.
+1. **What's New dialog**: `ui/whats_new_dialog.py` displays release
+   notes fetched from the feature flags config.
+1. **Beta settings**: `ui/beta_settings_dialog.py` for entering
+   invitation codes and viewing beta status.
+
+______________________________________________________________________
+
+## 11.7. What's New — Release Notes Publishing
+
+The **What's New** dialog (`ui/whats_new_dialog.py`) displays
+per-feature release notes to users when features are first enabled
+or updated. The content is fetched at runtime from Markdown files
+hosted in the repository.
+
+### Architecture
+
+| Component                         | Role                                                                       |
+| --------------------------------- | -------------------------------------------------------------------------- |
+| `docs/release_notes/<feature>.md` | Markdown source for each feature's release notes                           |
+| `feature_flags.json`              | Contains `release_notes_url` fields with `bitswhisperer://` URIs           |
+| `core/beta_service.py`            | Resolves `bitswhisperer://release-notes/<feature>` URIs to raw GitHub URLs |
+| `ui/whats_new_dialog.py`          | Displays resolved Markdown in a scrollable dialog                          |
+
+### URI scheme
+
+Feature flags reference release notes using a custom URI scheme:
+
+```
+bitswhisperer://release-notes/<feature_name>
+```
+
+At runtime, `BetaService.resolve_release_notes_url()` converts this
+to a raw GitHub URL:
+
+```
+https://raw.githubusercontent.com/<owner>/<repo>/main/docs/release_notes/<feature_name>.md
+```
+
+Plain `https://` URLs are passed through unchanged.
+
+### File naming convention
+
+Each Markdown file in `docs/release_notes/` is named after its
+feature flag identifier. Examples:
+
+- `watch_folder.md` → flag `watch_folder`
+- `live_transcription.md` → flag `live_transcription`
+- `audio_preview.md` → flag `audio_preview`
+
+### Markdown format
+
+- First `# Heading` is used as the feature title in the dialog.
+- Use `## Version X.Y.Z` headings to separate notes by version.
+- Keep notes concise — they are shown in a scrollable dialog.
+
+### Publishing a new feature announcement
+
+1. **Create the Markdown file**: Add
+   `docs/release_notes/<feature_name>.md` with a `# Title` heading
+   and concise release notes.
+2. **Add the URI to `feature_flags.json`**: Set the
+   `release_notes_url` field on the feature's flag entry:
+
+   ```json
+   {
+     "id": "my_feature",
+     "release_notes_url": "bitswhisperer://release-notes/my_feature",
+     ...
+   }
+   ```
+
+3. **Commit both files together** — the notes become available to
+   all deployed instances immediately (subject to the feature flag
+   cache TTL of 24 hours).
+
+### Updating existing release notes
+
+Edit the Markdown file in `docs/release_notes/` and commit. Changes
+are picked up on next cache refresh or app restart.
+
+______________________________________________________________________
+
 ## 12. Architecture
 
 ### File Tree
@@ -991,13 +1206,22 @@ src/bits_whisperer/
     transcoder.py             # ffmpeg WAV normalisation
     updater.py                # GitHub Releases self-update
     job.py                    # Job / TranscriptionResult data models
-    ai_service.py             # AI translation & summarization (OpenAI/Anthropic/Azure/Gemini/Copilot)
+    ai_service.py             # AI translation & summarization (OpenAI/Anthropic/Azure/Gemini/Copilot/Ollama)
+    ollama_adapter.py         # Native Ollama HTTP adapter (REST API, streaming, model mgmt)
+    dnd_monitor.py            # Do Not Disturb / Focus Assist detection
+    scheduler_service.py      # Scheduled transcription service
     live_transcription.py     # Real-time microphone transcription
     plugin_manager.py         # Plugin discovery, loading & lifecycle
     copilot_service.py        # GitHub Copilot SDK integration & agent management
     context_manager.py        # Context window management & token budgeting
     document_reader.py        # Document text extraction (DOCX/PDF/XLSX/RTF/TXT)
-  providers/                    # 17 provider adapters (strategy pattern)
+    feature_flags.py          # Remote feature flag service
+    watch_folder.py           # Watch folder auto-transcription service
+    beta_service.py           # Beta invitation verification & status
+    registration_service.py   # Product registration & licensing
+    member_verification.py    # OTP-based BITS member email verification
+    github_oauth.py           # GitHub OAuth device flow (RFC 8628)
+  providers/                    # 18 provider adapters (strategy pattern)
     base.py                   # TranscriptionProvider ABC + ProviderCapabilities
     local_whisper.py          # faster-whisper (local, free)
     openai_whisper.py         # OpenAI Whisper API
@@ -1006,7 +1230,7 @@ src/bits_whisperer/
     azure_speech.py           # Microsoft Azure Speech Services
     azure_embedded.py         # Microsoft Azure Embedded Speech (offline)
     aws_transcribe.py         # Amazon Transcribe
-    deepgram_provider.py      # Deepgram Nova-2
+    deepgram_provider.py      # Deepgram Nova-3
     assemblyai_provider.py    # AssemblyAI
     groq_whisper.py           # Groq LPU Whisper
     rev_ai_provider.py        # Rev.ai
@@ -1016,6 +1240,7 @@ src/bits_whisperer/
     vosk_provider.py          # Vosk offline speech (Kaldi-based)
     parakeet_provider.py      # NVIDIA Parakeet (NeMo ASR, English)
     auphonic_provider.py      # Auphonic audio post-production + transcription
+    mai_transcribe_provider.py  # MAI-Transcribe-1 (Azure LLM Speech)
   export/                       # Output formatters
     base.py                   # ExportFormatter ABC
     plain_text.py, markdown.py, html_export.py
@@ -1029,16 +1254,24 @@ src/bits_whisperer/
     transcript_panel.py       # Transcript viewer / editor with speaker management
     settings_dialog.py        # Tabbed settings (9 tabs)
     progress_dialog.py        # Batch progress display
-    model_manager_dialog.py   # Model download & management
+    model_manager_dialog.py   # Model download & management (TreeCtrl, multi-provider)
     add_provider_dialog.py    # Cloud provider onboarding wizard
-    setup_wizard.py           # First-run setup wizard (8 pages)
+    setup_wizard.py           # First-run setup wizard (9 pages)
     tray_icon.py              # System tray (TaskBarIcon)
     live_transcription_dialog.py  # Live microphone transcription dialog
-    ai_settings_dialog.py     # AI provider configuration dialog (5 providers)
+    ai_settings_dialog.py     # AI provider configuration dialog (6 providers)
     copilot_setup_dialog.py   # Copilot CLI installation & auth wizard
     copilot_chat_panel.py     # Interactive AI transcript chat panel
+    slash_commands.py         # Chat slash command registry & handlers (28 commands)
     agent_builder_dialog.py   # AI Action Builder — post-transcription template editor
     audio_player_dialog.py   # Audio preview dialog with clip selection
+    watch_folder_dialog.py   # Watch folder settings dialog
+    add_file_wizard.py       # Add file wizard with AI action selection
+    whats_new_dialog.py      # What's New / release notes dialog
+    beta_settings_dialog.py  # Beta programme settings dialog
+    keyboard_shortcuts_dialog.py  # Keyboard shortcuts reference dialog
+    welcome_dialog.py         # Welcome / activation dialog (5 tabs, mode-gated)
+    license_dialog.py         # Licence management (register, purchase, revoke)
   utils/
     accessibility.py          # a11y helpers (announce, set_name, safe_call_after)
     constants.py              # App constants, model registry, path definitions
@@ -1129,7 +1362,7 @@ TranscriptionResult
 | Store          | Backend                     | Contents                            |
 | -------------- | --------------------------- | ----------------------------------- |
 | Job metadata   | SQLite (WAL mode)           | Job history, status, paths          |
-| API keys       | keyring (Credential Mgr)    | Provider API keys (20 entries)      |
+| API keys       | keyring (Credential Mgr)    | Provider API keys (33 entries)      |
 | Recent files   | JSON file                   | Last 10 opened file paths           |
 | Whisper models | File system (models dir)    | Downloaded faster-whisper models    |
 | Provider SDKs  | File system (site-packages) | On-demand installed Python packages |
@@ -1150,6 +1383,37 @@ ______________________________________________________________________
   calls to the GitHub Releases API.
 - **Offline-capable**: 5 local providers (Local Whisper, Windows SAPI5/WinRT,
   Azure Embedded Speech, Vosk, Parakeet) work without any internet connection.
+
+### Registration & Licensing
+
+The application uses a secure registration system with the following
+properties:
+
+- **Welcome dialog** on first launch with 5 tabs (Free Trial,
+  Register, BITS Member, Beta Tester, Exit) gated by
+  `activation_mode` (`closed`, `beta`, or `live`).
+- **BITS member verification** via OTP email to @bitsusers.org
+  addresses, granting automatic registration.
+- **Beta invitation** validation with SHA-256 email hash matching.
+- **7-day trial** collects name, email, and hardware token; registers
+  the device with the backend.
+- **Ed25519 signed licence tokens** containing the user's name,
+  email, licence type, expiry, and version — cannot be forged.
+- **Name embedded in token** — the user's display name (`n` field)
+  is carried in the signed payload so the client can greet the user
+  by name without a separate lookup.
+- **3-device limit** enforced server-side per licence key.
+- **Device revocation** via Help → Licence allows freeing a slot.
+- **Licence dialog** (Help → Licence, Ctrl+Shift+L) shows status,
+  name, email, type, device ID, and installation count with actions
+  to register, purchase, or revoke.
+- **About dialog** (Help → About, F1) shows licence status,
+  registered name, installation count, and trial days remaining.
+- **Hardware fingerprinting** combines MAC address, platform, CPU
+  identifier, and user profile path with a salt for anti-spoofing.
+- **Rate-limited verification** (60s minimum between online checks)
+  with 7-day offline cache fallback.
+- **Anti-tamper** module integrity checking in frozen builds.
 
 ______________________________________________________________________
 
@@ -1225,7 +1489,7 @@ From `pyproject.toml`:
 | openai ≥ 1.0.0                          | OpenAI Whisper API           |
 | google-cloud-speech ≥ 2.20.0            | Google Speech-to-Text        |
 | azure-cognitiveservices-speech ≥ 1.32.0 | Azure Speech Services        |
-| deepgram-sdk ≥ 3.0.0                    | Deepgram Nova-2              |
+| deepgram-sdk ≥ 3.0.0                    | Deepgram Nova-3              |
 | assemblyai ≥ 0.20.0                     | AssemblyAI                   |
 | boto3 ≥ 1.28.0                          | Amazon Transcribe (AWS)      |
 | google-genai ≥ 0.4.0                    | Google Gemini                |
@@ -1245,14 +1509,14 @@ From `pyproject.toml`:
 | winsdk ≥ 1.0.0b10                       | Windows Speech Runtime (Win) |
 | comtypes ≥ 1.2.0                        | COM interop (Win)            |
 
-Dev dependencies: pytest, pytest-cov, black, ruff, pyright.
+Dev dependencies: pytest, pytest-cov, ruff, pyright.
 
 ______________________________________________________________________
 
 ## 19. Implementation Status
 
 - [x] Core transcription pipeline (preprocess, transcode, transcribe)
-- [x] 17 transcription provider adapters (including Auphonic, Vosk, Parakeet)
+- [x] 18 transcription provider adapters (including Auphonic, Vosk, Parakeet, MAI-Transcribe-1)
 - [x] 14 Whisper model definitions with hardware eligibility
 - [x] 7-filter audio preprocessing with ffmpeg
 - [x] 7 export format adapters
@@ -1281,7 +1545,7 @@ ______________________________________________________________________
 - [x] Basic/Advanced mode toggle with persistent experience_mode setting
 - [x] View Log (opens app.log)
 - [x] Full accessibility (names, labels, keyboard, screen reader)
-- [x] First-run setup wizard (8-page guided experience with mode selection and
+- [x] First-run setup wizard (9-page guided experience with mode selection and
   AI/Copilot setup)
 - [x] Cross-platform support (Windows 10+ and macOS 12+)
 - [x] Disk space pre-checks before model downloads
@@ -1299,14 +1563,14 @@ ______________________________________________________________________
 - [x] Learn more about BITS link in Help menu
 - [x] Add Provider menu item in Tools menu
 - [x] Provider activation tracking (activated_providers in settings)
-- [x] AI translation & summarization (5 providers: OpenAI, Anthropic, Azure
-  OpenAI, Gemini, Copilot)
+- [x] AI translation & summarization (6 providers: OpenAI, Anthropic, Azure
+  OpenAI, Gemini, Copilot, Ollama)
 - [x] Google Gemini AI provider (translation, summarization)
 - [x] GitHub Copilot SDK integration (CopilotService, async client, streaming,
   custom tools)
 - [x] Interactive AI Chat Panel (Ctrl+Shift+C, streaming, quick actions,
   transcript context)
-- [x] Copilot Setup Wizard (4-step: CLI install, SDK install, auth, test)
+- [x] Copilot Setup Wizard (auto-prepare, auth, plan/model selection, test)
 - [x] Agent Builder dialog (4-tab: Identity, Instructions with presets, Tools,
   Welcome Message)
 - [x] CopilotSettings dataclass (11 fields) in AppSettings
@@ -1351,6 +1615,19 @@ ______________________________________________________________________
 - [x] Document attachments for AI Actions (attach reference documents — DOCX,
   PDF, XLSX, RTF, TXT — to provide additional context for AI processing)
 - [x] Audio preview with pitch-preserving speed control and clip selection
+- [x] Ollama native HTTP adapter (direct REST API for streaming, model
+  management, health monitoring, automatic fallback)
+- [x] Do Not Disturb detection (Windows Focus Assist / macOS DND) with
+  configurable pause/resume behaviour
+- [x] Scheduler service for timed and recurring transcription jobs with
+  DND-aware rules
+- [x] Model Manager TreeCtrl with multi-provider model tree, rank scores,
+  detail view, open folder, and copy model ID
+- [x] Chat panel dynamic Ollama model querying with per-session model selection
+  and Model Manager quick link
+- [x] AI Settings ComboBox for default chat model populated from downloaded
+  models, connection mode selector (HTTP/CLI/Manual), and Model Manager button
+- [x] 1056 tests with full coverage for all features
 
 ______________________________________________________________________
 
@@ -1390,11 +1667,14 @@ ______________________________________________________________________
 | SpeakerRenameDialog over inline      | Global rename is safer and clearer than per-line editing                         |
 | speaker_map on TranscriptionResult   | Separates internal IDs from display names; lossless rename                       |
 | Google Gemini for AI                 | Fast, affordable translation/summarization; multimodal capable                   |
-| GitHub Copilot SDK over raw API      | CLI-based auth, streaming, tool calling, session management built-in             |
+| GitHub Copilot SDK over raw API      | SDK-managed runtime, JSON-RPC transport, streaming, tool calling, session management built-in |
 | Agent Builder as separate dialog     | Complex config deserves dedicated UI; presets simplify setup                     |
 | CopilotSettings as nested dataclass  | Clean separation from AI settings; many Copilot-specific fields                  |
 | TreeView for queue panel             | Hierarchical folder grouping; native accessibility; collapsible nodes            |
 | Budget limits per provider+model     | Granular cost control without blocking free/local providers                      |
 | AI Actions via existing AgentConfig  | Reuse existing template infrastructure; provider-agnostic design                 |
 | Ollama via OpenAI-compatible API     | No new SDK needed; uses existing openai package for API calls                    |
+| Ollama native HTTP adapter           | Direct REST API for streaming, model management, and health monitoring           |
+| DND detection via OS APIs            | Windows Focus Assist (WMI/Registry) and macOS DND for system-aware pausing       |
+| Scheduler for timed transcription    | System-aware scheduling with DND pause rules and recurring jobs                  |
 | Built-in presets for AI Actions      | Common use cases work out of the box; no configuration required                  |
