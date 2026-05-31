@@ -154,7 +154,7 @@ _SDK_REGISTRY: Final[dict[str, SDKInfo]] = {
     "local_whisper": SDKInfo(
         provider_key="local_whisper",
         display_name="Local Whisper (faster-whisper)",
-        pip_packages=["faster-whisper>=1.2.1,<2"],
+        pip_packages=["faster-whisper>=1.0.0"],
         test_import="faster_whisper",
         install_size_mb=220,
     ),
