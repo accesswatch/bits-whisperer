@@ -103,8 +103,8 @@ _EXCLUDED: Final[frozenset[str]] = frozenset(
         "tensorflow",
         "tensorflow_gpu",
         "keras",
-        # ONNX — optional extra for ctranslate2, not required
-        "onnxruntime",
+        # ONNX GPU remains excluded; CPU onnxruntime is a direct dependency of
+        # current faster-whisper releases and must be installable on demand.
         "onnxruntime_gpu",
         "onnx",
         # Other large scientific stacks never needed at runtime

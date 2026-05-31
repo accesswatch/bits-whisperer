@@ -2,7 +2,7 @@
 # Install all providers: pip install -r requirements-providers.txt
 # Or install individually: pip install faster-whisper
 
-faster-whisper>=1.0.0
+faster-whisper>=1.2.1,<2
 openai>=1.0.0
 google-cloud-speech>=2.20.0
 azure-cognitiveservices-speech>=1.32.0

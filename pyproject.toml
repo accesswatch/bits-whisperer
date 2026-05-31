@@ -35,7 +35,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # Individual provider SDKs — installed on demand at runtime
-local-whisper = ["faster-whisper>=1.0.0"]
+local-whisper = ["faster-whisper>=1.2.1,<2"]
 openai = ["openai>=1.0.0"]
 google = ["google-cloud-speech>=2.20.0"]
 azure = ["azure-cognitiveservices-speech>=1.32.0"]
@@ -47,7 +47,7 @@ groq = ["groq>=0.4.0"]
 rev-ai = ["rev-ai>=2.17.0"]
 speechmatics = ["speechmatics-python>=1.0.0"]
 # Live transcription (microphone capture)
-live = ["sounddevice>=0.4.6", "faster-whisper>=1.0.0", "numpy>=1.24.0", "silero-vad>=5.1"]
+live = ["sounddevice>=0.4.6", "faster-whisper>=1.2.1,<2", "numpy>=1.24.0", "silero-vad>=5.1"]
 # AI services (translation / summarization)
 ai-openai = ["openai>=1.0.0"]
 ai-anthropic = ["anthropic>=0.30.0"]
@@ -58,7 +58,7 @@ scheduler = ["APScheduler>=3.10.0"]
 ai-all = ["openai>=1.0.0", "anthropic>=0.30.0", "google-genai>=0.4.0"]
 # Provider bundles
 all-providers = [
-    "faster-whisper>=1.0.0",
+    "faster-whisper>=1.2.1,<2",
     "openai>=1.0.0",
     "google-cloud-speech>=2.20.0",
     "azure-cognitiveservices-speech>=1.32.0",

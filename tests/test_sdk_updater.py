@@ -18,6 +18,7 @@ from bits_whisperer.core.sdk_installer import (
 from bits_whisperer.core.updater import UpdateInfo, Updater
 from bits_whisperer.core.wheel_installer import (
     WheelInstaller,
+    _EXCLUDED,
     _norm,
     _wheel_is_compatible,
     compatible_tags,
@@ -68,6 +69,11 @@ class TestSDKRegistry:
         assert info is not None
         assert info.provider_key == "local_whisper"
         assert "faster-whisper" in info.pip_packages[0]
+
+    def test_local_whisper_uses_pinned_faster_whisper_range(self) -> None:
+        info = get_provider_sdk_info("local_whisper")
+        assert info is not None
+        assert info.pip_packages == ["faster-whisper>=1.2.1,<2"]
 
     def test_get_provider_sdk_info_unknown(self) -> None:
         assert get_provider_sdk_info("nonexistent_provider") is None
@@ -154,6 +160,10 @@ class TestWheelCompatibility:
 
 class TestWheelInstallerSatisfaction:
     """Package satisfaction checks."""
+
+    def test_cpu_onnxruntime_not_excluded_for_local_whisper(self) -> None:
+        assert "onnxruntime" not in _EXCLUDED
+        assert "onnxruntime_gpu" in _EXCLUDED
 
     def test_bundled_packages_satisfied(self, tmp_path: Path) -> None:
         installer = WheelInstaller(tmp_path)
